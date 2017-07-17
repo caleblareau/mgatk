@@ -270,7 +270,7 @@ texinfo_documents = [
 
 # Bibliographic Dublin Core info.
 epub_title = u'mgatk'
-epub_author = u'Caleb Lareau'
+epub_author = u'Caleb Lareau, Jacob Ulirsch'
 epub_publisher = u'Caleb Lareau, Jacob Ulirsch'
 epub_copyright = u'Caleb Lareau, Jacob Ulirsch'
 
