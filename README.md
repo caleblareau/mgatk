@@ -3,11 +3,10 @@
   <img src="docs/content/media/logo.png" width="50%"/>
 </p>
 
-[![Build Status](https://travis-ci.org/buenrostrolab/proatac.svg?branch=master)](https://travis-ci.org/buenrostrolab/proatac)
-[![PyPI version](https://badge.fury.io/py/proatac.svg)](https://badge.fury.io/py/proatac)
-[![Documentation Status](https://readthedocs.org/projects/proatac/badge/?version=latest)](http://proatac.readthedocs.io/en/latest/?badge=latest)
+[![TeamCity (simple build status)](https://img.shields.io/teamcity/http/teamcity.jetbrains.com/s/bt345.svg)]()
+[![Documentation Status](https://readthedocs.org/projects/mgatk/badge/?version=latest)](http://mgatk.readthedocs.io/en/latest/?badge=latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![DOI](https://zenodo.org/badge/71602064.svg)](https://zenodo.org/badge/latestdoi/71602064)
+
 
 
 The **mgatk** package was developed by Jacob Ulirsch and Caleb Lareau and is maintained by [Caleb Lareau](mailto:caleblareau@g.harvard.edu) in the
