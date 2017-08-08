@@ -8,26 +8,40 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 
-
-The **mgatk** package was developed by Jacob Ulirsch and Caleb Lareau and is maintained by [Caleb Lareau](mailto:caleblareau@g.harvard.edu) in the
-[Aryee Lab](https://aryeelab.org) and [Buenrostro Lab](https://buenrostrolab.com). Source code is made [freely available](http://github.com/aryeelab/mgatk)
+The **mgatk** package was developed by Jacob Ulirsch and Caleb Lareau and is maintained by
+[Caleb Lareau](mailto:caleblareau@g.harvard.edu) in the
+[Aryee Lab](https://aryeelab.org) and [Buenrostro Lab](https://buenrostrolab.com).
+Source code is made [freely available](http://github.com/aryeelab/mgatk)
 and a packaged install version is provided through [PyPi](https://pypi.python.org/pypi/mgatk/).
 <br><br>
 
 ## About
-The **proatac** package implements our data processing and quality control pipeline bulk
+The **mgatk** package implements our data processing and quality control pipeline bulk
 [ATAC-Seq](http://www.nature.com/nmeth/journal/v10/n12/full/nmeth.2688.html),
 [single cell ATAC-Seq](http://www.nature.com/nature/journal/v523/n7561/full/nature14590.html),
 and droplet-based ATAC-Seq data. 
 <br><br>
 
+## Install via github
+
+**Python-**
+```
+pip3 install git+https://github.com/aryeelab/mgatk.git#subdirectory=Pypkg/mgatk
+```
+
+**R-**
+```
+devtools::install_github("aryeelab/mgatk", subdir="Rpkg/mgatk")
+```
+
+R package vignette build with [pkgdown](https://github.com/hadley/pkgdown).
+
 ## Workflow Overview
 
 A detailed description of the workflow including a description of various parameter
 settings is discussed in depth in the [**mgatk** documentation](http://mgatk.readthedocs.io).
-Below is a brief overview of 
+Below is a brief overview of our workflow
 
-![proatac_overview](docs/content/media/overview.png)
 <br><br>
 
 ## Installation/Documentation/FAQ/.etc
