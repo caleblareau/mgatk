@@ -8,19 +8,32 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 
-The **mgatk** package was developed by Jacob Ulirsch and Caleb Lareau and is maintained by
-[Caleb Lareau](mailto:caleblareau@g.harvard.edu) in the
+The **mgatk** package was developed by Caleb Lareau and Jacob Ulirsch and is maintained by
+[Caleb](mailto:caleblareau@g.harvard.edu) in the
 [Aryee Lab](https://aryeelab.org) and [Buenrostro Lab](https://buenrostrolab.com).
 Source code is made [freely available](http://github.com/aryeelab/mgatk)
 and a packaged install version is provided through [PyPi](https://pypi.python.org/pypi/mgatk/).
 <br><br>
 
 ## About
-The **mgatk** package implements our data processing and quality control pipeline bulk
-[ATAC-Seq](http://www.nature.com/nmeth/journal/v10/n12/full/nmeth.2688.html),
-[single cell ATAC-Seq](http://www.nature.com/nature/journal/v523/n7561/full/nature14590.html),
-and droplet-based ATAC-Seq data. 
+We provide two interfaces for **mgatk**, including a python-based command line interface for
+processing `.bam` files with mitochondrial reads and generating quality control, blacklist, 
+and variant calls. These can be read into our `R` package that enables quality control, annotation, 
+sample deconvolution, transcriptomic and epigenomic heritability analyses, as well as 
+visualizations and diagnostics. 
 <br><br>
+
+## Installation
+
+**Python-**
+```
+pip3 install mgatk
+```
+
+**R-**
+```
+devtools::install_github("aryeelab/mgatk", subdir="Rpkg/mgatk")
+```
 
 ## Install via github
 
