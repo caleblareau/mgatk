@@ -35,6 +35,11 @@ pip3 install mgatk
 devtools::install_github("aryeelab/mgatk", subdir="Rpkg/mgatk")
 ```
 
+**or**
+```
+devtools::install_github("aryeelab/mgatk/Rpkg/mgatk")
+```
+
 ## Install via github
 
 **Python-**
