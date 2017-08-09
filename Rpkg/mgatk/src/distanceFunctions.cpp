@@ -6,29 +6,30 @@ double absDist (NumericVector x, NumericVector y, NumericVector w){
   int n = y.length();
   double total = 0;
   for (int i = 0; i < n ; ++i) {
-    total += w(i)*abs(x(i)-y(i));
+    total += w(i)*sqrt(pow(x(i)-y(i),2.0));
   }
-  return total;
+  return total/(float)x.length();
 }
 
 double eucDist (NumericVector x, NumericVector y, NumericVector w){
   int n = y.length();
   double total = 0;
   for (int i = 0; i < n ; ++i) {
-    total += w(i)*sqrt(pow(x(i)-y(i),2.0));
+    total += w(i)*pow(x(i)-y(i),2.0);
   }
-  return total;
+  return sqrt(total)/(float)x.length();
 }
 
 double sqrtDist (NumericVector x, NumericVector y, NumericVector w){
   int n = y.length();
   double total = 0;
   for (int i = 0; i < n ; ++i) {
-    total += w(i)*sqrt(abs(x(i)-y(i)));
+    total += w(i)*sqrt(sqrt(pow(x(i)-y(i),2.0)));
   }
-  return total;
+  return total/(float)x.length();
 }
 
+// [[Rcpp::export]]
 NumericMatrix calcWdist_abs (NumericMatrix x, NumericMatrix w){
 
   int outrows = x.ncol();

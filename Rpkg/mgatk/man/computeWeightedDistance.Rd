@@ -21,10 +21,12 @@ computeWeightedDistance(x, y = NULL, method = "euc")
 One or more outputs. See above
 }
 \description{
-\code{computeWeightedDistance} takes a matrix of samples X features
+\code{computeWeightedDistance} takes a matrix of features x samples.
+Essentially computing the pairwise distance difference between
 }
 \examples{
-x <- matrix(rnorm(1000), nrow = 20) # 50 samples
+
+x <- matrix(runif(1000), nrow = 20) # 50 samples
 y <- matrix(rpois(1000, 10), nrow = 20) # 50 samples
 d <- computeWeightedDistance(x,y)
 

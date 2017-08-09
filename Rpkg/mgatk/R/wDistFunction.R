@@ -3,7 +3,8 @@ NULL
 
 #' Compute weighted distance function.
 #'
-#' \code{computeWeightedDistance} takes a matrix of samples X features
+#' \code{computeWeightedDistance} takes a matrix of features x samples.
+#' Essentially computing the pairwise distance difference between
 #'
 #' @param x Data matrix of ratios (for mito: minor allele frequencies)
 #' @param y Data matrix of weights (for mito: coverage)
@@ -13,7 +14,8 @@ NULL
 #' @import methods
 #' @import Rcpp
 #' @examples
-#' x <- matrix(rnorm(1000), nrow = 20) # 50 samples
+#'
+#' x <- matrix(runif(1000), nrow = 20) # 50 samples
 #' y <- matrix(rpois(1000, 10), nrow = 20) # 50 samples
 #' d <- computeWeightedDistance(x,y)
 #'
@@ -48,5 +50,4 @@ setMethod("computeWeightedDistance", signature("ANY", "ANY", "ANY"),
               mat <- calcWdist_sqrt(x, y)
             }
             return(mat)
-
           })

@@ -1,16 +1,27 @@
 Package: mgatk
 Title: A mitocondrial genome analysis toolkit
-Version: 0.0.1
-Authors@R: person("Caleb", "Lareau", email = "caleblareau@g.harvard.edu", role = c("aut", "cre"))
-Description: mito genome toolkit.
-License: GPL (>= 2)
+Version: 0.1.0
+Authors@R: c(
+    person("Caleb", "Lareau", email = "caleblareau@g.harvard.edu", role = c("aut", "cre")),
+    person("Jacob", "Ulirsch", email = "julirsch@g.harvard.edu", role = c("aut"))
+    )
+Description: An R package tailored for the analysis, quanity control, filtering, 
+  annotation, and analysis of mitochondrial heteroplasmic variants. 
+License: MIT + file LICENSE
 Imports:
   Rcpp (>= 0.12.12),
   methods
 LinkingTo: Rcpp
-LazyData: true
+LazyData: TRUE
+Suggests:
+    knitr,
+    rmarkdown,
+    testthat,
+    microbenchmark,
+    gaston
 Collate: 
     'RcppExports.R'
     'mgatk.R'
     'wDistFunction.R'
+VignetteBuilder: knitr
 RoxygenNote: 6.0.1

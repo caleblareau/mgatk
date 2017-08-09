@@ -5,6 +5,18 @@
 
 using namespace Rcpp;
 
+// calcWdist_abs
+NumericMatrix calcWdist_abs(NumericMatrix x, NumericMatrix w);
+RcppExport SEXP _mgatk_calcWdist_abs(SEXP xSEXP, SEXP wSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericMatrix >::type x(xSEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type w(wSEXP);
+    rcpp_result_gen = Rcpp::wrap(calcWdist_abs(x, w));
+    return rcpp_result_gen;
+END_RCPP
+}
 // calcWdist_euclidean
 NumericMatrix calcWdist_euclidean(NumericMatrix x, NumericMatrix w);
 RcppExport SEXP _mgatk_calcWdist_euclidean(SEXP xSEXP, SEXP wSEXP) {
@@ -31,6 +43,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_mgatk_calcWdist_abs", (DL_FUNC) &_mgatk_calcWdist_abs, 2},
     {"_mgatk_calcWdist_euclidean", (DL_FUNC) &_mgatk_calcWdist_euclidean, 2},
     {"_mgatk_calcWdist_sqrt", (DL_FUNC) &_mgatk_calcWdist_sqrt, 2},
     {NULL, NULL, 0}
