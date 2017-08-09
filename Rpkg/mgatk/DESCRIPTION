@@ -2,8 +2,15 @@ Package: mgatk
 Title: A mitocondrial genome analysis toolkit
 Version: 0.0.1
 Authors@R: person("Caleb", "Lareau", email = "caleblareau@g.harvard.edu", role = c("aut", "cre"))
-Description: R package for post-processing of mgatk data. 
-Depends: R (>= 3.4.1)
-License: MIT
-Encoding: UTF-8
+Description: mito genome toolkit.
+License: GPL (>= 2)
+Imports:
+  Rcpp (>= 0.12.12),
+  methods
+LinkingTo: Rcpp
 LazyData: true
+Collate: 
+    'RcppExports.R'
+    'mgatk.R'
+    'wDistFunction.R'
+RoxygenNote: 6.0.1
