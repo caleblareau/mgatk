@@ -7,9 +7,8 @@ configfile: config["cfp"]
 indir = config["input_directory"]
 outdir = config["output_directory"]
 mitoQual = config["mitoQual"]
-mitoLegth = 16571
+mitoLength = 16571
 skip_indels = config["skip_indels"]
-mitoLegth = 16571
 
 # Software paths
 bcftools = "bcftools"

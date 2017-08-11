@@ -21,7 +21,7 @@ from .mgatkHelp import *
 @click.argument('mode')
 @click.option('--input', default = ".", required=True, help='input directory; assumes .bam / .bam.bai files are present')
 @click.option('--output', default="mgatk_out", required=True, help='Output directory for analysis')
-@click.option('--mito-genome', default = "hg19", required=True, help='mitochondrial genome configuration. Choose hg19, mm10, or a custom .yaml file (see documentation)')
+@click.option('--mito-genome', default = "hg19", required=True, help='mitochondrial genome configuration. Choose hg19, mm10, or a custom .fasta file (see documentation)')
 @click.option('--cluster-config', default = "", required=True, help='Cluster configuration for snakemake. See snakemake documentation for more details. Accepts .yaml and .json file formats.')
 @click.option('--stingy', is_flag=True, help='Space-efficient analyses; remove non-vital intermediate files.')
 @click.option('--atac-single', is_flag=True, help='Default parameters for ATAC-Seq single end read analyses.')
