@@ -11,7 +11,7 @@
 The **mgatk** package was developed by Caleb Lareau and Jacob Ulirsch and is maintained by
 [Caleb](mailto:caleblareau@g.harvard.edu) in the
 [Aryee Lab](https://aryeelab.org) and [Buenrostro Lab](https://buenrostrolab.com).
-Source code is made [freely available](http://github.com/aryeelab/mgatk)
+[Source code is made freely available](http://github.com/aryeelab/mgatk)
 and a packaged install version is provided through [PyPi](https://pypi.python.org/pypi/mgatk/).
 <br><br>
 
@@ -25,31 +25,36 @@ visualizations and diagnostics.
 
 ## Installation
 
-**Python-**
+**Python**
 ```
 pip3 install mgatk
 ```
 
-**R-**
+**R**
 ```
 devtools::install_github("aryeelab/mgatk", subdir="Rpkg/mgatk")
-```
 
 **or**
-```
+
 devtools::install_github("aryeelab/mgatk/Rpkg/mgatk")
 ```
 
 ## Install via github
 
-**Python-**
+**Python**
 ```
-pip3 install git+https://github.com/aryeelab/mgatk.git#subdirectory=Pypkg/mgatk
-```
+git clone https://github.com/aryeelab/mgatk.git
+cd mgatk/Pypkg/mgatk
+pip install -e .
+````
 
-**R-**
+**R**
 ```
 devtools::install_github("aryeelab/mgatk", subdir="Rpkg/mgatk")
+
+**or**
+
+devtools::install_github("aryeelab/mgatk/Rpkg/mgatk")
 ```
 
 R package vignette build with [pkgdown](https://github.com/hadley/pkgdown).
