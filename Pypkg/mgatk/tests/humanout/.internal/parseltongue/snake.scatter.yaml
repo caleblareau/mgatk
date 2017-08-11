@@ -1,1 +1,4 @@
-allsamples: hey
+input_directory: tests/humanbam
+mitoQual: '20'
+output_directory: tests/humanout
+skip_indels: '--skip-indels '

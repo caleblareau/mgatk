@@ -17,9 +17,9 @@ samtools = "samtools"
 tabix = "tabix"
 
 # A Snakemake regular expression matching the bam files that were all aligned
-SAMPLES, = glob_wildcards(join(indir, "{sample}.bam"))
+SAMPLES, = glob_wildcards(join(indir, "{sample}.bam.txt"))
 
-bamin = '{sample}.all.sorted.bam'
+bamtxtin = '{sample}.bam.txt'
 
 rule all:
     input:
@@ -27,13 +27,13 @@ rule all:
 
 rule filter_mito_chr:
     input:
-        bam = join(input_dir, bamin)
+        bamtxt = join(input_dir, bamtxtin)
     output:
         bam = outdir + "/03_processed_reads/mito/{sample}.mito.bam",
         bai = outdir + "/03_processed_reads/mito/{sample}.mito.bam.bai"
     threads: 1
     shell:
-    	samtools + " view -b {input.bam} -o {output.bam} " + " ".join(str(i) for i in mitochrs) + " && " + samtools + " index {output.bam}"
+    	samtools + " view -b `cat {input.bamtxt}` -o {output.bam} " + " ".join(str(i) for i in mitochrs) + " && " + samtools + " index {output.bam}"
 
 rule make_samtools_list:
 	input:

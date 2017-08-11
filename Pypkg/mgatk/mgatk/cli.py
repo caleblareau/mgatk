@@ -29,7 +29,8 @@ from .mgatkHelp import *
 @click.option('--rna-single', is_flag=True, help='Default parameters for RNA-Seq single end read analyses.')
 @click.option('--rna-paired', is_flag=True, help='Default parameters for RNA-Seq paired end read analyses.')
 
-@click.option('--filter-duplicates', is_flag=True, help='Filter marked (presumably PCR) duplicates')
+@click.option('--keep-duplicates', is_flag=True, help='Keep marked (presumably PCR) duplicates; recommended for low-coverage RNA-Seq')
+@click.option('--read-qual', default = "20", required=True, help='Minimum read quality for final filter.')
 
 
 @click.option('--keep-samples', default="ALL", help='Comma separated list of sample names to keep; ALL (special string) by default. Sample refers to basename of .bam file')
@@ -37,7 +38,7 @@ from .mgatkHelp import *
 
 @click.option('--skip-rds', is_flag=True, help='Generate plain-text only output. Otherwise, this generates a .rds obejct that can be immediately read into R')
 
-def main(mode, input, output, mito_genome, cluster_config, stingy, atac_single, atac_paired, rna_single, rna_paired, keep_samples, ignore_samples, skip_rds):
+def main(mode, input, output, mito_genome, cluster_config, stingy, atac_single, atac_paired, rna_single, rna_paired, keep_duplicates, read_qual, keep_samples, ignore_samples, skip_rds):
 	"""mgatk: Processing mitochondrial mutations."""
 	__version__ = get_distribution('mgatk').version
 	script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -60,24 +61,31 @@ def main(mode, input, output, mito_genome, cluster_config, stingy, atac_single, 
 	# -------------------------------
 
 	bams = os.popen('ls ' + input + '/*.bam').read().strip().split("\n")
-	print(bams)
+	samples = []
+	samplebams = []
 	
-	def intersect(a, b):
-		return list(set(a) & set(b))
+	find = re.compile(r"^[^.]*")
 
-	samples = bams
+	for bam in bams:
+		if(os.path.isfile(bam + ".bai")):
+			samples.append(re.search(find, os.path.basename(bam)).group(0))
+			samplebams.append(bam)
 	
 	if(keep_samples != "ALL"):
 		keeplist = keep_samples.split(",")
 		click.echo(gettime() + "Intersecting detected samples with user-retained ones: " + keep_samples)
-		samples = intersect(samples, keeplist)
+		keepidx = findIdx(samples, keeplist)
+		samples = [samples[i] for i in keepidx]
+		samplebams = [samplebams[i] for i in keepidx]
 		
 	if(ignore_samples != "NONE"):
-		igslist = ignore_samples.split(",")
-		for byesample in igslist:
-			click.echo(gettime() + "Attempting to remove " + byesample + " from processing", logf)
-			if byesample in samples: samples.remove(byesample)
-	
+		iglist = ignore_samples.split(",")
+		click.echo(gettime() + "Attempting to remove samples from processing:" + ignore_samples)
+		rmidx = findIdx(samples, iglist)
+		for index in sorted(rmidx, reverse=True):
+			del samples[index]
+			del samplebams[index]
+    		
 	if not len(samples) > 0:
 		sys.exit('ERROR: Could not import any samples from the user specification; check flags, logs and input configuration; QUITTING')
 
@@ -90,6 +98,7 @@ def main(mode, input, output, mito_genome, cluster_config, stingy, atac_single, 
 	logfolder = outfolder + "/logs"
 	internfolder = outfolder + "/.internal"
 	parselfolder = internfolder + "/parseltongue"
+	samplesfolder = internfolder + "/samples"
 	
 	# Check if output directories exist; make if not
 	if not os.path.exists(outfolder):
@@ -103,7 +112,17 @@ def main(mode, input, output, mito_genome, cluster_config, stingy, atac_single, 
 	if not os.path.exists(parselfolder):
 		os.makedirs(parselfolder)
 		with open(parselfolder + "/README" , 'w') as outfile:
-			outfile.write("This folder creates intermediate output to be interpreted by Snakemake; don't modify it.\n\n")	
+			outfile.write("This folder creates intermediate output to be interpreted by Snakemake; don't modify it.\n\n")
+	if not os.path.exists(samplesfolder):
+		os.makedirs(samplesfolder)
+		with open(samplesfolder + "/README" , 'w') as outfile:
+			outfile.write("This folder creates samples to be interpreted by Snakemake; don't modify it.\n\n")
+	
+	# Set up sample bam plain text file
+	for i in range(len(samples)):
+		with open(samplesfolder + "/" + samples[i] + ".bam.txt" , 'w') as outfile:
+			outfile.write(samplebams[i])
+				
 	cwd = os.getcwd()
 	logf = open(logfolder + "/base.mgatk.log", 'a')
 		
@@ -111,10 +130,12 @@ def main(mode, input, output, mito_genome, cluster_config, stingy, atac_single, 
 	# -----------------------------------
 	# Parse user-specified parameteres
 	# -----------------------------------
-	if(keep_indels):
+	if(keep_duplicates):
 		skip_indels = ""
 	else:
 		skip_indels = "--skip-indels "
+	
+	
 	
 	# -------------------
 	# Process each sample
@@ -125,14 +146,14 @@ def main(mode, input, output, mito_genome, cluster_config, stingy, atac_single, 
 				
 	click.echo(gettime() + "First pass of samples", logf)
 	
-	snakedict1 = {'allsamples' : 'hey', 'input_directory' : input, 'output_directory' : output,
-		'mitoQual' : mitoQual, 'skip_indels' : skip_indels}
+	snakedict1 = {'input_directory' : input, 'output_directory' : output,
+		'mitoQual' : read_qual, 'skip_indels' : skip_indels}
 	
 	y1 = parselfolder + "/snake.scatter.yaml"
 	with open(y1, 'w') as yaml_file:
 		yaml.dump(snakedict1, yaml_file, default_flow_style=False)
 		
-	#snakecall1 = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --config cfp="' + y1 + '"'
+	snakecall1 = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --config cfp="' + y1 + '"'
 	#os.system(snakecall1)
 	click.echo(gettime() + "Sample scattering done.", logf)
 	
