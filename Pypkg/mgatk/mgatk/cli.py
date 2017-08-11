@@ -140,11 +140,14 @@ def main(mode, input, output, mito_genome, cluster_config, stingy, atac_single, 
 	# -------------------
 	# Process each sample
 	# -------------------
-	trimfolder = outfolder + "/01_raw"
-	if not os.path.exists(trimfolder + "_process"):
-		os.makedirs(trimfolder+ "_process")
+	qcfolder = outfolder + "/qc"
+	if not os.path.exists(qcfolder):
+		os.makedirs(qcfolder)
+		os.makedirs(qcfolder + "/BAQ")
+		os.makedirs(qcfolder + "/BQ")
+		os.makedirs(qcfolder + "/depth")
 				
-	click.echo(gettime() + "First pass of samples", logf)
+	click.echo(gettime() + "Scattering samples", logf)
 	
 	snakedict1 = {'input_directory' : input, 'output_directory' : output,
 		'mitoQual' : read_qual, 'skip_indels' : skip_indels}
@@ -154,7 +157,7 @@ def main(mode, input, output, mito_genome, cluster_config, stingy, atac_single, 
 		yaml.dump(snakedict1, yaml_file, default_flow_style=False)
 		
 	snakecall1 = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --config cfp="' + y1 + '"'
-	#os.system(snakecall1)
+	os.system(snakecall1)
 	click.echo(gettime() + "Sample scattering done.", logf)
 	
 	# Suspend logging

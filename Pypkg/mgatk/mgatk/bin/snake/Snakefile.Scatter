@@ -7,8 +7,9 @@ configfile: config["cfp"]
 indir = config["input_directory"]
 outdir = config["output_directory"]
 mitoQual = config["mitoQual"]
-sample_sheet = config["sample_sheet"]
+mitoLegth = 16571
 skip_indels = config["skip_indels"]
+mitoLegth = 16571
 
 # Software paths
 bcftools = "bcftools"
@@ -17,67 +18,29 @@ samtools = "samtools"
 tabix = "tabix"
 
 # A Snakemake regular expression matching the bam files that were all aligned
-SAMPLES, = glob_wildcards(join(indir, "{sample}.bam.txt"))
+SAMPLES, = glob_wildcards(join(outdir, ".internal/samples/{sample}.bam.txt"))
 
 bamtxtin = '{sample}.bam.txt'
 
 rule all:
     input:
-        outdir + "/03_processed_reads/mito/All.SNPs.MNP.clean.txt.gz"
+        outdir + "/qc/depth/all.txt"
 
-rule filter_mito_chr:
+rule get_depth:
     input:
-        bamtxt = join(input_dir, bamtxtin)
+        bamtxt = join(outdir + "/.internal/samples", bamtxtin)
     output:
-        bam = outdir + "/03_processed_reads/mito/{sample}.mito.bam",
-        bai = outdir + "/03_processed_reads/mito/{sample}.mito.bam.bai"
+        depth = outdir + "/qc/depth/{sample}.depth.txt", 
     threads: 1
-    shell:
-    	samtools + " view -b `cat {input.bamtxt}` -o {output.bam} " + " ".join(str(i) for i in mitochrs) + " && " + samtools + " index {output.bam}"
+    run:
+    	with open(input.bamtxt) as f: bamfilepath = f.read()
+    	os.system(samtools + " depth "+bamfilepath+" | awk '{sum+=$3} END {print sum/16571}' > " + output.depth)
 
-rule make_samtools_list:
+rule fin:
 	input:
-		expand(outdir + "/03_processed_reads/mito/{sample}.mito.bam", sample=SAMPLES)
+		expand(outdir + "/qc/depth/{sample}.depth.txt", sample=SAMPLES)
 	output:
-		temp(outdir + "/03_processed_reads/mito/samplesForPileup.txt")
+		outdir + "/qc/depth/all.txt"
 	threads: 1
 	shell: 
-		"ls -1 {input} >> {output}"
-		
-rule bam_to_vcf:
-	input:
-		outdir + "/03_processed_reads/mito/samplesForPileup.txt"
-	output:
-		vcf = temp(outdir + "/03_processed_reads/mito/All.SNPs.vcf.gz"), 
-		ix = temp(outdir + "/03_processed_reads/mito/All.SNPs.vcf.gz.tbi")
-	threads: 1
-	shell:
-		samtools + " mpileup -d8000 -r " + " ".join(str(i) for i in mitochrs) +" -B -Q " + mitoQual + " -C 50 -t AD,ADF,ADR "+skip_indels+"-b {input} -v > {output.vcf} && " + tabix + " {output.vcf}"
-
-rule bcftools_norm:
-	input:
-		vcf = outdir + "/03_processed_reads/mito/All.SNPs.vcf.gz", 
-		ix = outdir + "/03_processed_reads/mito/All.SNPs.vcf.gz.tbi"
-	output:
-		temp(outdir + "/03_processed_reads/mito/All.SNPs.MNP.vcf.gz")
-	threads:1
-	shell:
-		bcftools + " norm -m-both {input.vcf} > {output}"
-
-rule bcftools_query:
-	input:
-		outdir + "/03_processed_reads/mito/All.SNPs.MNP.vcf.gz"
-	output:
-		temp(outdir + "/03_processed_reads/mito/All.SNPs.MNP.txt")
-	threads:1
-	shell:
-		bcftools + " query -f '[%CHROM\t%POS\t%ALT\t%SAMPLE\tINFO/%AD\n]' {input} > {output}"
-
-rule variant_cleanup:
-	input:
-		outdir + "/03_processed_reads/mito/All.SNPs.MNP.txt"
-	output:
-		outdir + "/03_processed_reads/mito/All.SNPs.MNP.clean.txt.gz"
-	threads:1
-	shell:
-		'''cat {input} | sed -e 's/INFO\///g' -e 's/\.mito.bam//g' -e 's/,/\t/g' | awk '{{print $4,$2,$3,$6}}'  | awk -F'03_processed_reads/mito/' '{{print $2}}' | gzip > {output}'''
+		"cat {input} >> {output}"
