@@ -4,22 +4,20 @@ import os
 configfile: config["cfp"]     
            
 # Parse the configuration variables
-outdir = config["outdir"]
-samtools = config["samtools"]
-mitochrs = config["mitochrs"]
-project_name = config["project_name"]
+indir = config["input_directory"]
+outdir = config["output_directory"]
+mitoQual = config["mitoQual"]
+sample_sheet = config["sample_sheet"]
+skip_indels = config["skip_indels"]
 
-aligned_reads = outdir + "/02_aligned_reads"
-
-
-# Need to update these at some point
-mitoQual = "40"
+# Software paths
 bcftools = "bcftools"
+java = "java"
+samtools = "samtools"
 tabix = "tabix"
 
-
 # A Snakemake regular expression matching the bam files that were all aligned
-SAMPLES, = glob_wildcards(join(aligned_reads, "{sample}.all.sorted.bam"))
+SAMPLES, = glob_wildcards(join(indir, "{sample}.bam"))
 
 bamin = '{sample}.all.sorted.bam'
 
@@ -29,7 +27,7 @@ rule all:
 
 rule filter_mito_chr:
     input:
-        bam = join(aligned_reads, bamin)
+        bam = join(input_dir, bamin)
     output:
         bam = outdir + "/03_processed_reads/mito/{sample}.mito.bam",
         bai = outdir + "/03_processed_reads/mito/{sample}.mito.bam.bai"
@@ -54,7 +52,7 @@ rule bam_to_vcf:
 		ix = temp(outdir + "/03_processed_reads/mito/All.SNPs.vcf.gz.tbi")
 	threads: 1
 	shell:
-		samtools + " mpileup -d8000 -r " + " ".join(str(i) for i in mitochrs) +" -B -Q " + mitoQual + " -C 50 -t AD,ADF,ADR --skip-indels -b {input} -v > {output.vcf} && " + tabix + " {output.vcf}"
+		samtools + " mpileup -d8000 -r " + " ".join(str(i) for i in mitochrs) +" -B -Q " + mitoQual + " -C 50 -t AD,ADF,ADR "+skip_indels+"-b {input} -v > {output.vcf} && " + tabix + " {output.vcf}"
 
 rule bcftools_norm:
 	input:
@@ -83,19 +81,3 @@ rule variant_cleanup:
 	threads:1
 	shell:
 		'''cat {input} | sed -e 's/INFO\///g' -e 's/\.mito.bam//g' -e 's/,/\t/g' | awk '{{print $4,$2,$3,$6}}'  | awk -F'03_processed_reads/mito/' '{{print $2}}' | gzip > {output}'''
-
-
-
-# rule make_summary_txt:
-# 	input:
-# 		expand(outdir + "/03_processed_reads/mito/{sample}.mito.bam", sample=SAMPLES)
-# 	output:
-# 		outdir + "/03_processed_reads/mito/" + project_name + ".mitoreads.txt"
-# 	threads: 1
-# 	run:
-# 		with open(output[0], 'w') as out:
-# 			for i in input:
-# 				sample = (i.split('/03_processed_reads/mito/')[1]).split('.')[0]
-# 				lns = os.popen(samtools + " view " + i + " | wc -l").read().strip()
-# 				out.write(sample + '\t' + lns + '\n')
-

@@ -1,19 +1,16 @@
 import click
 import os
+import yaml
 import os.path
 import sys
 import shutil
-import yaml
 import random
 import string
 import itertools
 import time
 from pkg_resources import get_distribution
 from subprocess import call, check_call
-from .proatacHelp import *
-from .proatacProjectClass import *
-
-
+from .mgatkHelp import *
 
 # ------------------------------
 # Command line arguments
@@ -21,30 +18,80 @@ from .proatacProjectClass import *
 
 @click.command()
 @click.version_option()
-@click.option('--check', is_flag=True, help='[MODE] Check to see if all dependencies are properly configured.')
+@click.argument('mode')
+@click.option('--input', default = ".", required=True, help='input directory; assumes .bam / .bam.bai files are present')
+@click.option('--output', default="mgatk_out", required=True, help='Output directory for analysis')
+@click.option('--mito-genome', default = "hg19", required=True, help='mitochondrial genome configuration. Choose hg19, mm10, or a custom .yaml file (see documentation)')
+@click.option('--cluster-config', default = "", required=True, help='Cluster configuration for snakemake. See snakemake documentation for more details. Accepts .yaml and .json file formats.')
 @click.option('--stingy', is_flag=True, help='Space-efficient analyses; remove non-vital intermediate files.')
-@click.argument('manifest')
+@click.option('--atac-single', is_flag=True, help='Default parameters for ATAC-Seq single end read analyses.')
+@click.option('--atac-paired', is_flag=True, help='Default parameters for ATAC-Seq paired end read analyses.')
+@click.option('--rna-single', is_flag=True, help='Default parameters for RNA-Seq single end read analyses.')
+@click.option('--rna-paired', is_flag=True, help='Default parameters for RNA-Seq paired end read analyses.')
+
+@click.option('--filter-duplicates', is_flag=True, help='Filter marked (presumably PCR) duplicates')
 
 
-def main(manifest, check, stingy):
-	"""Preprocessing ATAC and scATAC Data."""
-	__version__ = get_distribution('proatac').version
+@click.option('--keep-samples', default="ALL", help='Comma separated list of sample names to keep; ALL (special string) by default. Sample refers to basename of .bam file')
+@click.option('--ignore-samples', default="NONE", help='Comma separated list of sample names to ignore; NONE (special string) by default. Sample refers to basename of .bam file')
+
+@click.option('--skip-rds', is_flag=True, help='Generate plain-text only output. Otherwise, this generates a .rds obejct that can be immediately read into R')
+
+def main(mode, input, output, mito_genome, cluster_config, stingy, atac_single, atac_paired, rna_single, rna_paired, keep_samples, ignore_samples, skip_rds):
+	"""mgatk: Processing mitochondrial mutations."""
+	__version__ = get_distribution('mgatk').version
 	script_dir = os.path.dirname(os.path.realpath(__file__))
 
-	click.echo(gettime() + "Starting proatac pipeline v%s" % __version__)
-	ymml = parse_manifest(manifest)
+	click.echo(gettime() + "mgatk v%s" % __version__)
 
-	
 	# -------------------------------
-	# Utility functions and variables
+	# Verify dependencies
 	# -------------------------------
 	
-	outfolder = os.path.abspath(ymml['project_dir']) 
+	check_software_exists("R")
+	check_software_exists("bcftools")
+	check_software_exists("tabix")
+	check_software_exists("samtools")
+	check_software_exists("java")
+	check_R_packages(['mgatk', 'ggplot2'])
+
+	# -------------------------------
+	# Determine samples for analysis
+	# -------------------------------
+
+	bams = os.popen('ls ' + input + '/*.bam').read().strip().split("\n")
+	print(bams)
+	
+	def intersect(a, b):
+		return list(set(a) & set(b))
+
+	samples = bams
+	
+	if(keep_samples != "ALL"):
+		keeplist = keep_samples.split(",")
+		click.echo(gettime() + "Intersecting detected samples with user-retained ones: " + keep_samples)
+		samples = intersect(samples, keeplist)
+		
+	if(ignore_samples != "NONE"):
+		igslist = ignore_samples.split(",")
+		for byesample in igslist:
+			click.echo(gettime() + "Attempting to remove " + byesample + " from processing", logf)
+			if byesample in samples: samples.remove(byesample)
+	
+	if not len(samples) > 0:
+		sys.exit('ERROR: Could not import any samples from the user specification; check flags, logs and input configuration; QUITTING')
+
+
+	# -------------------------------
+	# Setup output folder
+	# -------------------------------
+	
+	outfolder = output
 	logfolder = outfolder + "/logs"
 	internfolder = outfolder + "/.internal"
 	parselfolder = internfolder + "/parseltongue"
 	
-	# Check if directories exist; make if not
+	# Check if output directories exist; make if not
 	if not os.path.exists(outfolder):
 		os.makedirs(outfolder)
 	if not os.path.exists(logfolder):
@@ -58,165 +105,37 @@ def main(manifest, check, stingy):
 		with open(parselfolder + "/README" , 'w') as outfile:
 			outfile.write("This folder creates intermediate output to be interpreted by Snakemake; don't modify it.\n\n")	
 	cwd = os.getcwd()
-	logf = open(logfolder + "/base.proatac.log", 'a')
+	logf = open(logfolder + "/base.mgatk.log", 'a')
 		
-	# Main Project Variable; output to .yaml so it's clear what's going on
-	p = proatacProject(ymml, script_dir)
-	projectdict = p.__dict__
-	del projectdict["yaml"]
-	
-	# Copy original yaml
-	cpyaml = 'cp ' + manifest + ' ' + logfolder +  "/supplied.yaml"
-	os.system(cpyaml)
-	
-	y0 = logfolder + "/interpreted.params.yaml"
-	with open(y0, 'w') as yaml_file:
-		yaml.dump(projectdict, yaml_file, default_flow_style=False)
-	
-	# -------------------------------
-	# Atypical analysis modes
-	# -------------------------------	
-	
-	if check:
-		sys.exit("Success! We're reasonably confident that all dependencies and files are good to go!")
 
 	# -----------------------------------
-	# ACTUAL PREPROCESSING / SNAKE MAKING
+	# Parse user-specified parameteres
 	# -----------------------------------
+	if(keep_indels):
+		skip_indels = ""
+	else:
+		skip_indels = "--skip-indels "
 	
-	click.echo(gettime() + "Project .yaml successfully loaded. ", logf)
-	
-	# -------------
-	# Adapter Trim
-	# -------------
-	trimfolder = outfolder + "/01_trimmed"
-	if not os.path.exists(trimfolder + "_reads"):
-		os.makedirs(trimfolder+ "_reads")
+	# -------------------
+	# Process each sample
+	# -------------------
+	trimfolder = outfolder + "/01_raw"
+	if not os.path.exists(trimfolder + "_process"):
+		os.makedirs(trimfolder+ "_process")
 				
-	click.echo(gettime() + "Trimming samples", logf)
+	click.echo(gettime() + "First pass of samples", logf)
 	
-	snakedict1 = {'allsamples' : parselfolder + "/allsamples.csv", 'outdir' : outfolder,
-		'scriptdir' : script_dir, 'PEAT' : p.peat_path, 'pigz' : p.pigz_path}
-		
-	y1 = parselfolder + "/snake.trim.yaml"
+	snakedict1 = {'allsamples' : 'hey', 'input_directory' : input, 'output_directory' : output,
+		'mitoQual' : mitoQual, 'skip_indels' : skip_indels}
+	
+	y1 = parselfolder + "/snake.scatter.yaml"
 	with open(y1, 'w') as yaml_file:
 		yaml.dump(snakedict1, yaml_file, default_flow_style=False)
 		
-	snakecall1 = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Trim --cores ' + p.max_cores + ' --config cfp="' + y1 + '"'
-	os.system(snakecall1)
-	click.echo(gettime() + "Sample trimming done.", logf)
+	#snakecall1 = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --config cfp="' + y1 + '"'
+	#os.system(snakecall1)
+	click.echo(gettime() + "Sample scattering done.", logf)
 	
-	# -------------
-	# Alignment
-	# -------------
-	if not os.path.exists(logfolder + "/bowtie2logs"):
-		os.makedirs(logfolder+ "/bowtie2logs")
-	if not os.path.exists(outfolder + "/02_aligned_reads"):
-		os.makedirs(outfolder+ "/02_aligned_reads")
-		
-	click.echo(gettime() + "Aligning samples", logf)
-	
-	snakedict2 = {'bowtie2' : p.bowtie2_path, 'bowtie2index' : p.bowtie2_index,
-		'outdir' : outfolder, 'samtools' : p.samtools_path}
-	
-	y2 = parselfolder + "/snake.align.yaml"
-	with open(y2, 'w') as yaml_file:
-		yaml.dump(snakedict2, yaml_file, default_flow_style=False)
-	
-	snakecall2 = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Align --cores ' + p.max_cores + ' --config cfp="' + y2 + '"'
-	os.system(snakecall2)
-	
-	# -------------
-	# bam process
-	# -------------
-	if not os.path.exists(outfolder + "/03_processed_reads"):
-		os.makedirs(outfolder+ "/03_processed_reads")
-	if not os.path.exists(outfolder + "/03_processed_reads/individual"):
-		os.makedirs(outfolder+ "/03_processed_reads/individual")
-	if not os.path.exists(logfolder + "/rmduplogs"):
-		os.makedirs(logfolder+ "/rmduplogs")
-		
-	click.echo(gettime() + "Cleaning up .bam files", logf)
-	
-	# Determine chromosomes to keep / filter
-	chrs = os.popen(p.samtools_path + " idxstats " +  outfolder + "/02_aligned_reads/* | cut -f1").read().strip().split("\n")
-	rmchrlist = ["*", "chrY", "MT", "chrM"]
-	keepchrs = [x for x in chrs if x not in rmchrlist and len(x) < int(p.chr_name_length)]
-	
-	snakedict3 = {'keepchrs' : keepchrs, 'read_quality' : p.read_quality, 'java' : p.java_path,
-		'outdir' : outfolder, 'samtools' : p.samtools_path, 'project_name' : p.project_name, 'scriptdir' : script_dir}
-		
-	y3 = parselfolder + "/snake.bamprocess.yaml"
-	with open(y3, 'w') as yaml_file:
-		yaml.dump(snakedict3, yaml_file, default_flow_style=False)
-	
-	snakecall3 = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.BamProcess --cores ' + p.max_cores + ' --config cfp="' + y3 + '"'
-	os.system(snakecall3)
-	
-	# ---------------------
-	# Mitochondria
-	# ---------------------
-	if(p.extract_mito):
-		click.echo(gettime() + "Extracting mitochondrial reads", logf)
-		
-		if not os.path.exists(outfolder + "/03_processed_reads/mito"):
-			os.makedirs(outfolder+ "/03_processed_reads/mito")
-			
-		# Determine mitochondrial chromosomes
-		mitochrs = []
-		for name in chrs:
-			if 'MT' in name or 'chrM' in name:
-				mitochrs.append(name)
-				
-		snakedictM = {'mitochrs' : mitochrs, 'outdir' : outfolder, 'samtools' : p.samtools_path, 
-			'project_name' : p.project_name}
-		yM = parselfolder + "/snake.mito.yaml"
-
-		with open(yM, 'w') as yaml_file:
-			yaml.dump(snakedictM, yaml_file, default_flow_style=False)
-		
-		snakecallM = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.MitoProcess --cores ' + p.max_cores + ' --config cfp="' + yM + '"'
-		os.system(snakecallM)
-		
-		
-	# ---------------------
-	# Peaks
-	# ---------------------
-	if not os.path.exists(outfolder + "/04_qc"):
-		os.makedirs(outfolder+ "/04_qc")
-		
-	snakedict4 = {
-		'bedtools' : p.bedtools_path, 'blacklistFile' : p.blacklistFile, 'macs2' : p.macs2_path,
-		'macs2_genome_size' : p.macs2_genome_size, 'n_peaks' : p.n_peaks, 'outdir' : outfolder,
-		'peak_width': p.peak_width, 'project_name' : p.project_name, 'R' : p.R_path, 'script_dir' : script_dir
-	}	
-		
-	y4 = parselfolder + "/snake.callpeaksone.yaml"
-	with open(y4, 'w') as yaml_file:
-		yaml.dump(snakedict4, yaml_file, default_flow_style=False)
-	
-	snakecall4 = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.CallPeaksOne --cores ' + p.max_cores + ' --config cfp="' + y4 + '"'
-	os.system(snakecall4)
-	
-	# ---------------------
-	# Individual QC
-	# ---------------------	
-	if not os.path.exists(outfolder + "/04_qc/individualQC"):
-		os.makedirs(outfolder+ "/04_qc/individualQC")
-		
-	snakedict5 = {
-		'bedtools' : p.bedtools_path, 'outdir' : outfolder,
-		'project_name' : p.project_name, 'R' : p.R_path, 'samtools' : p.samtools_path, 
-		'script_dir' : script_dir
-	}	
-		
-	y5 = parselfolder + "/snake.qcstats.yaml"
-	with open(y5, 'w') as yaml_file:
-		yaml.dump(snakedict5, yaml_file, default_flow_style=False)
-	
-	snakecall5 = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.QCstats --cores ' + p.max_cores + ' --config cfp="' + y5 + '"'
-	os.system(snakecall5)
-		
 	# Suspend logging
 	logf.close()
 	

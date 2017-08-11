@@ -1,13 +1,13 @@
 """
-A mitochondrial genome analysis toolkit
+mgatk: a mitochondrial genome analysis toolkit
 """
 from setuptools import find_packages, setup
 
-dependencies = ['click', 'Numpy', 'editdistance', 'pytest', 'python-levenshtein', 'snakemake', 'biopython', 'optparse-pretty', 'regex', 'PyYAML']
+dependencies = ['click', 'Numpy', 'pytest', 'snakemake', 'biopython', 'optparse-pretty', 'regex', 'PyYAML']
 
 setup(
     name='mgatk',
-    version='0.0.1',
+    version='0.0.4',
     url='https://github.com/aryeelab/mgatk',
     license='MIT',
     author='Caleb Lareau and Jacob Ulirsch',
@@ -35,7 +35,7 @@ setup(
         # 'Development Status :: 7 - Inactive',
         'Environment :: Console',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: BSD License',
+        'License :: OSI Approved :: MIT License',
         'Operating System :: POSIX',
         'Operating System :: MacOS',
         'Operating System :: Unix',
