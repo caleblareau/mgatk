@@ -1,6 +1,6 @@
 import pytest
 from click.testing import CliRunner
-from parkour import cli
+from mgatk import cli
 import md5
 
 
