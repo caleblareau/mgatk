@@ -6,11 +6,17 @@ Authors@R: c(
     person("Jacob", "Ulirsch", email = "julirsch@g.harvard.edu", role = c("aut"))
     )
 Description: An R package tailored for the analysis, quanity control, filtering, 
-  annotation, and analysis of mitochondrial heteroplasmic variants. 
+  annotation, and analysis of mitochondrial variants. 
 License: MIT + file LICENSE
 Imports:
   Rcpp (>= 0.12.12),
-  methods
+  methods,
+  data.table,
+  S4Vectors,
+  GenomicRanges,
+  SummarizedExperiment,
+  Matrix,
+  IRanges
 LinkingTo: Rcpp
 LazyData: TRUE
 Suggests:
@@ -23,5 +29,6 @@ Collate:
     'RcppExports.R'
     'mgatk.R'
     'wDistFunction.R'
+    'io.R'
 VignetteBuilder: knitr
 RoxygenNote: 6.0.1
