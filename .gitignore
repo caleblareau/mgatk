@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+# Snake make executables / temp directory
+*/.snakemake/*
+
 # Distribution / packaging
 .Python
 env/
