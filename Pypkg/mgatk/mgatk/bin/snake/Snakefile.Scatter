@@ -7,7 +7,9 @@ configfile: config["cfp"]
 indir = config["input_directory"]
 outdir = config["output_directory"]
 mitoQual = config["mitoQual"]
-mitoLength = 16571
+mito_genome = config["mito_genome"]
+mito_length = config["mito_length"]
+fasta_file = config["fasta_file"]
 skip_indels = config["skip_indels"]
 
 # Software paths

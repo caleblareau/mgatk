@@ -153,7 +153,7 @@ def main(mode, input, output, mito_genome, cluster_config, keep_temp_files, atac
 
 	if(len(fasta.keys()) != 1):
 		sys.exit('ERROR: .fasta file has multiple chromosomes; supply file with only 1; QUITTING')
-	mito_name, mito_seq = list(fasta.items())[0]
+	mito_genome, mito_seq = list(fasta.items())[0]
 	mito_length = len(mito_seq)
 	
 	shutil.copyfile(fastaf, fastafolder + "/" + mito_genome + ".fasta")
@@ -189,6 +189,7 @@ def main(mode, input, output, mito_genome, cluster_config, keep_temp_files, atac
 	click.echo(gettime() + "Scattering samples", logf)
 	
 	snakedict1 = {'input_directory' : input, 'output_directory' : output,
+		'fasta_file' : fastaf, 'mito_genome' : mito_genome, 'mito_length' : mito_length,
 		'mitoQual' : read_qual, 'skip_indels' : skip_indels}
 	
 	y1 = parselfolder + "/snake.scatter.yaml"

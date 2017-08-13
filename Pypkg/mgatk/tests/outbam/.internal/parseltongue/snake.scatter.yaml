@@ -1,4 +1,7 @@
+fasta_file: tests/outbam/fasta/chrM.fasta
 input_directory: tests/humanbam/
 mitoQual: '20'
+mito_genome: chrM
+mito_length: 16571
 output_directory: tests/outbam
 skip_indels: '--skip-indels '
