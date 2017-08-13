@@ -1,0 +1,4 @@
+input_directory: tests/humanbam/
+mitoQual: '20'
+output_directory: tests/outbam
+skip_indels: '--skip-indels '
