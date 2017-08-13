@@ -94,12 +94,5 @@ setMethod("importMito.txt", signature("character", "ANY", "ANY", "ANY", "ANY", "
                         ),
     rowData = row_g
   )
-
-  # Annotate with prevalence
-  mcols(rowRanges(SE)) <- DataFrame(
-    rowRanges(SE),
-    prevalenceOrder = orderACTG(SE)
-  )
-
   return(SE)
 })
