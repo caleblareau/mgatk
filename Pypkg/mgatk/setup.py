@@ -3,7 +3,7 @@ mgatk: a mitochondrial genome analysis toolkit
 """
 from setuptools import find_packages, setup
 
-dependencies = ['click', 'Numpy', 'pytest', 'snakemake', 'biopython', 'optparse-pretty', 'regex', 'PyYAML']
+dependencies = ['click', 'Numpy', 'pysam', 'pytest', 'snakemake', 'biopython', 'optparse-pretty', 'regex', 'PyYAML']
 
 setup(
     name='mgatk',

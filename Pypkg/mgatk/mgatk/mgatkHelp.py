@@ -51,3 +51,20 @@ def check_software_exists(tool):
 	tool_path = shutil.which(tool)
 	if(str(tool_path) == "None"):
 		sys.exit("ERROR: cannot find "+tool+" in environment; add it to user PATH environment")
+
+
+def parse_fasta(filename):
+	"""
+	Imports specified .fasta file
+	"""
+	f = open(filename)
+	sequences = {}
+	for line in f:
+		if line.startswith('>'):
+			name = line[1:].strip()
+			sequences[name] = ''
+		else:
+			sequences[name] = sequences[name] + line.strip()
+	f.close()
+	return sequences
+	

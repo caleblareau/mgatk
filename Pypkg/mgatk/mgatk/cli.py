@@ -23,7 +23,7 @@ from .mgatkHelp import *
 @click.option('--output', default="mgatk_out", required=True, help='Output directory for analysis')
 @click.option('--mito-genome', default = "hg19", required=True, help='mitochondrial genome configuration. Choose hg19, mm10, or a custom .fasta file (see documentation)')
 @click.option('--cluster-config', default = "", required=True, help='Cluster configuration for snakemake. See snakemake documentation for more details. Accepts .yaml and .json file formats.')
-@click.option('--stingy', is_flag=True, help='Space-efficient analyses; remove non-vital intermediate files.')
+@click.option('--keep-temp-files', is_flag=True, help='Keep all intermediate files.')
 @click.option('--atac-single', is_flag=True, help='Default parameters for ATAC-Seq single end read analyses.')
 @click.option('--atac-paired', is_flag=True, help='Default parameters for ATAC-Seq paired end read analyses.')
 @click.option('--rna-single', is_flag=True, help='Default parameters for RNA-Seq single end read analyses.')
@@ -32,13 +32,15 @@ from .mgatkHelp import *
 @click.option('--keep-duplicates', is_flag=True, help='Keep marked (presumably PCR) duplicates; recommended for low-coverage RNA-Seq')
 @click.option('--read-qual', default = "20", required=True, help='Minimum read quality for final filter.')
 
+@click.option('--clipL', default = "0", required=True, help='Number of variants to clip from left hand side of read.')
+@click.option('--clipR', default = "0", required=True, help='Number of variants to clip from right hand side of read.')
 
 @click.option('--keep-samples', default="ALL", help='Comma separated list of sample names to keep; ALL (special string) by default. Sample refers to basename of .bam file')
 @click.option('--ignore-samples', default="NONE", help='Comma separated list of sample names to ignore; NONE (special string) by default. Sample refers to basename of .bam file')
 
 @click.option('--skip-rds', is_flag=True, help='Generate plain-text only output. Otherwise, this generates a .rds obejct that can be immediately read into R')
 
-def main(mode, input, output, mito_genome, cluster_config, stingy, atac_single, atac_paired, rna_single, rna_paired, keep_duplicates, read_qual, keep_samples, ignore_samples, skip_rds):
+def main(mode, input, output, mito_genome, cluster_config, keep_temp_files, atac_single, atac_paired, rna_single, rna_paired, keep_duplicates, read_qual, clipl, clipr, keep_samples, ignore_samples, skip_rds):
 	"""mgatk: Processing mitochondrial mutations."""
 	__version__ = get_distribution('mgatk').version
 	script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -55,7 +57,7 @@ def main(mode, input, output, mito_genome, cluster_config, stingy, atac_single, 
 	check_software_exists("samtools")
 	check_software_exists("java")
 	check_R_packages(['mgatk', 'ggplot2'])
-
+	
 	# -------------------------------
 	# Determine samples for analysis
 	# -------------------------------
@@ -67,9 +69,9 @@ def main(mode, input, output, mito_genome, cluster_config, stingy, atac_single, 
 	find = re.compile(r"^[^.]*")
 
 	for bam in bams:
-		if(os.path.isfile(bam + ".bai")):
-			samples.append(re.search(find, os.path.basename(bam)).group(0))
-			samplebams.append(bam)
+		#if(os.path.isfile(bam + ".bai")):
+		samples.append(re.search(find, os.path.basename(bam)).group(0))
+		samplebams.append(bam)
 	
 	if(keep_samples != "ALL"):
 		keeplist = keep_samples.split(",")
@@ -125,17 +127,35 @@ def main(mode, input, output, mito_genome, cluster_config, stingy, atac_single, 
 				
 	cwd = os.getcwd()
 	logf = open(logfolder + "/base.mgatk.log", 'a')
-		
-
+	
+	
 	# -----------------------------------
 	# Parse user-specified parameteres
 	# -----------------------------------
+	
+	# Handle .fasta file
+	supported_genomes = ['hg19', 'mm10']
+	print(mito_genome)
+	if any(mito_genome in s for s in supported_genomes):
+		click.echo(gettime() + "Found designated mitochondrial genome: %s" % mito_genome, logf)
+		fastaf = script_dir + "/bin/anno/fasta/" + mito_genome + "_mtDNA.fasta"
+	else:
+		if os.path.exists(mito_genome):
+			fastaf = mito_genome
+		else:
+			sys.exit('ERROR: Could not find file ' + mito_genome + '; QUITTING')
+	fasta = parse_fasta(fastaf)	
+
+	if(len(fasta.keys()) != 1):
+		sys.exit('ERROR: .fasta file has multiple chromosomes; supply file with only 1; QUITTING')
+	mito_name, mito_seq = list(fasta.items())[0]
+	mito_length = len(mito_seq)
+	
+	
 	if(keep_duplicates):
 		skip_indels = ""
 	else:
 		skip_indels = "--skip-indels "
-	
-	
 	
 	# -------------------
 	# Process each sample
