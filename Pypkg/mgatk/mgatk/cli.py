@@ -25,6 +25,8 @@ from .mgatkHelp import *
 @click.option('--mito-genome', default = "hg19", required=True, help='mitochondrial genome configuration. Choose hg19, mm10, or a custom .fasta file (see documentation)')
 @click.option('--cluster-config', default = "", required=True, help='Cluster configuration for snakemake. See snakemake documentation for more details. Accepts .yaml and .json file formats.')
 @click.option('--keep-temp-files', is_flag=True, help='Keep all intermediate files.')
+@click.option('--filtered-sorted', is_flag=True, help='Input bam files are already filtered, sorted, and indexed')
+
 @click.option('--atac-single', is_flag=True, help='Default parameters for ATAC-Seq single end read analyses.')
 @click.option('--atac-paired', is_flag=True, help='Default parameters for ATAC-Seq paired end read analyses.')
 @click.option('--rna-single', is_flag=True, help='Default parameters for RNA-Seq single end read analyses.')
@@ -41,7 +43,7 @@ from .mgatkHelp import *
 
 @click.option('--skip-rds', is_flag=True, help='Generate plain-text only output. Otherwise, this generates a .rds obejct that can be immediately read into R')
 
-def main(mode, input, output, mito_genome, cluster_config, keep_temp_files, atac_single, atac_paired, rna_single, rna_paired, keep_duplicates, read_qual, clipl, clipr, keep_samples, ignore_samples, skip_rds):
+def main(mode, input, output, mito_genome, cluster_config, keep_temp_files, filtered_sorted, atac_single, atac_paired, rna_single, rna_paired, keep_duplicates, read_qual, clipl, clipr, keep_samples, ignore_samples, skip_rds):
 	"""mgatk: Processing mitochondrial mutations."""
 	__version__ = get_distribution('mgatk').version
 	script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -70,9 +72,13 @@ def main(mode, input, output, mito_genome, cluster_config, keep_temp_files, atac
 	find = re.compile(r"^[^.]*")
 
 	for bam in bams:
-		#if(os.path.isfile(bam + ".bai")):
-		samples.append(re.search(find, os.path.basename(bam)).group(0))
-		samplebams.append(bam)
+		if(filtered_sorted): # if user says that these are good to go, then filter on the bams being indexed
+			if(os.path.isfile(bam + ".bai")):
+			samples.append(re.search(find, os.path.basename(bam)).group(0))
+			samplebams.append(bam)
+		else: 
+			samples.append(re.search(find, os.path.basename(bam)).group(0))
+			samplebams.append(bam)
 	
 	if(keep_samples != "ALL"):
 		keeplist = keep_samples.split(",")
@@ -179,6 +185,12 @@ def main(mode, input, output, mito_genome, cluster_config, keep_temp_files, atac
 	# -------------------
 	# Process each sample
 	# -------------------
+	tempbam = outfolder + "/temp_bam"
+	if not os.path.exists(qcfolder):
+		os.makedirs(tempbam)
+		os.makedirs(tempbam + "/filtered")
+		os.makedirs(tempbam + "/sorted")
+	
 	qcfolder = outfolder + "/qc"
 	if not os.path.exists(qcfolder):
 		os.makedirs(qcfolder)
@@ -188,9 +200,10 @@ def main(mode, input, output, mito_genome, cluster_config, keep_temp_files, atac
 				
 	click.echo(gettime() + "Scattering samples", logf)
 	
-	snakedict1 = {'input_directory' : input, 'output_directory' : output,
+	snakedict1 = {'input_directory' : input, 'output_directory' : output, 'script_dir' : script_dir,
 		'fasta_file' : fastaf, 'mito_genome' : mito_genome, 'mito_length' : mito_length,
-		'mitoQual' : read_qual, 'skip_indels' : skip_indels}
+		'mitoQual' : read_qual, 'filtered_sorted' : filtered_sorted, 'skip_indels' : skip_indels,
+		'clipl' : clipl, 'clipr' : clipr}
 	
 	y1 = parselfolder + "/snake.scatter.yaml"
 	with open(y1, 'w') as yaml_file:

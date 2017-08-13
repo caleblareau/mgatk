@@ -10,13 +10,20 @@ mitoQual = config["mitoQual"]
 mito_genome = config["mito_genome"]
 mito_length = config["mito_length"]
 fasta_file = config["fasta_file"]
+script_dir = config["script_dir"]
 skip_indels = config["skip_indels"]
+clipL = config["clipl"]
+clipR = config["clipr"]
 
 # Software paths
 bcftools = "bcftools"
 java = "java"
 samtools = "samtools"
 tabix = "tabix"
+
+# Script calls
+filtClipBam = script_dir + "/bin/filterClipBam.py"
+
 
 # A Snakemake regular expression matching the bam files that were all aligned
 SAMPLES, = glob_wildcards(join(outdir, ".internal/samples/{sample}.bam.txt"))

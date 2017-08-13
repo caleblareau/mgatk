@@ -1,1 +1,0 @@
-tests/humanbam//MGH97-P8-H02.mito.bam
