@@ -1,5 +1,6 @@
 from os.path import join
 import os
+import subprocess
 import shutil
 import pysam
 
@@ -45,6 +46,7 @@ rule filter_sort:
 	output:
 		bam = outdir + "/temp_bam/ready/{sample}.qc.bam",
 		bai = outdir + "/temp_bam/ready/{sample}.qc.bam.bai"
+	threads: 1
 	run:
 		rmlog = output.bam.replace(".qc.bam", ".rmdups.logs").replace("/temp_bam/ready/", "/logs/rmdupslogs/")
 		with open(input.txtin) as f: bamfilepath = f.read()
@@ -72,26 +74,50 @@ rule filter_sort:
 				rmdupbam = filtbam.replace(".filt.bam", ".rmdup.bam")
 				pysam.sort("-o", rmdupbam, filtbam)
 				mdc_long = MarkDuplicatesCall + " INPUT="+rmdupbam+" OUTPUT="+prepbam+" METRICS_FILE="+rmlog+" REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT"
-				os.system(mdc_long)
-				
-		pysam.sort("-o", output.bam, prepbam)
+				os.system(mdc_long)		
+			pysam.sort("-o", output.bam, prepbam)
+			
 		pysam.index(output.bam)
 
-rule get_depth:
+rule get_depth_bq_baq:
 	input:
 		bam = outdir + "/temp_bam/ready/{sample}.qc.bam"
 	output:
-		depth = outdir + "/qc/depth/{sample}.depth.txt", 
+		depth = outdir + "/qc/depth/{sample}.Q0.depth.txt", 
+		baq = outdir + "/qc/BAQ/{sample}.Q0.BAQ.txt", 
+		bq = outdir + "/qc/BQ/{sample}.Q0.BQ.txt"
 	threads: 1
 	run:
 		bamfilepath = input.bam
+		
+		# Depth
 		os.system(samtools + " depth "+bamfilepath+" | awk '{sum+=$3} END {print sum/"+str(mito_length)+"}' > " + output.depth)
-
-rule fin:
+		
+		# BAQ
+		baq_vcf_gz = output.baq.replace(".Q0.BAQ.txt", ".Q0.BAQ.vcf.gz")
+		stc = samtools + " mpileup -d8000 -f "+fasta_file+" -r "+mito_genome+" -Q0 -t AD,ADF,ADR "+skip_indels+"-v "+bamfilepath+" > " + baq_vcf_gz
+		os.system(stc)
+		os.system(tabix + " " + baq_vcf_gz)
+		bcc = bcftools+" query -f '[%POS\tINFO/%I16\n]' "+baq_vcf_gz+" | sed -e 's/INFO\///g' -e 's/,/\t/g' > " + output.baq
+		os.system(bcc)
+		
+		# BQ
+		bq_vcf_gz = output.bq.replace(".Q0.BQ.txt", ".Q0.BQ.vcf.gz")
+		stc2 = samtools + " mpileup -d8000 -f "+fasta_file+" -r "+mito_genome+" -Q0 -B -t AD,ADF,ADR "+skip_indels+"-v "+bamfilepath+" > " + bq_vcf_gz
+		os.system(stc2)
+		os.system(tabix + " " + bq_vcf_gz)
+		bcc2 = bcftools+" query -f '[%POS\tINFO/%I16\n]' "+bq_vcf_gz+" | sed -e 's/INFO\///g' -e 's/,/\t/g' > " + output.bq
+		os.system(bcc2)
+		
+rule make_depth_table:
 	input:
-		expand(outdir + "/qc/depth/{sample}.depth.txt", sample=SAMPLES)
+		expand(outdir + "/qc/depth/{sample}.Q0.depth.txt", sample=SAMPLES)
 	output:
 		outdir + "/qc/depth/all.txt"
 	threads: 1
-	shell: 
-		"cat {input} >> {output}"
+	run: 
+		with open(output[0], 'w') as f:
+			for i in input:
+				sample = i.replace(outdir+ "/qc/depth/", '').replace(".Q0.depth.txt", '')
+				result = subprocess.run(['cat', i], stdout=subprocess.PIPE)
+				f.write(sample + " " + result.stdout.strip().decode("utf-8") + "\n")

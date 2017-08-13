@@ -1,0 +1,12 @@
+{sample} CompletedProcess(args=[cat, tests/outbam/qc/depth/MGH60-P6-A11.Q0.depth.txt], returncode=0, stdout=b141.202n)
+{sample} CompletedProcess(args=[cat, tests/outbam/qc/depth/MGH60-P6-B01.Q0.depth.txt], returncode=0, stdout=b76.1236n)
+{sample} CompletedProcess(args=[cat, tests/outbam/qc/depth/MGH97-P8-H02.Q0.depth.txt], returncode=0, stdout=b106.994n)
+{sample} CompletedProcess(args=[cat, tests/outbam/qc/depth/MGH97-P8-H03.Q0.depth.txt], returncode=0, stdout=b96.6417n)
+{sample} CompletedProcess(args=[cat, tests/outbam/qc/depth/MGH60-P6-A11.Q0.depth.txt], returncode=0, stdout=b141.202n)
+{sample} CompletedProcess(args=[cat, tests/outbam/qc/depth/MGH60-P6-B01.Q0.depth.txt], returncode=0, stdout=b76.1236n)
+{sample} CompletedProcess(args=[cat, tests/outbam/qc/depth/MGH97-P8-H02.Q0.depth.txt], returncode=0, stdout=b106.994n)
+{sample} CompletedProcess(args=[cat, tests/outbam/qc/depth/MGH97-P8-H03.Q0.depth.txt], returncode=0, stdout=b96.6417n)
+one b141.202
+one b76.1236
+one b106.994
+one b96.6417

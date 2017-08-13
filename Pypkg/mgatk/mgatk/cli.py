@@ -25,7 +25,7 @@ from .mgatkHelp import *
 @click.option('--mito-genome', default = "hg19", required=True, help='mitochondrial genome configuration. Choose hg19, mm10, or a custom .fasta file (see documentation)')
 @click.option('--cluster-config', default = "", required=True, help='Cluster configuration for snakemake. See snakemake documentation for more details. Accepts .yaml and .json file formats.')
 @click.option('--keep-temp-files', is_flag=True, help='Keep all intermediate files.')
-@click.option('--filtered-sorted', is_flag=True, help='Input bam files are already filtered for only the mitochondrial genome and sorted; can still remove duplicates optionally though; this flag also bypasses clipping')
+@click.option('--bams-ready', is_flag=True, help='Input bam files are already filtered for only the mitochondrial genome and sorted; can still remove duplicates optionally though; this flag also bypasses clipping')
 
 @click.option('--atac-single', is_flag=True, help='Default parameters for ATAC-Seq single end read analyses.')
 @click.option('--atac-paired', is_flag=True, help='Default parameters for ATAC-Seq paired end read analyses.')
@@ -33,6 +33,7 @@ from .mgatkHelp import *
 @click.option('--rna-paired', is_flag=True, help='Default parameters for RNA-Seq paired end read analyses.')
 
 @click.option('--keep-duplicates', is_flag=True, help='Keep marked (presumably PCR) duplicates; recommended for low-coverage RNA-Seq')
+@click.option('--keep-indels', is_flag=True, help='Keep marked indels for analysis; not recommended as this flag has not been well-tested')
 @click.option('--read-qual', default = "20", required=True, help='Minimum read quality for final filter.')
 
 @click.option('--clipL', default = "0", required=True, help='Number of variants to clip from left hand side of read.')
@@ -43,12 +44,21 @@ from .mgatkHelp import *
 
 @click.option('--skip-rds', is_flag=True, help='Generate plain-text only output. Otherwise, this generates a .rds obejct that can be immediately read into R')
 
-def main(mode, input, output, mito_genome, cluster_config, keep_temp_files, filtered_sorted, atac_single, atac_paired, rna_single, rna_paired, keep_duplicates, read_qual, clipl, clipr, keep_samples, ignore_samples, skip_rds):
+def main(mode, input, output, mito_genome, cluster_config, keep_temp_files, bams_ready,
+	atac_single, atac_paired, rna_single, rna_paired, keep_duplicates, keep_indels,
+	read_qual, clipl, clipr, keep_samples, ignore_samples, skip_rds):
+	
 	"""mgatk: Processing mitochondrial mutations."""
 	__version__ = get_distribution('mgatk').version
 	script_dir = os.path.dirname(os.path.realpath(__file__))
 
 	click.echo(gettime() + "mgatk v%s" % __version__)
+
+	# -------------------------------
+	# Synonyms
+	# -------------------------------
+	# When variable names get updated
+	filtered_sorted = bams_ready
 
 	# -------------------------------
 	# Verify dependencies
@@ -175,7 +185,7 @@ def main(mode, input, output, mito_genome, cluster_config, keep_temp_files, filt
 	# Other command line arguments
 	##############################
 	
-	if(keep_duplicates):
+	if(keep_indels):
 		skip_indels = ""
 	else:
 		skip_indels = "--skip-indels "
