@@ -8,6 +8,7 @@ import random
 import string
 import itertools
 import time
+import pysam
 from pkg_resources import get_distribution
 from subprocess import call, check_call
 from .mgatkHelp import *
@@ -98,6 +99,7 @@ def main(mode, input, output, mito_genome, cluster_config, keep_temp_files, atac
 	
 	outfolder = output
 	logfolder = outfolder + "/logs"
+	fastafolder = outfolder + "/fasta"
 	internfolder = outfolder + "/.internal"
 	parselfolder = internfolder + "/parseltongue"
 	samplesfolder = internfolder + "/samples"
@@ -106,7 +108,9 @@ def main(mode, input, output, mito_genome, cluster_config, keep_temp_files, atac
 	if not os.path.exists(outfolder):
 		os.makedirs(outfolder)
 	if not os.path.exists(logfolder):
-		os.makedirs(logfolder)	
+		os.makedirs(logfolder)
+	if not os.path.exists(fastafolder):
+		os.makedirs(fastafolder)	
 	if not os.path.exists(internfolder):
 		os.makedirs(internfolder)
 		with open(internfolder + "/README" , 'w') as outfile:
@@ -133,9 +137,10 @@ def main(mode, input, output, mito_genome, cluster_config, keep_temp_files, atac
 	# Parse user-specified parameteres
 	# -----------------------------------
 	
+	####################
 	# Handle .fasta file
+	####################
 	supported_genomes = ['hg19', 'mm10']
-	print(mito_genome)
 	if any(mito_genome in s for s in supported_genomes):
 		click.echo(gettime() + "Found designated mitochondrial genome: %s" % mito_genome, logf)
 		fastaf = script_dir + "/bin/anno/fasta/" + mito_genome + "_mtDNA.fasta"
@@ -151,6 +156,20 @@ def main(mode, input, output, mito_genome, cluster_config, keep_temp_files, atac
 	mito_name, mito_seq = list(fasta.items())[0]
 	mito_length = len(mito_seq)
 	
+	shutil.copyfile(fastaf, fastafolder + "/" + mito_genome + ".fasta")
+	fastaf = fastafolder + "/" + mito_genome + ".fasta"
+	pysam.faidx(fastaf)
+	
+	f = open(fastafolder + "/" + mito_genome + "_refAllele.txt", 'w')
+	b = 1
+	for base in mito_seq:
+		f.write(str(b) + "\t" + base + "\n")
+		b += 1
+	f.close()
+		
+	##############################
+	# Other command line arguments
+	##############################
 	
 	if(keep_duplicates):
 		skip_indels = ""
