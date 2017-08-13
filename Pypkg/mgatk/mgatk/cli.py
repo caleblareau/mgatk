@@ -20,37 +20,39 @@ from .mgatkHelp import *
 @click.command()
 @click.version_option()
 @click.argument('mode', type=click.Choice(['call', 'go']))
-@click.option('--input', default = ".", required=True, help='input directory; assumes .bam / .bam.bai files are present')
-@click.option('--output', default="mgatk_out", required=True, help='Output directory for analysis')
-@click.option('--name', default="mgatk", required=True, help='Prefix for project name')
+@click.option('--input', '-i',  default = ".", required=True, help='input directory; assumes .bam / .bam.bai files are present')
+@click.option('--output', '-o', default="mgatk_out", required=True, help='Output directory for analysis')
+@click.option('--name', '-n', default="mgatk", required=True, help='Prefix for project name')
 
-@click.option('--mito-genome', default = "hg19", required=True, help='mitochondrial genome configuration. Choose hg19, mm10, or a custom .fasta file (see documentation)')
-@click.option('--cluster-config', default = "", required=True, help='Cluster configuration for snakemake. See snakemake documentation for more details. Accepts .yaml and .json file formats.')
-@click.option('--keep-temp-files', is_flag=True, help='Keep all intermediate files.')
-@click.option('--bams-ready', is_flag=True, help='Input bam files are already filtered for only the mitochondrial genome and sorted; can still remove duplicates optionally though; this flag also bypasses clipping')
+@click.option('--mito-genome', '-m', default = "hg19", required=True, help='mitochondrial genome configuration. Choose hg19, mm10, or a custom .fasta file (see documentation)')
+@click.option('--ncores', '-c', default = "detect", required=True, help='Number of cores to run job in parallel.')
+@click.option('--bams-ready', '-r', is_flag=True, help='Input bam files are already filtered for only the mitochondrial genome and sorted; can still remove duplicates optionally though; this flag also bypasses clipping')
 
-@click.option('--atac-single', is_flag=True, help='Default parameters for ATAC-Seq single end read analyses.')
-@click.option('--atac-paired', is_flag=True, help='Default parameters for ATAC-Seq paired end read analyses.')
-@click.option('--rna-single', is_flag=True, help='Default parameters for RNA-Seq single end read analyses.')
-@click.option('--rna-paired', is_flag=True, help='Default parameters for RNA-Seq paired end read analyses.')
+@click.option('--atac-single', '-as', is_flag=True, help='Default parameters for ATAC-Seq single end read analyses; see documentation.')
+@click.option('--atac-paired', '-ap',  is_flag=True, help='Default parameters for ATAC-Seq paired end read analyses; see documentation.')
+@click.option('--rna-single', '-rs', is_flag=True, help='Default parameters for RNA-Seq single end read analyses; see documentation.')
+@click.option('--rna-paired', '-rp', is_flag=True, help='Default parameters for RNA-Seq paired end read analyses; see documentation.')
+@click.option('--filter-flags', '-ff', is_flag=True, help='Manual specification of .sam headers to filter for; see documentation.')
 
-@click.option('--keep-duplicates', is_flag=True, help='Keep marked (presumably PCR) duplicates; recommended for low-coverage RNA-Seq')
-@click.option('--keep-indels', is_flag=True, help='Keep marked indels for analysis; not recommended as this flag has not been well-tested')
-@click.option('--read-qual', default = "20", required=True, help='Minimum read quality for final filter.')
 
-@click.option('--clipL', default = "0", required=True, help='Number of variants to clip from left hand side of read.')
-@click.option('--clipR', default = "0", required=True, help='Number of variants to clip from right hand side of read.')
+@click.option('--keep-duplicates', '-kd', is_flag=True, help='Keep marked (presumably PCR) duplicates; recommended for low-coverage RNA-Seq')
+@click.option('--keep-indels', '-ki', is_flag=True, help='Keep marked indels for analysis; not recommended as this flag has not been well-tested')
+@click.option('--read-qual', '-q', default = "20", required=True, help='Minimum read quality for final filter.')
 
-@click.option('--keep-samples', default="ALL", help='Comma separated list of sample names to keep; ALL (special string) by default. Sample refers to basename of .bam file')
-@click.option('--ignore-samples', default="NONE", help='Comma separated list of sample names to ignore; NONE (special string) by default. Sample refers to basename of .bam file')
+@click.option('--clipL', '-cl', default = "0", required=True, help='Number of variants to clip from left hand side of read.')
+@click.option('--clipR', '-cr', default = "0", required=True, help='Number of variants to clip from right hand side of read.')
 
-@click.option('--skip-rds', is_flag=True, help='Generate plain-text only output. Otherwise, this generates a .rds obejct that can be immediately read into R')
+@click.option('--keep-samples', '-k', default="ALL", help='Comma separated list of sample names to keep; ALL (special string) by default. Sample refers to basename of .bam file')
+@click.option('--ignore-samples', '-g', default="NONE", help='Comma separated list of sample names to ignore; NONE (special string) by default. Sample refers to basename of .bam file')
 
-def main(mode, input, output, name, mito_genome, cluster_config, keep_temp_files, bams_ready,
-	atac_single, atac_paired, rna_single, rna_paired, keep_duplicates, keep_indels,
-	read_qual, clipl, clipr, keep_samples, ignore_samples, skip_rds):
+@click.option('--keep-temp-files', '-t', is_flag=True, help='Keep all intermediate files.')
+@click.option('--skip-rds', '-s', is_flag=True, help='Generate plain-text only output. Otherwise, this generates a .rds obejct that can be immediately read into R')
+
+def main(mode, input, output, name, mito_genome, ncores, bams_ready,
+	atac_single, atac_paired, rna_single, rna_paired, filter_flags, keep_duplicates, keep_indels,
+	read_qual, clipl, clipr, keep_samples, ignore_samples, keep_temp_files, skip_rds):
 	
-	"""mgatk: Processing mitochondrial mutations."""
+	"""mgatk: a mitochondrial genome analysis toolkit."""
 	__version__ = get_distribution('mgatk').version
 	script_dir = os.path.dirname(os.path.realpath(__file__))
 
@@ -177,7 +179,7 @@ def main(mode, input, output, name, mito_genome, cluster_config, keep_temp_files
 	fastaf = fastafolder + "/" + mito_genome + ".fasta"
 	pysam.faidx(fastaf)
 	
-	f = open(fastafolder + "/" + mito_genome + "_refAllele.txt", 'w')
+	f = open(outfolder + "/final/" + name + "." + mito_genome + "_refAllele.txt", 'w')
 	b = 1
 	for base in mito_seq:
 		f.write(str(b) + "\t" + base + "\n")
@@ -192,6 +194,14 @@ def main(mode, input, output, name, mito_genome, cluster_config, keep_temp_files
 		skip_indels = ""
 	else:
 		skip_indels = "--skip-indels "
+		
+	if(ncores == "detect"):
+		ncores = str(available_cpu_count())
+	else:
+		ncores = str(ncores)
+		
+	click.echo(gettime() + "Processing .bams with "+ncores+" cores", logf)
+	click.echo(gettime() + "Processing .bams with "+ncores+" cores")
 	
 	# -------------------
 	# Process each sample
@@ -209,23 +219,28 @@ def main(mode, input, output, name, mito_genome, cluster_config, keep_temp_files
 		os.makedirs(qcfolder + "/BAQ")
 		os.makedirs(qcfolder + "/BQ")
 		os.makedirs(qcfolder + "/depth")
-				
-	click.echo(gettime() + "Scattering samples", logf)
-	
+					
 	snakedict1 = {'input_directory' : input, 'output_directory' : output, 'script_dir' : script_dir,
 		'fasta_file' : fastaf, 'mito_genome' : mito_genome, 'mito_length' : mito_length, 'name' : name,
 		'read_qual' : read_qual, 'filtered_sorted' : filtered_sorted, 'keep_duplicates' : keep_duplicates,
-		'skip_indels' : skip_indels,
-		'clipl' : clipl, 'clipr' : clipr}
+		'skip_indels' : skip_indels, 'clipl' : clipl, 'clipr' : clipr}
 	
 	y1 = parselfolder + "/snake.scatter.yaml"
 	with open(y1, 'w') as yaml_file:
 		yaml.dump(snakedict1, yaml_file, default_flow_style=False)
 		
-	snakecall1 = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --config cfp="' + y1 + '"'
+	snakecall1 = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="' + y1 + '"'
 	os.system(snakecall1)
-	click.echo(gettime() + "Sample scattering done.", logf)
+	click.echo(gettime() + "mgatk Success!", logf)
 	
+	if keep_temp_files:
+		click.echo(gettime() + "Temporary files not deleted since --keep-temp-files was specified.", logf)
+	else:
+		shutil.rmtree(fastafolder)
+		shutil.rmtree(internfolder)
+		shutil.rmtree(tempfolder)
+		click.echo(gettime() + "Intermediate files successfully removed.", logf)
+		
 	# Suspend logging
 	logf.close()
 	
