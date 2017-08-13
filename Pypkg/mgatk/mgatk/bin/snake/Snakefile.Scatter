@@ -9,12 +9,13 @@ configfile: config["cfp"]
 # Parse the configuration variables
 indir = config["input_directory"]
 outdir = config["output_directory"]
-mitoQual = config["mitoQual"]
+read_qual = config["read_qual"]
 mito_genome = config["mito_genome"]
 mito_length = config["mito_length"]
 fasta_file = config["fasta_file"]
 script_dir = config["script_dir"]
 skip_indels = config["skip_indels"]
+name = config["name"]
 keep_duplicates = config["keep_duplicates"]
 filtered_sorted = config["filtered_sorted"]
 clipL = config["clipl"]
@@ -29,7 +30,7 @@ python = shutil.which("python")
 
 # Script calls
 filtClipBam = script_dir + "/bin/filterClipBam.py"
-MarkDuplicatesCall = java + " -jar " + script_dir + "/bin/MarkDuplicates.jar"
+MarkDuplicatesCall = java + "-Xmx4000m  -jar " + script_dir + "/bin/MarkDuplicates.jar"
 
 # A Snakemake regular expression matching the bam files that were all aligned
 SAMPLES, = glob_wildcards(join(outdir, ".internal/samples/{sample}.bam.txt"))
@@ -38,17 +39,18 @@ bamtxtin = '{sample}.bam.txt'
 
 rule all:
 	input:
-		outdir + "/qc/depth/all.txt"
+		outdir + "/final/" + name + ".depthTable.txt",
+		outdir + "/final/" + name + ".allCalls.txt.gz"
 
 rule filter_sort:
 	input:
 		txtin = join(outdir + "/.internal/samples", bamtxtin)
 	output:
-		bam = outdir + "/temp_bam/ready/{sample}.qc.bam",
-		bai = outdir + "/temp_bam/ready/{sample}.qc.bam.bai"
+		bam = outdir + "/temp/ready_bam/{sample}.qc.bam",
+		bai = outdir + "/temp/ready_bam/{sample}.qc.bam.bai"
 	threads: 1
 	run:
-		rmlog = output.bam.replace(".qc.bam", ".rmdups.logs").replace("/temp_bam/ready/", "/logs/rmdupslogs/")
+		rmlog = output.bam.replace(".qc.bam", ".rmdups.logs").replace("/temp/ready_bam/", "/logs/rmdupslogs/")
 		with open(input.txtin) as f: bamfilepath = f.read()
 		
 		# User likes the .bam files the way they are though we may need to filter duplicates
@@ -61,13 +63,13 @@ rule filter_sort:
 
 		# Do some filtering, clipping, and sorting
 		else:
-			prepbam = output.bam.replace(".qc.bam", ".prep.bam").replace("/temp_bam/ready/", "/temp_bam/temp/")
+			prepbam = output.bam.replace(".qc.bam", ".prep.bam").replace("/temp/ready_bam/", "/temp/temp_bam/")
 			if(keep_duplicates):
 				fcb_call = python + " " + filtClipBam + " " + bamfilepath + " " + clipL + " -" + clipR + " " + mito_genome + " | " + samtools + " sort -n - | " + samtools + " fixmate - " + prepbam
 				os.system(fcb_call)
 
 			else:
-				filtbam = output.bam.replace(".qc.bam", ".filt.bam").replace("/temp_bam/ready/", "/temp_bam/temp/")
+				filtbam = output.bam.replace(".qc.bam", ".filt.bam").replace("/temp/ready_bam/", "/temp/temp_bam/")
 				fcb_call = python + " " + filtClipBam + " " + bamfilepath + " " + clipL + " -" + clipR + " " + mito_genome + " | " + samtools + " sort -n - | " + samtools + " fixmate - " + filtbam
 				os.system(fcb_call)
 				
@@ -81,7 +83,7 @@ rule filter_sort:
 
 rule get_depth_bq_baq:
 	input:
-		bam = outdir + "/temp_bam/ready/{sample}.qc.bam"
+		bam = outdir + "/temp/ready_bam/{sample}.qc.bam"
 	output:
 		depth = outdir + "/qc/depth/{sample}.Q0.depth.txt", 
 		baq = outdir + "/qc/BAQ/{sample}.Q0.BAQ.txt", 
@@ -108,12 +110,41 @@ rule get_depth_bq_baq:
 		os.system(tabix + " " + bq_vcf_gz)
 		bcc2 = bcftools+" query -f '[%POS\tINFO/%I16\n]' "+bq_vcf_gz+" | sed -e 's/INFO\///g' -e 's/,/\t/g' > " + output.bq
 		os.system(bcc2)
+
+rule call_variants:
+	input:
+		expand(outdir + "/temp/ready_bam/{sample}.qc.bam", sample=SAMPLES)
+	output:
+		bamlist = temp(outdir + "/temp/vcf/allBamSamples.txt"),
+		vcf = temp(outdir + "/temp/vcf/All.SNPs.vcf.gz"),
+		mnpvcf = temp(outdir + "/temp/vcf/All.SNPs.MNP.vcf.gz"),
+		mnptxt = outdir + "/temp/vcf/All.SNPs.MNP.txt",
+		gzcall = outdir + "/final/" + name + ".allCalls.txt.gz", 
+		
+	run:
+		# Make text file of all the bams
+		with open(output.bamlist, 'w') as o:
+			for i in input:
+				o.write(i + "\n")
+
+		stc1 = samtools + " mpileup -d8000 -f "+fasta_file+" -r "+mito_genome+" -Q"+read_qual+" -t AD,ADF,ADR "+skip_indels+" -b "+output.bamlist+" -v > " + output.vcf
+		os.system(stc1)
+		
+		bcc1 = bcftools + " norm -m-both " + output.vcf + " > " + output.mnpvcf
+		os.system(bcc1)
+		
+		bcc2 = bcftools + " query -f '[%CHROM\t%POS\t%ALT\t%SAMPLE\tINFO/%AD\n]' " +  output.mnpvcf + " > " + output.mnptxt
+		os.system(bcc2)
+		
+		outsed = (outdir + "/temp/ready_bam/").replace("/", "\/")
+		finalcmd = '''cat '''+output.mnptxt+''' | sed -e 's/INFO\///g' -e 's/,/\t/g' | awk '$3 != "<*>" && $6 != "0" {print $2"\t"$3"\t"$4"\t"$6}' | sed -e 's/INFO\///g' -e 's/''' +outsed + '''//g' | sed -e 's/INFO\///g' -e 's/.qc.bam//g' | gzip > ''' + output.gzcall
+		os.system(finalcmd)
 		
 rule make_depth_table:
 	input:
 		expand(outdir + "/qc/depth/{sample}.Q0.depth.txt", sample=SAMPLES)
 	output:
-		outdir + "/qc/depth/all.txt"
+		outdir + "/final/" + name + ".depthTable.txt"
 	threads: 1
 	run: 
 		with open(output[0], 'w') as f:

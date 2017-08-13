@@ -22,6 +22,8 @@ from .mgatkHelp import *
 @click.argument('mode', type=click.Choice(['call', 'go']))
 @click.option('--input', default = ".", required=True, help='input directory; assumes .bam / .bam.bai files are present')
 @click.option('--output', default="mgatk_out", required=True, help='Output directory for analysis')
+@click.option('--name', default="mgatk", required=True, help='Prefix for project name')
+
 @click.option('--mito-genome', default = "hg19", required=True, help='mitochondrial genome configuration. Choose hg19, mm10, or a custom .fasta file (see documentation)')
 @click.option('--cluster-config', default = "", required=True, help='Cluster configuration for snakemake. See snakemake documentation for more details. Accepts .yaml and .json file formats.')
 @click.option('--keep-temp-files', is_flag=True, help='Keep all intermediate files.')
@@ -44,7 +46,7 @@ from .mgatkHelp import *
 
 @click.option('--skip-rds', is_flag=True, help='Generate plain-text only output. Otherwise, this generates a .rds obejct that can be immediately read into R')
 
-def main(mode, input, output, mito_genome, cluster_config, keep_temp_files, bams_ready,
+def main(mode, input, output, name, mito_genome, cluster_config, keep_temp_files, bams_ready,
 	atac_single, atac_paired, rna_single, rna_paired, keep_duplicates, keep_indels,
 	read_qual, clipl, clipr, keep_samples, ignore_samples, skip_rds):
 	
@@ -119,6 +121,7 @@ def main(mode, input, output, mito_genome, cluster_config, keep_temp_files, bams
 	# Check if output directories exist; make if not
 	if not os.path.exists(outfolder):
 		os.makedirs(outfolder)
+		os.makedirs(outfolder + "/final")
 	if not os.path.exists(logfolder):
 		os.makedirs(logfolder)
 		if not(keep_duplicates):
@@ -193,11 +196,12 @@ def main(mode, input, output, mito_genome, cluster_config, keep_temp_files, bams
 	# -------------------
 	# Process each sample
 	# -------------------
-	tempbamfolder = outfolder + "/temp_bam"
-	if not os.path.exists(tempbamfolder):
-		os.makedirs(tempbamfolder)
-		os.makedirs(tempbamfolder + "/temp")
-		os.makedirs(tempbamfolder + "/ready")
+	tempfolder = outfolder + "/temp"
+	if not os.path.exists(tempfolder):
+		os.makedirs(tempfolder)
+		os.makedirs(tempfolder + "/temp_bam")
+		os.makedirs(tempfolder + "/ready_bam")
+		os.makedirs(tempfolder + "/vcf")
 	
 	qcfolder = outfolder + "/qc"
 	if not os.path.exists(qcfolder):
@@ -209,8 +213,8 @@ def main(mode, input, output, mito_genome, cluster_config, keep_temp_files, bams
 	click.echo(gettime() + "Scattering samples", logf)
 	
 	snakedict1 = {'input_directory' : input, 'output_directory' : output, 'script_dir' : script_dir,
-		'fasta_file' : fastaf, 'mito_genome' : mito_genome, 'mito_length' : mito_length,
-		'mitoQual' : read_qual, 'filtered_sorted' : filtered_sorted, 'keep_duplicates' : keep_duplicates,
+		'fasta_file' : fastaf, 'mito_genome' : mito_genome, 'mito_length' : mito_length, 'name' : name,
+		'read_qual' : read_qual, 'filtered_sorted' : filtered_sorted, 'keep_duplicates' : keep_duplicates,
 		'skip_indels' : skip_indels,
 		'clipl' : clipl, 'clipr' : clipr}
 	
