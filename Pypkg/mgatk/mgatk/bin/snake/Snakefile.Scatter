@@ -1,5 +1,7 @@
 from os.path import join
 import os
+import shutil
+import pysam
 
 configfile: config["cfp"]     
            
@@ -12,6 +14,8 @@ mito_length = config["mito_length"]
 fasta_file = config["fasta_file"]
 script_dir = config["script_dir"]
 skip_indels = config["skip_indels"]
+keep_duplicates = config["keep_duplicates"]
+filtered_sorted = config["filtered_sorted"]
 clipL = config["clipl"]
 clipR = config["clipr"]
 
@@ -20,10 +24,11 @@ bcftools = "bcftools"
 java = "java"
 samtools = "samtools"
 tabix = "tabix"
+python = shutil.which("python")
 
 # Script calls
 filtClipBam = script_dir + "/bin/filterClipBam.py"
-
+MarkDuplicatesCall = java + " -jar " + script_dir + "/bin/MarkDuplicates.jar"
 
 # A Snakemake regular expression matching the bam files that were all aligned
 SAMPLES, = glob_wildcards(join(outdir, ".internal/samples/{sample}.bam.txt"))
@@ -31,18 +36,56 @@ SAMPLES, = glob_wildcards(join(outdir, ".internal/samples/{sample}.bam.txt"))
 bamtxtin = '{sample}.bam.txt'
 
 rule all:
-    input:
-        outdir + "/qc/depth/all.txt"
+	input:
+		outdir + "/qc/depth/all.txt"
+
+rule filter_sort:
+	input:
+		txtin = join(outdir + "/.internal/samples", bamtxtin)
+	output:
+		bam = outdir + "/temp_bam/ready/{sample}.qc.bam",
+		bai = outdir + "/temp_bam/ready/{sample}.qc.bam.bai"
+	run:
+		rmlog = output.bam.replace(".qc.bam", ".rmdups.logs").replace("/temp_bam/ready/", "/logs/rmdupslogs/")
+		with open(input.txtin) as f: bamfilepath = f.read()
+		
+		# User likes the .bam files the way they are though we may need to filter duplicates
+		if(filtered_sorted):
+			if(keep_duplicates):
+				shutil.copyfile(bamfilepath, output.bam)
+			else:
+				mdc_long = MarkDuplicatesCall + " INPUT="+bamfilepath+" OUTPUT="+output.bam+" METRICS_FILE="+rmlog+" REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT"
+				os.system(mdc_long)
+
+		# Do some filtering, clipping, and sorting
+		else:
+			prepbam = output.bam.replace(".qc.bam", ".prep.bam").replace("/temp_bam/ready/", "/temp_bam/temp/")
+			if(keep_duplicates):
+				fcb_call = python + " " + filtClipBam + " " + bamfilepath + " " + clipL + " -" + clipR + " " + mito_genome + " | " + samtools + " sort -n - | " + samtools + " fixmate - " + prepbam
+				os.system(fcb_call)
+
+			else:
+				filtbam = output.bam.replace(".qc.bam", ".filt.bam").replace("/temp_bam/ready/", "/temp_bam/temp/")
+				fcb_call = python + " " + filtClipBam + " " + bamfilepath + " " + clipL + " -" + clipR + " " + mito_genome + " | " + samtools + " sort -n - | " + samtools + " fixmate - " + filtbam
+				os.system(fcb_call)
+				
+				rmdupbam = filtbam.replace(".filt.bam", ".rmdup.bam")
+				pysam.sort("-o", rmdupbam, filtbam)
+				mdc_long = MarkDuplicatesCall + " INPUT="+rmdupbam+" OUTPUT="+prepbam+" METRICS_FILE="+rmlog+" REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT"
+				os.system(mdc_long)
+				
+		pysam.sort("-o", output.bam, prepbam)
+		pysam.index(output.bam)
 
 rule get_depth:
-    input:
-        bamtxt = join(outdir + "/.internal/samples", bamtxtin)
-    output:
-        depth = outdir + "/qc/depth/{sample}.depth.txt", 
-    threads: 1
-    run:
-    	with open(input.bamtxt) as f: bamfilepath = f.read()
-    	os.system(samtools + " depth "+bamfilepath+" | awk '{sum+=$3} END {print sum/16571}' > " + output.depth)
+	input:
+		bam = outdir + "/temp_bam/ready/{sample}.qc.bam"
+	output:
+		depth = outdir + "/qc/depth/{sample}.depth.txt", 
+	threads: 1
+	run:
+		bamfilepath = input.bam
+		os.system(samtools + " depth "+bamfilepath+" | awk '{sum+=$3} END {print sum/"+str(mito_length)+"}' > " + output.depth)
 
 rule fin:
 	input:
