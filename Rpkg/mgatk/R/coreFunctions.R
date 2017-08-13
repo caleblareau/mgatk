@@ -51,3 +51,27 @@ setMethod("computeWeightedDistance", signature("ANY", "ANY", "ANY"),
             }
             return(mat)
           })
+
+####################
+# Internal Functions
+####################
+
+# Function returns a vector of a comma separated list of DNA
+# nucleotides by decreasing prevalence in a Summarized Experiment
+orderACTG <- function(mitoSE){
+  DNA <- c('A', 'C', 'G', 'T')
+  stopifnot(DNA %in% names(assays(mitoSE)))
+  d <- data.matrix(data.frame(
+    A = rowSums((assays(mitoSE)[["A"]])),
+    C = rowSums((assays(mitoSE)[["C"]])),
+    G = rowSums((assays(mitoSE)[["G"]])),
+    T = rowSums((assays(mitoSE)[["T"]]))
+  ))
+
+  orderACTGvec <- function(vec){
+    names(vec) <- DNA
+    paste(names(vec)[order(vec, decreasing = TRUE)], collapse = ",")
+  }
+  acgtVec <- apply(d, 1, orderACTGvec)
+  return(acgtVec)
+}
