@@ -39,7 +39,7 @@ setGeneric(name = "importMito.txt", def = function(datafile, pos = 1, allele = 2
   standardGeneric("importMito.txt"))
 
 #' @rdname importMito.txt
-setMethod("importMito.txt", signature("character", "numeric", "ANY", "ANY", "ANY", "ANY"),
+setMethod("importMito.txt", signature("character", "ANY", "ANY", "ANY", "ANY", "ANY"),
           definition = function(datafile, pos = 1, allele = 2, sample = 3, coverage = 4, mito = "chrM"){
 
   stopifnot(length(file) == 1)
@@ -53,7 +53,7 @@ setMethod("importMito.txt", signature("character", "numeric", "ANY", "ANY", "ANY
     stop("Provide a valid file format (.gz, .txt, .csv, or .tsv)")
   }
 
-  stopifnot(all(dim(dt)[2] > c(pos, allele, sample, coverage)))
+  stopifnot(all(dim(dt)[2] >= c(pos, allele, sample, coverage)))
 
   # Handle column naming based on user input
   ct <- paste0("X", 1:dim(dt)[2])
@@ -67,6 +67,8 @@ setMethod("importMito.txt", signature("character", "numeric", "ANY", "ANY", "ANY
   sdt <- lapply(split(1:nrow(dt), dt[[allele]]), function(x) dt[x])
 
   # cast the split data tables into sparse matrices
+  # extra element appended to all vectors is for correct
+  # dimension defintions
   sparseMatrixMake <- function(letter){
     Matrix::sparseMatrix(
       i = c(sdt[[letter]][["pos"]],maxpos),

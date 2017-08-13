@@ -3,13 +3,13 @@
 \docType{methods}
 \name{importMito.txt}
 \alias{importMito.txt}
-\alias{importMito.txt,character,numeric-method}
+\alias{importMito.txt,character-method}
 \title{Import data from plain text file into}
 \usage{
 importMito.txt(datafile, pos = 1, allele = 2, sample = 3, coverage = 4,
   mito = "chrM")
 
-\S4method{importMito.txt}{character,numeric}(datafile, pos = 1, allele = 2,
+\S4method{importMito.txt}{character}(datafile, pos = 1, allele = 2,
   sample = 3, coverage = 4, mito = "chrM")
 }
 \arguments{

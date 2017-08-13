@@ -41,11 +41,47 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// giniRows
+NumericVector giniRows(NumericMatrix x);
+RcppExport SEXP _mgatk_giniRows(SEXP xSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericMatrix >::type x(xSEXP);
+    rcpp_result_gen = Rcpp::wrap(giniRows(x));
+    return rcpp_result_gen;
+END_RCPP
+}
+// giniCols
+NumericVector giniCols(NumericMatrix x);
+RcppExport SEXP _mgatk_giniCols(SEXP xSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericMatrix >::type x(xSEXP);
+    rcpp_result_gen = Rcpp::wrap(giniCols(x));
+    return rcpp_result_gen;
+END_RCPP
+}
+// giniCpp
+float giniCpp(NumericVector x);
+RcppExport SEXP _mgatk_giniCpp(SEXP xSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type x(xSEXP);
+    rcpp_result_gen = Rcpp::wrap(giniCpp(x));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_mgatk_calcWdist_abs", (DL_FUNC) &_mgatk_calcWdist_abs, 2},
     {"_mgatk_calcWdist_euclidean", (DL_FUNC) &_mgatk_calcWdist_euclidean, 2},
     {"_mgatk_calcWdist_sqrt", (DL_FUNC) &_mgatk_calcWdist_sqrt, 2},
+    {"_mgatk_giniRows", (DL_FUNC) &_mgatk_giniRows, 1},
+    {"_mgatk_giniCols", (DL_FUNC) &_mgatk_giniCols, 1},
+    {"_mgatk_giniCpp", (DL_FUNC) &_mgatk_giniCpp, 1},
     {NULL, NULL, 0}
 };
 

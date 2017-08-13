@@ -1,12 +1,13 @@
 
 #include <Rcpp.h>
+#include <math.h>
 using namespace Rcpp;
 
 double absDist (NumericVector x, NumericVector y, NumericVector w){
   int n = y.length();
   double total = 0;
   for (int i = 0; i < n ; ++i) {
-    total += w(i)*sqrt(pow(x(i)-y(i),2.0));
+    total += w(i)*fabs(x(i)-y(i));
   }
   return total/(float)x.length();
 }
@@ -24,7 +25,7 @@ double sqrtDist (NumericVector x, NumericVector y, NumericVector w){
   int n = y.length();
   double total = 0;
   for (int i = 0; i < n ; ++i) {
-    total += w(i)*sqrt(sqrt(pow(x(i)-y(i),2.0)));
+    total += w(i)*sqrt(fabs(x(i)-y(i)));
   }
   return total/(float)x.length();
 }
