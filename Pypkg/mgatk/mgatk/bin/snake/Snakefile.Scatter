@@ -131,6 +131,8 @@ rule detailed_variant_calls:
 			os.system(pycall0)
 			os.system("gzip -c " + output.o1 + " > " + output.out)
 		else:
+			with open(output.o1 , 'w') as outfile:
+				outfile.write(" ")
 			with open(output.out , 'wb') as outfile:
 				outfile.write(" ".encode())
 				
@@ -178,6 +180,19 @@ rule call_variants:
 		os.system(finalcmd)
 		
 rule make_depth_table:
+	input:
+		expand(outdir + "/qc/depth/{sample}.Q0.depth.txt", sample=SAMPLES)
+	output:
+		outdir + "/final/" + name + ".depthTable.txt"
+	threads: 1
+	run: 
+		with open(output[0], 'w') as f:
+			for i in input:
+				sample = i.replace(outdir+ "/qc/depth/", '').replace(".Q0.depth.txt", '')
+				result = subprocess.run(['cat', i], stdout=subprocess.PIPE)
+				f.write(sample + " " + result.stdout.strip().decode("utf-8") + "\n")
+
+rule make_blacklist:
 	input:
 		expand(outdir + "/qc/depth/{sample}.Q0.depth.txt", sample=SAMPLES)
 	output:

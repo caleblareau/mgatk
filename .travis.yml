@@ -28,11 +28,8 @@ before_install:
   - cd ..
   - PATH=`pwd`/htslib-1.5/bin:$PATH
 
-  - chmod +x ../.travis/run.sh
-  - chmod +x ../.travis/install.sh
-
 install:
-  - "./.travis/install.sh"
+  - python Pypkg/mgatk/setup.py install
 
 script: 
-  - "./.travis/run.sh"
+  - cd Pypkg/mgatk/tests && echo $PATH
