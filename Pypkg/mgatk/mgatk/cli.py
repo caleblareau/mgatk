@@ -229,9 +229,12 @@ def main(mode, input, output, name, mito_genome, ncores, bams_ready,
 	with open(y1, 'w') as yaml_file:
 		yaml.dump(snakedict1, yaml_file, default_flow_style=False)
 		
-	snakecall1 = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="' + y1 + '"'
-	os.system(snakecall1)
-	click.echo(gettime() + "mgatk Success!", logf)
+	#dagcall = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="' + y1 + '" --rulegraph -T'
+	#os.system(dagcall)
+	
+	snakefile1 = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="' + y1 + '" -T'
+	os.system(snakefile1)
+	click.echo(gettime() + "mgatk successfully processed the supplied .bam files", logf)
 	
 	if keep_temp_files:
 		click.echo(gettime() + "Temporary files not deleted since --keep-temp-files was specified.", logf)
