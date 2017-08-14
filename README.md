@@ -7,7 +7,6 @@
 [![Documentation Status](https://readthedocs.org/projects/mgatk/badge/?version=latest)](http://mgatk.readthedocs.io/en/latest/?badge=latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-
 The **mgatk** package was developed by Caleb Lareau and Jacob Ulirsch and is maintained by
 [Caleb](mailto:caleblareau@g.harvard.edu) in the
 [Aryee Lab](https://aryeelab.org) and [Buenrostro Lab](https://buenrostrolab.com).
