@@ -181,7 +181,7 @@ def main(mode, input, output, name, mito_genome, ncores, bams_ready, filter_flag
 		elif(atac_paired):
 			click.echo(gettime() + "Adding read filtering flags for paired ATAC/WGS.", logf)
 			click.echo(gettime() + "These include NM < 4, and NH:i:1", logf)
-			ffout = '| grep -E "NM:i:(0|1|2|3)$" | grep -E "NH:i:1" '
+			ffout = '| grep -E "NM:i:(0|1|2|3)$" | grep -E "NH:i:(1|2)" '
 			
 		elif(rna_single):
 			click.echo(gettime() + "Adding read filtering flags for single-end RNA.", logf)
@@ -191,8 +191,9 @@ def main(mode, input, output, name, mito_genome, ncores, bams_ready, filter_flag
 		elif(atac_single):
 			click.echo(gettime() + "Adding read filtering flags for single-end ATAC/WGS.", logf)
 			click.echo(gettime() + "These include NM < 4, and NH:i:1", logf)
-			ffout = '| grep -E "NM:i:(0|1|2|3)$" | grep -E "NH:i:1" '
-			
+			ffout = '| grep -E "NM:i:(0|1|2|3)$" | grep -E "NH:i:(1|2)" '
+		else:
+			click.echo(gettime() + "Not filtering for any alignment meta-data on reads.", logf)
 	else: # just do the user's specification
 		ff = filter_flags
 		ff = filter_flags.split(',')
@@ -200,6 +201,8 @@ def main(mode, input, output, name, mito_genome, ncores, bams_ready, filter_flag
 			ffout = ffout + '| grep -E "' + flag+'" ' 
 		click.echo(gettime() + "Choosing user-defined flags to subset reads for.", logf)
 		click.echo(gettime() + "Reads will be matched for the following:" + ffout, logf)
+	
+	
 	
 	####################
 	# Handle .fasta file
@@ -248,7 +251,7 @@ def main(mode, input, output, name, mito_genome, ncores, bams_ready, filter_flag
 	
 	proper_pairing = ""
 	if(proper_pairs):
-		proper_pairing = "samtools view -f 0x2 -b - "
+		proper_pairing = "samtools view -f 0x2 -b - | "
 	
 	click.echo(gettime() + "Processing .bams with "+ncores+" cores", logf)
 	click.echo(gettime() + "Processing .bams with "+ncores+" cores")

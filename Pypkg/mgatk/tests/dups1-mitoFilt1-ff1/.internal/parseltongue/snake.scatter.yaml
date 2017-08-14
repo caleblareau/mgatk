@@ -1,0 +1,15 @@
+clipl: '0'
+clipr: '0'
+fasta_file: tests/dups1-mitoFilt1-ff1/fasta/chrM.fasta
+filter_reads: '| grep -E "nM:i:(0|1|2|3|4)$" | grep -E "NH:i:(1|2)" '
+filtered_sorted: false
+input_directory: tests/humanbam
+keep_duplicates: true
+mito_genome: chrM
+mito_length: 16571
+name: dups1-mitoFilt1-ff1
+output_directory: tests/dups1-mitoFilt1-ff1
+proper_paired: ''
+read_qual: '20'
+script_dir: /Volumes/dat/Research/AryeeResearch/lareau_dev/mgatk/Pypkg/mgatk/mgatk
+skip_indels: '--skip-indels '
