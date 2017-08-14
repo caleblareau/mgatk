@@ -1,7 +1,0 @@
-## net.sf.picard.metrics.StringHeader
-# net.sf.picard.sam.MarkDuplicates INPUT=tests/dups0-mitoFilt1-ff1/temp/temp_bam/MGH97-P8-H03.temp2.bam OUTPUT=tests/dups0-mitoFilt1-ff1/temp/temp_bam/MGH97-P8-H03.prep.bam METRICS_FILE=tests/dups0-mitoFilt1-ff1/logs/rmdupslogs/MGH97-P8-H03.rmdups.logs REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT    ASSUME_SORTED=false MAX_SEQUENCES_FOR_DISK_READ_ENDS_MAP=50000 MAX_FILE_HANDLES_FOR_READ_ENDS_MAP=8000 SORTING_COLLECTION_SIZE_RATIO=0.25 READ_NAME_REGEX=[a-zA-Z0-9]+:[0-9]:([0-9]+):([0-9]+):([0-9]+).* OPTICAL_DUPLICATE_PIXEL_DISTANCE=100 TMP_DIR=/var/folders/m0/x094zjwj29jgv66179mkkkhm0000gn/T/lareauc VERBOSITY=INFO QUIET=false COMPRESSION_LEVEL=5 MAX_RECORDS_IN_RAM=500000 CREATE_INDEX=false CREATE_MD5_FILE=false
-## net.sf.picard.metrics.StringHeader
-# Started on: Mon Aug 14 10:48:02 EDT 2017
-
-
-

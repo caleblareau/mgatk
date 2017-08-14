@@ -6,27 +6,39 @@
 ##########################
 
 import sys
+import re
 import pysam
 
-bam = pysam.AlignmentFile(sys.argv[1], "rb")
+bamfile = sys.argv[1]
+clipL = sys.argv[2]
+clipR = sys.argv[3]
+mtchr = sys.argv[4]
+mtchr = sys.argv[4]
+
+bam = pysam.AlignmentFile(bamfile, "rb")
 out = pysam.AlignmentFile("-", "wb", template=bam)
 
-if(int(sys.argv[2]) > 0 & int(sys.argv[3]) < 0):
+# Clip Both
+if(int(clipL) > 0 & int(sys.argv[3]) < 0):
 	for read in bam:
 		q = read.qual
-		read.seq = "N"*int(sys.argv[2]) + read.seq[int(sys.argv[2]):int(sys.argv[3])] + "N"*(abs(int(sys.argv[3])))
-		read.qual = "!"*int(sys.argv[2]) + q[int(sys.argv[2]):int(sys.argv[3])] + "!"*(abs(int(sys.argv[3])))
-		if(read.reference_name == sys.argv[4]):
+		read.seq = "N"*int(clipL) + read.seq[int(clipL):int(clipR )] + "N"*(abs(int(clipR)))
+		read.qual = "!"*int(clipL) + q[int(clipL):int(clipR )] + "!"*(abs(int(clipR)))
+		if(read.reference_name == mtchr]):
 			out.write(read)
-elif(int(sys.argv[3]) < 0):
+			
+# Clip right
+elif(int(clipL) < 0):
 	for read in bam:
 		q = read.qual
-		read.seq = read.seq[int(sys.argv[2]):int(sys.argv[3])] + "N"*(abs(int(sys.argv[3])))
-		read.qual = q[int(sys.argv[2]):int(sys.argv[3])] + "!"*(abs(int(sys.argv[3])))
-		if(read.reference_name == sys.argv[4]):
+		read.seq = read.seq[int(clipL):int(clipR)] + "N"*(abs(int(clipR)))
+		read.qual = q[int(clipL):int(clipR)] + "!"*(abs(int(clipR)))
+		if(read.reference_name == mtchr):
 			out.write(read)
+
+# No clipping, just filtering
 else:
 		for read in bam:
-			if(read.reference_name == sys.argv[4]):
+			if(read.reference_name == mtchr):
 				out.write(read)
 				
