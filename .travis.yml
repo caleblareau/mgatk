@@ -15,7 +15,7 @@ before_install:
   - cd ..
 
 install:
- - python Pypkg/mgatk/setup.py install
+- "./.travis/install.sh"
 
 script: 
-- cd Pypkg/mgatk/tests && py.test
+- "./.travis/run.sh"
