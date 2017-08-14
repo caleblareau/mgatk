@@ -4,14 +4,42 @@ dist: trusty
 
 python:
   - "3.6"
-    
+
+addons:
+  apt:
+    sources:
+      - r-packages-precise
+    packages:
+      - r-base-dev	
+      - r-recommended
+      - oracle-java8-installer   
 before_install:
-  - apt-get install samtools tabix -y
+  - wget https://github.com/samtools/samtools/releases/download/1.5/samtools-1.5.tar.bz2 -O samtools.tar.bz2
+  - tar -xjvf samtools.tar.bz2
+  - cd samtools-1.5
+  - make
+  - cd ..
+  - PATH=`pwd`/samtools-1.5/bin:$PATH
+
+  - wget https://github.com/samtools/bcftools/releases/download/1.5/bcftools-1.5.tar.bz2 -O bcftools.tar.bz2
+  - tar -xjvf bcftools.tar.bz2
+  - cd bcftools-1.5
+  - make
+  - cd ..
+  - PATH=`pwd`/bcftools-1.5/bin:$PATH
+
+  - wget https://github.com/samtools/htslib/releases/download/1.5/htslib-1.5.tar.bz2 -O htslib.tar.bz2
+  - tar -xjvf htslib.tar.bz2
+  - cd htslib-1.5
+  - make
+  - cd ..
+  - PATH=`pwd`/htslib-1.5/bin:$PATH
+
   - chmod +x ../.travis/run.sh
   - chmod +x ../.travis/install.sh
 
 install:
-- "./.travis/install.sh"
+  - "./.travis/install.sh"
 
 script: 
-- "./.travis/run.sh"
+  - "./.travis/run.sh"

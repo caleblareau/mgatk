@@ -34,5 +34,14 @@ samtools view -H $bam > $out/$sample.header.sam
 #samtools view $bam | grep -E "NM:i:(0|1|2|3)	" | grep -E "XO:i:0	" | cat $out/$sample.header.sam - | samtools view -f 0x2 -b - > $out/$sample.filtered.bam
 samtools view $bam | grep -E "nM:i:(0|1|2|3|4)$" | grep -E "NH:i:1	" | cat $out/$sample.header.sam - | samtools view -b - > $out/$sample.filtered.bam && samtools index $out/$sample.filtered.bam
 
+wget https://github.com/samtools/samtools/releases/download/1.5/samtools-1.5.tar.bz2 -O samtools.tar.bz2
+tar -xjvf samtools.tar.bz2
+cd samtools-1.5
+make
+cd ..
+PATH=`pwd`/samtools-1.5/bin:$PATH
 
+
+wget https://github.com/samtools/bcftools/releases/download/1.5/bcftools-1.5.tar.bz2 -O bcftools.tar.bz2
+tar -xjvf bcftlls.tar.bz2
 
