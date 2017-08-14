@@ -28,7 +28,7 @@ from .mgatkHelp import *
 @click.option('--ncores', '-c', default = "detect", required=True, help='Number of cores to run job in parallel.')
 @click.option('--bams-ready', '-r', is_flag=True, help='Input bam files are already filtered for only the mitochondrial genome and sorted; can still remove duplicates optionally though; this flag also bypasses clipping')
 
-@click.option('--filter-flags', '-ff', is_flag=True, help='Manual specification of .sam headers to filter for; see documentation.')
+@click.option('--filter-flags', '-ff', default = "", help='Manual specification of .sam headers to filter for; see documentation.')
 @click.option('--atac-single', '-as', is_flag=True, help='Default parameters for ATAC-Seq single end read analyses; see documentation.')
 @click.option('--atac-paired', '-ap',  is_flag=True, help='Default parameters for ATAC-Seq paired end read analyses; see documentation.')
 @click.option('--rna-single', '-rs', is_flag=True, help='Default parameters for RNA-Seq single end read analyses; see documentation.')
@@ -36,10 +36,12 @@ from .mgatkHelp import *
 
 @click.option('--keep-duplicates', '-kd', is_flag=True, help='Keep marked (presumably PCR) duplicates; recommended for low-coverage RNA-Seq')
 @click.option('--keep-indels', '-ki', is_flag=True, help='Keep marked indels for analysis; not recommended as this flag has not been well-tested')
-@click.option('--read-qual', '-q', default = "20", required=True, help='Minimum read quality for final filter.')
+@click.option('--proper-pairs', '-pp', is_flag=True, help='Require reads to be properly paired.')
 
-@click.option('--clipL', '-cl', default = "0", required=True, help='Number of variants to clip from left hand side of read.')
-@click.option('--clipR', '-cr', default = "0", required=True, help='Number of variants to clip from right hand side of read.')
+@click.option('--read-qual', '-q', default = "20", help='Minimum read quality for final filter.')
+
+@click.option('--clipL', '-cl', default = "0", help='Number of variants to clip from left hand side of read.')
+@click.option('--clipR', '-cr', default = "0", help='Number of variants to clip from right hand side of read.')
 
 @click.option('--keep-samples', '-k', default="ALL", help='Comma separated list of sample names to keep; ALL (special string) by default. Sample refers to basename of .bam file')
 @click.option('--ignore-samples', '-g', default="NONE", help='Comma separated list of sample names to ignore; NONE (special string) by default. Sample refers to basename of .bam file')
@@ -47,8 +49,10 @@ from .mgatkHelp import *
 @click.option('--keep-temp-files', '-t', is_flag=True, help='Keep all intermediate files.')
 @click.option('--skip-rds', '-s', is_flag=True, help='Generate plain-text only output. Otherwise, this generates a .rds obejct that can be immediately read into R')
 
+
+
 def main(mode, input, output, name, mito_genome, ncores, bams_ready, filter_flags,
-	atac_single, atac_paired, rna_single, rna_paired, keep_duplicates, keep_indels,
+	atac_single, atac_paired, rna_single, rna_paired, keep_duplicates, keep_indels, proper_pairs,
 	read_qual, clipl, clipr, keep_samples, ignore_samples, keep_temp_files, skip_rds):
 	
 	"""mgatk: a mitochondrial genome analysis toolkit."""
@@ -154,15 +158,50 @@ def main(mode, input, output, name, mito_genome, ncores, bams_ready, filter_flag
 				
 	cwd = os.getcwd()
 	logf = open(logfolder + "/base.mgatk.log", 'a')
-	
+	click.echo(gettime() + "Starting analysis.", logf)
 	
 	# -----------------------------------
 	# Parse user-specified parameteres
 	# -----------------------------------
+
+	##########################
+	# Handle read filter flags
+	##########################
+	
+	ffout = ''
+	if(filter_flags == ""):
+		if(rna_paired):
+			click.echo(gettime() + "Adding read filtering flags for paired RNA.", logf)
+			click.echo(gettime() + "These include nM <= 4, and NH:i:1", logf)
+			ffout = '| grep -E "nM:i:(0|1|2|3|4)$" | grep -E "NH:i:1" '
+			
+		elif(atac_paired):
+			click.echo(gettime() + "Adding read filtering flags for paired ATAC/WGS.", logf)
+			click.echo(gettime() + "These include NM < 4, and NH:i:1", logf)
+			ffout = '| grep -E "NM:i:(0|1|2|3)$" | grep -E "NH:i:1" '
+			
+		elif(rna_single):
+			click.echo(gettime() + "Adding read filtering flags for single-end RNA.", logf)
+			click.echo(gettime() + "These include nM =< 4, and NH:i:1", logf)
+			ffout = '| grep -E "nM:i:(0|1|2|3|4)$" | grep -E "NH:i:1" '
+			
+		elif(atac_single):
+			click.echo(gettime() + "Adding read filtering flags for single-end ATAC/WGS.", logf)
+			click.echo(gettime() + "These include NM < 4, and NH:i:1", logf)
+			ffout = '| grep -E "NM:i:(0|1|2|3)$" | grep -E "NH:i:1" '
+			
+	else: # just do the user's specification
+		ff = filter_flags
+		ff = filter_flags.split(',')
+		for flag in ff:
+			ffout = ffout + '| grep -E "' + flag+'" ' 
+		click.echo(gettime() + "Choosing user-defined flags to subset reads for.", logf)
+		click.echo(gettime() + "Reads will be matched for the following:" + ffout, logf)
 	
 	####################
 	# Handle .fasta file
 	####################
+	
 	supported_genomes = ['hg19', 'mm10']
 	if any(mito_genome in s for s in supported_genomes):
 		click.echo(gettime() + "Found designated mitochondrial genome: %s" % mito_genome, logf)
@@ -203,7 +242,11 @@ def main(mode, input, output, name, mito_genome, ncores, bams_ready, filter_flag
 		ncores = str(available_cpu_count())
 	else:
 		ncores = str(ncores)
-		
+	
+	proper_pairing = ""
+	if(proper_pairs):
+		proper_pairing = "samtools view -f 0x2 -b - "
+	
 	click.echo(gettime() + "Processing .bams with "+ncores+" cores", logf)
 	click.echo(gettime() + "Processing .bams with "+ncores+" cores")
 	
@@ -227,7 +270,8 @@ def main(mode, input, output, name, mito_genome, ncores, bams_ready, filter_flag
 	snakedict1 = {'input_directory' : input, 'output_directory' : output, 'script_dir' : script_dir,
 		'fasta_file' : fastaf, 'mito_genome' : mito_genome, 'mito_length' : mito_length, 'name' : name,
 		'read_qual' : read_qual, 'filtered_sorted' : filtered_sorted, 'keep_duplicates' : keep_duplicates,
-		'skip_indels' : skip_indels, 'clipl' : clipl, 'clipr' : clipr}
+		'skip_indels' : skip_indels, 'clipl' : clipl, 'clipr' : clipr, 'filter_reads' : ffout,
+		'proper_paired' : proper_pairing}
 	
 	y1 = parselfolder + "/snake.scatter.yaml"
 	with open(y1, 'w') as yaml_file:

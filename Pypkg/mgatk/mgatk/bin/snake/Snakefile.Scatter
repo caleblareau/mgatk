@@ -20,13 +20,15 @@ keep_duplicates = config["keep_duplicates"]
 filtered_sorted = config["filtered_sorted"]
 clipL = config["clipl"]
 clipR = config["clipr"]
+filter_reads = config["filter_reads"]
+proper_paired = config["proper_paired"]
 
 # Software paths
 bcftools = "bcftools"
 java = "java"
 samtools = "samtools"
 tabix = "tabix"
-python = shutil.which("python")
+python = "python"
 
 # Script calls
 filtClipBam = script_dir + "/bin/filterClipBam.py"
@@ -36,6 +38,22 @@ MarkDuplicatesCall = java + " -Xmx4000m  -jar " + script_dir + "/bin/MarkDuplica
 SAMPLES, = glob_wildcards(join(outdir, ".internal/samples/{sample}.bam.txt"))
 
 bamtxtin = '{sample}.bam.txt'
+
+
+def filter_flag_do(inbam, outbam, filter_reads):
+	"""
+	Imports specified .fasta file
+	"""
+	f = open(filename)
+	sequences = {}
+	for line in f:
+		if line.startswith('>'):
+			name = line[1:].strip()
+			sequences[name] = ''
+		else:
+			sequences[name] = sequences[name] + line.strip()
+	f.close()
+	return sequences
 
 rule all:
 	input:
@@ -56,11 +74,20 @@ rule filter_sort:
 		# User likes the .bam files the way they are though we may need to filter duplicates
 		if(filtered_sorted):
 			if(keep_duplicates):
-				shutil.copyfile(bamfilepath, output.bam)
+				if(len(filter_reads)==0):
+					shutil.copyfile(bamfilepath, output.bam)
+				else:
+					sam_header = output.bam.replace(".qc.bam", ".rmdups.logs").replace("/temp/ready_bam/", "/temp/temp_bam/")
+					os.system(samtools + " view -H "+bamfilepath+ " > " + sam_header)
+					os.system(samtools + " view " + bamfilepath + " " + filter_reads + " | cat " + sam_header + " - | "+samtools+" view -b - > " + output.bam)
 			else:
-				mdc_long = MarkDuplicatesCall + " INPUT="+bamfilepath+" OUTPUT="+output.bam+" METRICS_FILE="+rmlog+" REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT"
-				os.system(mdc_long)
-
+				if(len(filter_reads) == 0):
+					mdc_long = MarkDuplicatesCall + " INPUT="+bamfilepath+" OUTPUT="+output.bam+" METRICS_FILE="+rmlog+" REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT"
+					os.system(mdc_long)
+				else:
+					sam_header = output.bam.replace(".qc.bam", ".rmdups.logs").replace("/temp/ready_bam/", "/temp/temp_bam/")
+					
+					
 		# Do some filtering, clipping, and sorting
 		else:
 			prepbam = output.bam.replace(".qc.bam", ".prep.bam").replace("/temp/ready_bam/", "/temp/temp_bam/")
@@ -78,7 +105,8 @@ rule filter_sort:
 				mdc_long = MarkDuplicatesCall + " INPUT="+rmdupbam+" OUTPUT="+prepbam+" METRICS_FILE="+rmlog+" REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT"
 				os.system(mdc_long)		
 			pysam.sort("-o", output.bam, prepbam)
-			
+		
+		# No matter what, prepare the index	
 		pysam.index(output.bam)
 
 rule get_depth_bq_baq:

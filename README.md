@@ -1,5 +1,4 @@
 <p align="left">
-  <br>
   <img src="docs/content/media/logo.png" width="50%"/>
 </p>
 
