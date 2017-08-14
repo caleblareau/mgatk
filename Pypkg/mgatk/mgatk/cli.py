@@ -47,7 +47,9 @@ from .mgatkHelp import *
 @click.option('--keep-samples', '-k', default="ALL", help='Comma separated list of sample names to keep; ALL (special string) by default. Sample refers to basename of .bam file')
 @click.option('--ignore-samples', '-g', default="NONE", help='Comma separated list of sample names to ignore; NONE (special string) by default. Sample refers to basename of .bam file')
 
-@click.option('--keep-temp-files', '-t', is_flag=True, help='Keep all intermediate files.')
+@click.option('--keep-temp-files', '-z', is_flag=True, help='Keep all intermediate files.')
+@click.option('--detailed-calls', '-dc', is_flag=True, help='Perform detailed variant calling; may be slow.')
+
 @click.option('--skip-rds', '-s', is_flag=True, help='Generate plain-text only output. Otherwise, this generates a .rds obejct that can be immediately read into R')
 
 
@@ -56,7 +58,8 @@ def main(mode, input, output, name, mito_genome, ncores,
 	atac_single, atac_paired, rna_single, rna_paired,
 	nhmax, nmmax,  
 	keep_duplicates, keep_indels, proper_pairs,
-	read_qual, clipl, clipr, keep_samples, ignore_samples, keep_temp_files, skip_rds):
+	read_qual, clipl, clipr, keep_samples, ignore_samples,
+	detailed_calls, keep_temp_files, skip_rds):
 	
 	"""mgatk: a mitochondrial genome analysis toolkit."""
 	__version__ = get_distribution('mgatk').version
@@ -238,13 +241,16 @@ def main(mode, input, output, name, mito_genome, ncores,
 	
 	click.echo(gettime() + "Processing .bams with "+ncores+" cores", logf)
 	click.echo(gettime() + "Processing .bams with "+ncores+" cores")
-	
+	if(detailed_calls):
+		click.echo(gettime() + "Also performing detailed variant calling.")
+		
 	# -------------------
 	# Process each sample
 	# -------------------
 	tempfolder = outfolder + "/temp"
 	if not os.path.exists(tempfolder):
 		os.makedirs(tempfolder)
+		os.makedirs(tempfolder + "/ready_bam")
 		os.makedirs(tempfolder + "/temp_bam")
 		os.makedirs(tempfolder + "/vcf")
 	
@@ -254,12 +260,13 @@ def main(mode, input, output, name, mito_genome, ncores,
 		os.makedirs(qcfolder + "/BAQ")
 		os.makedirs(qcfolder + "/BQ")
 		os.makedirs(qcfolder + "/depth")
+		os.makedirs(qcfolder + "/detailed")
 					
 	snakedict1 = {'input_directory' : input, 'output_directory' : output, 'script_dir' : script_dir,
 		'fasta_file' : fastaf, 'mito_genome' : mito_genome, 'mito_length' : mito_length, 'name' : name,
 		'read_qual' : read_qual, 'keep_duplicates' : keep_duplicates,
 		'skip_indels' : skip_indels, 'clipl' : clipl, 'clipr' : clipr, 'proper_paired' : proper_paired,
-		'NHmax' : nhmax, 'NMmax' : nmmax}
+		'NHmax' : nhmax, 'NMmax' : nmmax, 'detailed_calls' : str(detailed_calls)}
 	
 	y1 = parselfolder + "/snake.scatter.yaml"
 	with open(y1, 'w') as yaml_file:
@@ -279,6 +286,8 @@ def main(mode, input, output, name, mito_genome, ncores,
 		shutil.rmtree(fastafolder)
 		shutil.rmtree(internfolder)
 		shutil.rmtree(tempfolder)
+		if not detailed_calls:
+			shutil.rmtree(qcfolder + "/detailed")
 		click.echo(gettime() + "Intermediate files successfully removed.", logf)
 		
 	# Suspend logging

@@ -1,8 +1,9 @@
 #!/usr/bin/python
 
-##########################
-# Filter / clip .bam files
-##########################
+###############################################
+# Filter reads / clip .bam files
+# Don't print() anything!!!! writing to STDOUT
+##############################################
 
 import sys
 import re
@@ -36,7 +37,7 @@ def processRead(read):
 	global keepCount
 	global filtCount
 	
-	if(filterReadTags(read.tags)):
+	if(filterReadTags(read.tags) and read.reference_name == mtchr):
 		keepCount += 1
 		out.write(read)
 	else:

@@ -7,7 +7,7 @@ dependencies = ['click', 'Numpy', 'pysam', 'pytest', 'snakemake', 'biopython', '
 
 setup(
     name='mgatk',
-    version='0.0.5',
+    version='0.0.6',
     url='https://github.com/aryeelab/mgatk',
     license='MIT',
     author='Caleb Lareau and Jacob Ulirsch',

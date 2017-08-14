@@ -27,6 +27,8 @@ clipR = config["clipr"]
 NHmax = config["NHmax"]
 NMmax = config["NMmax"]
 
+detailed_calls = config["detailed_calls"]
+
 # Software paths
 bcftools = "bcftools"
 java = "java"
@@ -37,6 +39,7 @@ python = "python"
 
 # Script calls
 filtclip_py = script_dir + "/bin/filterClipBam.py"
+detailedcall_py = script_dir + "/bin/detailedCalls.py"
 MarkDuplicatesCall = java + " -Xmx4000m  -jar " + script_dir + "/bin/MarkDuplicates.jar"
 
 # A Snakemake regular expression matching the bam files that were all aligned
@@ -48,7 +51,8 @@ bamtxtin = '{sample}.bam.txt'
 rule all:
 	input:
 		outdir + "/final/" + name + ".depthTable.txt",
-		outdir + "/final/" + name + ".allCalls.txt.gz"
+		outdir + "/final/" + name + ".allCalls.txt.gz",
+		outdir + "/qc/detailed/detailed.run.txt"
 
 rule filter_sort:
 	input:
@@ -83,7 +87,6 @@ rule filter_sort:
 		else: # just move the previous output
 			os.system("mv " + temp_bam1 + " " + output.bam)
 			os.system("mv " + temp_bam1 + ".bai " + output.bai)
-			
 		pysam.index(output.bam)
 
 rule get_depth_bq_baq:
@@ -116,6 +119,35 @@ rule get_depth_bq_baq:
 		bcc2 = bcftools+" query -f '[%POS\tINFO/%I16\n]' "+bq_vcf_gz+" | sed -e 's/INFO\///g' -e 's/,/\t/g' > " + output.bq
 		os.system(bcc2)
 
+rule detailed_variant_calls:
+	input:
+		expand(outdir + "/temp/ready_bam/{sample}.qc.bam", sample=SAMPLES)
+	output:
+		o1 = temp(outdir + "/qc/detailed/{sample}.detailed.txt"),
+		out = outdir + "/qc/detailed/{sample}.detailed.txt.gz"
+	run:
+		if(detailed_calls == "True"):
+			pycall0 = " ".join([python, detailedcall_py, input[0], output.o1, fasta_file])
+			os.system(pycall0)
+			os.system("gzip -c " + output.o1 + " > " + output.out)
+		else:
+			with open(output.out , 'wb') as outfile:
+				outfile.write(" ".encode())
+				
+rule gather_variant_calls:
+	input:
+		expand(outdir + "/qc/detailed/{sample}.detailed.txt.gz", sample=SAMPLES)
+	output:
+		out = outdir + "/qc/detailed/detailed.run.txt"
+	run:
+		if(detailed_calls == "True"):
+			with open(output.out , 'w') as outfile:
+				outfile.write("Detailed variant calls complete. \n")
+		else:
+			with open(output.out , 'w') as outfile:
+				outfile.write("Detailed variant calls not chosen. \n")
+		
+			
 rule call_variants:
 	input:
 		expand(outdir + "/temp/ready_bam/{sample}.qc.bam", sample=SAMPLES)
