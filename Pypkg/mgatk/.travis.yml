@@ -1,0 +1,21 @@
+language: python
+
+python:
+  - "3.6"
+    
+before_install:
+  # Install bedtools
+  - cd tests
+  - git clone https://github.com/arq5x/bedtools2.git
+  - cd bedtools2
+  - git checkout tags/v2.25.0
+  - make
+  - cd ..
+  - PATH=`pwd`/bedtools2/bin:$PATH
+  - cd ..
+
+install:
+ - python Pypkg/mgatk/setup.py install
+
+script: 
+- cd Pypkg/mgatk/tests && py.test
