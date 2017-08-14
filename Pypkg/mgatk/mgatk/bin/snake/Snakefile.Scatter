@@ -21,6 +21,7 @@ proper_paired = config["proper_paired"]
 skip_indels = config["skip_indels"]
 
 read_qual = config["read_qual"]
+blacklist_percentile = config["blacklist_percentile"]
 
 clipL = config["clipl"]
 clipR = config["clipr"]
@@ -32,14 +33,18 @@ detailed_calls = config["detailed_calls"]
 # Software paths
 bcftools = "bcftools"
 java = "java"
-R = "R"
+Rscript = "Rscript"
 samtools = "samtools"
 tabix = "tabix"
 python = "python"
 
-# Script calls
+# Script locations
 filtclip_py = script_dir + "/bin/filterClipBam.py"
 detailedcall_py = script_dir + "/bin/detailedCalls.py"
+
+depthTableQuery_R = script_dir + "/bin/R/depthTableQuery.R"
+makeBlacklist_R = script_dir + "/bin/R/makeBlacklist.R"
+
 MarkDuplicatesCall = java + " -Xmx4000m  -jar " + script_dir + "/bin/MarkDuplicates.jar"
 
 # A Snakemake regular expression matching the bam files that were all aligned
@@ -52,7 +57,8 @@ rule all:
 	input:
 		outdir + "/final/" + name + ".depthTable.txt",
 		outdir + "/final/" + name + ".allCalls.txt.gz",
-		outdir + "/qc/detailed/detailed.run.txt"
+		outdir + "/qc/detailed/detailed.run.txt",
+		outdir + "/final/" + name + ".blacklist.txt"
 
 rule filter_sort:
 	input:
@@ -194,13 +200,24 @@ rule make_depth_table:
 
 rule make_blacklist:
 	input:
-		expand(outdir + "/qc/depth/{sample}.Q0.depth.txt", sample=SAMPLES)
+		table = outdir + "/final/" + name + ".depthTable.txt"
 	output:
-		outdir + "/final/" + name + ".depthTable.txt"
+		o1 = outdir + "/temp/" + name + ".samplesFor.blacklist.txt",
+		allBAQ = outdir + "/temp/" + name + ".allBAQfor.blacklist.txt.gz",
+		out = outdir + "/final/" + name + ".blacklist.txt"
 	threads: 1
 	run: 
-		with open(output[0], 'w') as f:
-			for i in input:
-				sample = i.replace(outdir+ "/qc/depth/", '').replace(".Q0.depth.txt", '')
-				result = subprocess.run(['cat', i], stdout=subprocess.PIPE)
-				f.write(sample + " " + result.stdout.strip().decode("utf-8") + "\n")
+		# Determine samples
+		Rcall1 = " ".join([Rscript, depthTableQuery_R, input[0], output.o1, blacklist_percentile])
+		os.system(Rcall1)
+		
+		# Cat together BAQ files
+		with open(output.o1) as f:
+			content = f.readlines()
+		content = [x.strip() for x in content] 
+		files = [outdir + "/qc/BAQ/" + s + ".Q0.BAQ.txt" for s in content]
+		os.system("cat " + " ".join(files) + " | gzip > " + output.allBAQ)
+		
+		# Do the blacklist stuff
+		Rcall2 = " ".join([Rscript, makeBlacklist_R, output.allBAQ, output.out, str(mito_length)])
+		os.system(Rcall2)

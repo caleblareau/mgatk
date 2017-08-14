@@ -40,6 +40,7 @@ from .mgatkHelp import *
 @click.option('--proper-pairs', '-pp', is_flag=True, help='Require reads to be properly paired.')
 
 @click.option('--read-qual', '-q', default = "20", help='Minimum read quality for final filter.')
+@click.option('--blacklist-percentile', '-bp', default = "33", help='Samples with percentile depth below this number will be excluded when determining the blacklist.')
 
 @click.option('--clipL', '-cl', default = "0", help='Number of variants to clip from left hand side of read.')
 @click.option('--clipR', '-cr', default = "0", help='Number of variants to clip from right hand side of read.')
@@ -57,7 +58,7 @@ from .mgatkHelp import *
 def main(mode, input, output, name, mito_genome, ncores,
 	atac_single, atac_paired, rna_single, rna_paired,
 	nhmax, nmmax,  
-	keep_duplicates, keep_indels, proper_pairs,
+	keep_duplicates, keep_indels, proper_pairs, blacklist_percentile,
 	read_qual, clipl, clipr, keep_samples, ignore_samples,
 	detailed_calls, keep_temp_files, skip_rds):
 	
@@ -80,7 +81,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 	check_software_exists("python")
 	check_software_exists("samtools")
 	check_software_exists("java")
-	check_R_packages(['mgatk', 'ggplot2'])
+	check_R_packages(['mgatk', 'ggplot2', "dtplyr", "magrittr"])
 	
 	# -------------------------------
 	# Determine samples for analysis
@@ -264,7 +265,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 					
 	snakedict1 = {'input_directory' : input, 'output_directory' : output, 'script_dir' : script_dir,
 		'fasta_file' : fastaf, 'mito_genome' : mito_genome, 'mito_length' : mito_length, 'name' : name,
-		'read_qual' : read_qual, 'keep_duplicates' : keep_duplicates,
+		'read_qual' : read_qual, 'keep_duplicates' : keep_duplicates, 'blacklist_percentile' : blacklist_percentile, 
 		'skip_indels' : skip_indels, 'clipl' : clipl, 'clipr' : clipr, 'proper_paired' : proper_paired,
 		'NHmax' : nhmax, 'NMmax' : nmmax, 'detailed_calls' : str(detailed_calls)}
 	

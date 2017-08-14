@@ -7,7 +7,7 @@
 # Load libraries
 library(ggplot2)
 library(BuenColors)
-library(dplyr)
+library(dtplyr)
 
 # First argument is path to input file without file type
 args <- commandArgs(trailingOnly=TRUE)
