@@ -19,7 +19,7 @@ from .mgatkHelp import *
 
 @click.command()
 @click.version_option()
-@click.argument('mode', type=click.Choice(['call', 'go']))
+@click.argument('mode', type=click.Choice(['call', 'check']))
 @click.option('--input', '-i',  default = ".", required=True, help='input directory; assumes .bam / .bam.bai files are present')
 @click.option('--output', '-o', default="mgatk_out", required=True, help='Output directory for analysis')
 @click.option('--name', '-n', default="mgatk", required=True, help='Prefix for project name')
@@ -28,12 +28,11 @@ from .mgatkHelp import *
 @click.option('--ncores', '-c', default = "detect", required=True, help='Number of cores to run job in parallel.')
 @click.option('--bams-ready', '-r', is_flag=True, help='Input bam files are already filtered for only the mitochondrial genome and sorted; can still remove duplicates optionally though; this flag also bypasses clipping')
 
+@click.option('--filter-flags', '-ff', is_flag=True, help='Manual specification of .sam headers to filter for; see documentation.')
 @click.option('--atac-single', '-as', is_flag=True, help='Default parameters for ATAC-Seq single end read analyses; see documentation.')
 @click.option('--atac-paired', '-ap',  is_flag=True, help='Default parameters for ATAC-Seq paired end read analyses; see documentation.')
 @click.option('--rna-single', '-rs', is_flag=True, help='Default parameters for RNA-Seq single end read analyses; see documentation.')
 @click.option('--rna-paired', '-rp', is_flag=True, help='Default parameters for RNA-Seq paired end read analyses; see documentation.')
-@click.option('--filter-flags', '-ff', is_flag=True, help='Manual specification of .sam headers to filter for; see documentation.')
-
 
 @click.option('--keep-duplicates', '-kd', is_flag=True, help='Keep marked (presumably PCR) duplicates; recommended for low-coverage RNA-Seq')
 @click.option('--keep-indels', '-ki', is_flag=True, help='Keep marked indels for analysis; not recommended as this flag has not been well-tested')
@@ -48,8 +47,8 @@ from .mgatkHelp import *
 @click.option('--keep-temp-files', '-t', is_flag=True, help='Keep all intermediate files.')
 @click.option('--skip-rds', '-s', is_flag=True, help='Generate plain-text only output. Otherwise, this generates a .rds obejct that can be immediately read into R')
 
-def main(mode, input, output, name, mito_genome, ncores, bams_ready,
-	atac_single, atac_paired, rna_single, rna_paired, filter_flags, keep_duplicates, keep_indels,
+def main(mode, input, output, name, mito_genome, ncores, bams_ready, filter_flags,
+	atac_single, atac_paired, rna_single, rna_paired, keep_duplicates, keep_indels,
 	read_qual, clipl, clipr, keep_samples, ignore_samples, keep_temp_files, skip_rds):
 	
 	"""mgatk: a mitochondrial genome analysis toolkit."""
@@ -57,6 +56,8 @@ def main(mode, input, output, name, mito_genome, ncores, bams_ready,
 	script_dir = os.path.dirname(os.path.realpath(__file__))
 
 	click.echo(gettime() + "mgatk v%s" % __version__)
+	if(mode == "check"):
+		click.echo(gettime() + "checking dependencies...")
 
 	# -------------------------------
 	# Synonyms
@@ -71,6 +72,7 @@ def main(mode, input, output, name, mito_genome, ncores, bams_ready,
 	check_software_exists("R")
 	check_software_exists("bcftools")
 	check_software_exists("tabix")
+	check_software_exists("python")
 	check_software_exists("samtools")
 	check_software_exists("java")
 	check_R_packages(['mgatk', 'ggplot2'])
@@ -108,7 +110,9 @@ def main(mode, input, output, name, mito_genome, ncores, bams_ready,
 	if not len(samples) > 0:
 		sys.exit('ERROR: Could not import any samples from the user specification; check flags, logs and input configuration; QUITTING')
 
-
+	if(mode == "check"):
+		sys.exit(gettime() + "mgatk check passed! The software will process " + str(len(samples)) + " samples if same parameters are run in `call` mode")
+	
 	# -------------------------------
 	# Setup output folder
 	# -------------------------------
@@ -228,7 +232,8 @@ def main(mode, input, output, name, mito_genome, ncores, bams_ready,
 	y1 = parselfolder + "/snake.scatter.yaml"
 	with open(y1, 'w') as yaml_file:
 		yaml.dump(snakedict1, yaml_file, default_flow_style=False)
-		
+	
+	# For making the DAG
 	#dagcall = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="' + y1 + '" --rulegraph -T'
 	#os.system(dagcall)
 	
