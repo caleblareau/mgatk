@@ -4,15 +4,9 @@ python:
   - "3.6"
     
 before_install:
-  # Install bedtools
-  - cd tests
-  - git clone https://github.com/arq5x/bedtools2.git
-  - cd bedtools2
-  - git checkout tags/v2.25.0
-  - make
-  - cd ..
-  - PATH=`pwd`/bedtools2/bin:$PATH
-  - cd ..
+  - apt-get install samtools tabix -y
+  - chmod +x ../.travis/run.sh
+  - chmod +x ../.travis/install.sh
 
 install:
 - "./.travis/install.sh"
