@@ -31,7 +31,7 @@ tabix = "tabix"
 python = "python"
 
 # Script calls
-filtClipBam = script_dir + "/bin/filterClipBam.py"
+filtclip_py = script_dir + "/bin/filterClipBam.py"
 MarkDuplicatesCall = java + " -Xmx4000m  -jar " + script_dir + "/bin/MarkDuplicates.jar"
 
 # A Snakemake regular expression matching the bam files that were all aligned
@@ -39,21 +39,6 @@ SAMPLES, = glob_wildcards(join(outdir, ".internal/samples/{sample}.bam.txt"))
 
 bamtxtin = '{sample}.bam.txt'
 
-
-def filter_flag_do(inbam, outbam, filter_reads):
-	"""
-	Imports specified .fasta file
-	"""
-	f = open(filename)
-	sequences = {}
-	for line in f:
-		if line.startswith('>'):
-			name = line[1:].strip()
-			sequences[name] = ''
-		else:
-			sequences[name] = sequences[name] + line.strip()
-	f.close()
-	return sequences
 
 rule all:
 	input:
@@ -70,6 +55,11 @@ rule filter_sort:
 	run:
 		rmlog = output.bam.replace(".qc.bam", ".rmdups.logs").replace("/temp/ready_bam/", "/logs/rmdupslogs/")
 		with open(input.txtin) as f: bamfilepath = f.read()
+		sam_header = output.bam.replace(".qc.bam", ".header.sam").replace("/temp/ready_bam/", "/temp/temp_bam/")
+		temp_bam0 = output.bam.replace(".qc.bam", ".temp0.bam").replace("/temp/ready_bam/", "/temp/temp_bam/")
+		temp_bam1 = output.bam.replace(".qc.bam", ".temp1.bam").replace("/temp/ready_bam/", "/temp/temp_bam/")
+		temp_bam2 = output.bam.replace(".qc.bam", ".temp2.bam").replace("/temp/ready_bam/", "/temp/temp_bam/")
+		
 		
 		# User likes the .bam files the way they are though we may need to filter duplicates
 		if(filtered_sorted):
@@ -77,7 +67,6 @@ rule filter_sort:
 				if(len(filter_reads)==0):
 					shutil.copyfile(bamfilepath, output.bam)
 				else:
-					sam_header = output.bam.replace(".qc.bam", ".rmdups.logs").replace("/temp/ready_bam/", "/temp/temp_bam/")
 					os.system(samtools + " view -H "+bamfilepath+ " > " + sam_header)
 					os.system(samtools + " view " + bamfilepath + " " + filter_reads + " | cat " + sam_header + " - | "+samtools+" view -b - > " + output.bam)
 			else:
@@ -85,25 +74,49 @@ rule filter_sort:
 					mdc_long = MarkDuplicatesCall + " INPUT="+bamfilepath+" OUTPUT="+output.bam+" METRICS_FILE="+rmlog+" REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT"
 					os.system(mdc_long)
 				else:
-					sam_header = output.bam.replace(".qc.bam", ".rmdups.logs").replace("/temp/ready_bam/", "/temp/temp_bam/")
-					
+					prepbam = output.bam.replace(".qc.bam", ".prep.bam").replace("/temp/ready_bam/", "/temp/temp_bam/")
+					os.system(samtools + " view -H "+bamfilepath+ " > " + sam_header)
+					os.system(samtools + " view " + bamfilepath + " " + filter_reads + " | cat " + sam_header + " - | "+samtools+" view -b - > " + temp_bam1)
+					pysam.sort("-o", temp_bam2, temp_bam1)
+					pysam.index(temp_bam2)
+					mdc_long = MarkDuplicatesCall + " INPUT="+temp_bam2+" OUTPUT="+prepbam+" METRICS_FILE="+rmlog+" REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT"
+					os.system(mdc_long)
+					pysam.sort("-o", output.bam, prepbam)
 					
 		# Do some filtering, clipping, and sorting
 		else:
 			prepbam = output.bam.replace(".qc.bam", ".prep.bam").replace("/temp/ready_bam/", "/temp/temp_bam/")
 			if(keep_duplicates):
-				fcb_call = python + " " + filtClipBam + " " + bamfilepath + " " + clipL + " -" + clipR + " " + mito_genome + " | " + samtools + " sort -n - | " + samtools + " fixmate - " + prepbam
-				os.system(fcb_call)
-
+				if(len(filter_reads)==0):
+					fcb_call = python + " " + filtclip_py + " " + bamfilepath + " " + clipL + " -" + clipR + " " + mito_genome + " | " + samtools + " sort -n - | " + samtools + " fixmate - " + prepbam
+					os.system(fcb_call)
+				else:
+					fcb_call = python + " " + filtclip_py + " " + bamfilepath + " " + clipL + " -" + clipR + " " + mito_genome + " | " + samtools + " sort -n - | " + samtools + " fixmate - " + temp_bam0
+					os.system(fcb_call)
+					os.system(samtools + " view -H "+temp_bam0+ " > " + sam_header)
+					os.system(samtools + " view " + temp_bam0 + " " + filter_reads + " | cat " + sam_header + " - | "+samtools+" view -b - > " + temp_bam1)
+					pysam.sort("-o", prepbam, temp_bam1)
+					# Keep duplicates -- nothing to add here
 			else:
-				filtbam = output.bam.replace(".qc.bam", ".filt.bam").replace("/temp/ready_bam/", "/temp/temp_bam/")
-				fcb_call = python + " " + filtClipBam + " " + bamfilepath + " " + clipL + " -" + clipR + " " + mito_genome + " | " + samtools + " sort -n - | " + samtools + " fixmate - " + filtbam
-				os.system(fcb_call)
+				if(len(filter_reads)==0):
+					filtbam = output.bam.replace(".qc.bam", ".filt.bam").replace("/temp/ready_bam/", "/temp/temp_bam/")
+					fcb_call = python + " " + filtclip_py + " " + bamfilepath + " " + clipL + " -" + clipR + " " + mito_genome + " | " + samtools + " sort -n - | " + samtools + " fixmate - " + filtbam
+					os.system(fcb_call)
 				
-				rmdupbam = filtbam.replace(".filt.bam", ".rmdup.bam")
-				pysam.sort("-o", rmdupbam, filtbam)
-				mdc_long = MarkDuplicatesCall + " INPUT="+rmdupbam+" OUTPUT="+prepbam+" METRICS_FILE="+rmlog+" REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT"
-				os.system(mdc_long)		
+					rmdupbam = filtbam.replace(".filt.bam", ".rmdup.bam")
+					pysam.sort("-o", rmdupbam, filtbam)
+					mdc_long = MarkDuplicatesCall + " INPUT="+rmdupbam+" OUTPUT="+prepbam+" METRICS_FILE="+rmlog+" REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT"
+					os.system(mdc_long)	
+				else:
+					fcb_call = python + " " + filtclip_py + " " + bamfilepath + " " + clipL + " -" + clipR + " " + mito_genome + " | " + samtools + " sort -n - | " + samtools + " fixmate - " + temp_bam0
+					os.system(fcb_call)
+					os.system(samtools + " view -H "+temp_bam0+ " > " + sam_header)
+					os.system(samtools + " view " + temp_bam0 + " " + filter_reads + " | cat " + sam_header + " - | "+samtools+" view -b - > " + temp_bam1)
+					pysam.sort("-o", temp_bam2, temp_bam1)
+					pysam.index(temp_bam2)
+					mdc_long = MarkDuplicatesCall + " INPUT="+temp_bam2+" OUTPUT="+prepbam+" METRICS_FILE="+rmlog+" REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT"
+					os.system(mdc_long)
+					
 			pysam.sort("-o", output.bam, prepbam)
 		
 		# No matter what, prepare the index	

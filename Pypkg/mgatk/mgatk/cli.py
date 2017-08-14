@@ -113,9 +113,11 @@ def main(mode, input, output, name, mito_genome, ncores, bams_ready, filter_flag
     		
 	if not len(samples) > 0:
 		sys.exit('ERROR: Could not import any samples from the user specification; check flags, logs and input configuration; QUITTING')
-
+	
+	nsamplesNote = "The software will process " + str(len(samples)) + " samples"
+	
 	if(mode == "check"):
-		sys.exit(gettime() + "mgatk check passed! The software will process " + str(len(samples)) + " samples if same parameters are run in `call` mode")
+		sys.exit(gettime() + "mgatk check passed! "+nsamplesNote+" if same parameters are run in `call` mode")
 	
 	# -------------------------------
 	# Setup output folder
@@ -158,7 +160,8 @@ def main(mode, input, output, name, mito_genome, ncores, bams_ready, filter_flag
 				
 	cwd = os.getcwd()
 	logf = open(logfolder + "/base.mgatk.log", 'a')
-	click.echo(gettime() + "Starting analysis.", logf)
+	click.echo(gettime() + "Starting analysis with mgatk", logf)
+	click.echo(gettime() + nsamplesNote, logf)
 	
 	# -----------------------------------
 	# Parse user-specified parameteres
@@ -173,7 +176,7 @@ def main(mode, input, output, name, mito_genome, ncores, bams_ready, filter_flag
 		if(rna_paired):
 			click.echo(gettime() + "Adding read filtering flags for paired RNA.", logf)
 			click.echo(gettime() + "These include nM <= 4, and NH:i:1", logf)
-			ffout = '| grep -E "nM:i:(0|1|2|3|4)$" | grep -E "NH:i:1" '
+			ffout = '| grep -E "nM:i:(0|1|2|3|4)$" | grep -E "NH:i:(1|2)" '
 			
 		elif(atac_paired):
 			click.echo(gettime() + "Adding read filtering flags for paired ATAC/WGS.", logf)
@@ -183,7 +186,7 @@ def main(mode, input, output, name, mito_genome, ncores, bams_ready, filter_flag
 		elif(rna_single):
 			click.echo(gettime() + "Adding read filtering flags for single-end RNA.", logf)
 			click.echo(gettime() + "These include nM =< 4, and NH:i:1", logf)
-			ffout = '| grep -E "nM:i:(0|1|2|3|4)$" | grep -E "NH:i:1" '
+			ffout = '| grep -E "nM:i:(0|1|2|3|4)$" | grep -E "NH:i:(1|2)" '
 			
 		elif(atac_single):
 			click.echo(gettime() + "Adding read filtering flags for single-end ATAC/WGS.", logf)
