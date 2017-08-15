@@ -69,8 +69,8 @@ rule filter_sort:
 	threads: 1
 	run:
 		with open(input.txtin) as f: bamfilepath = f.read()
-		rmlog = output.bam.replace(".qc.bam", ".rmdups.logs").replace("/temp/ready_bam/", "/logs/rmdupslogs/")
-		filtlog = output.bam.replace(".qc.bam", ".filter.logs").replace("/temp/ready_bam/", "/logs/filterlogs/")
+		rmlog = output.bam.replace(".qc.bam", ".rmdups.log").replace("/temp/ready_bam/", "/logs/rmdupslogs/")
+		filtlog = output.bam.replace(".qc.bam", ".filter.log").replace("/temp/ready_bam/", "/logs/filterlogs/")
 		temp_bam0 = output.bam.replace(".qc.bam", ".temp0.bam").replace("/temp/ready_bam/", "/temp/temp_bam/")
 		temp_bam1 = output.bam.replace(".qc.bam", ".temp1.bam").replace("/temp/ready_bam/", "/temp/temp_bam/")
 		
@@ -101,7 +101,7 @@ rule get_depth_bq_baq:
 	output:
 		depth = outdir + "/qc/depth/{sample}.Q0.depth.txt", 
 		baq = outdir + "/qc/BAQ/{sample}.Q0.BAQ.txt", 
-		bq = outdir + "/qc/BQ/{sample}.Q0.BQ.txt"
+#		bq = outdir + "/qc/BQ/{sample}.Q0.BQ.txt"
 	threads: 1
 	run:
 		bamfilepath = input.bam
@@ -118,12 +118,12 @@ rule get_depth_bq_baq:
 		os.system(bcc)
 		
 		# BQ
-		bq_vcf_gz = output.bq.replace(".Q0.BQ.txt", ".Q0.BQ.vcf.gz").replace("/qc/BQ/", "/temp/vcf/")
-		stc2 = samtools + " mpileup -d8000 -f "+fasta_file+" -r "+mito_genome+" -Q0 -B -t AD,ADF,ADR "+skip_indels+"-v "+bamfilepath+" > " + bq_vcf_gz
-		os.system(stc2)
-		os.system(tabix + " " + bq_vcf_gz)
-		bcc2 = bcftools+" query -f '[%POS\tINFO/%I16\n]' "+bq_vcf_gz+" | sed -e 's/INFO\///g' -e 's/,/\t/g' > " + output.bq
-		os.system(bcc2)
+#		bq_vcf_gz = output.bq.replace(".Q0.BQ.txt", ".Q0.BQ.vcf.gz").replace("/qc/BQ/", "/temp/vcf/")
+#		stc2 = samtools + " mpileup -d8000 -f "+fasta_file+" -r "+mito_genome+" -Q0 -B -t AD,ADF,ADR "+skip_indels+"-v "+bamfilepath+" > " + bq_vcf_gz
+#		os.system(stc2)
+#		os.system(tabix + " " + bq_vcf_gz)
+#		bcc2 = bcftools+" query -f '[%POS\tINFO/%I16\n]' "+bq_vcf_gz+" | sed -e 's/INFO\///g' -e 's/,/\t/g' > " + output.bq
+#		os.system(bcc2)
 
 rule detailed_variant_calls:
 	input:
@@ -160,9 +160,9 @@ rule call_variants:
 	input:
 		expand(outdir + "/temp/ready_bam/{sample}.qc.bam", sample=SAMPLES)
 	output:
-		bamlist = temp(outdir + "/temp/vcf/allBamSamples.txt"),
-		vcf = temp(outdir + "/temp/vcf/All.SNPs.vcf.gz"),
-		mnpvcf = temp(outdir + "/temp/vcf/All.SNPs.MNP.vcf.gz"),
+		bamlist = outdir + "/temp/vcf/allBamSamples.txt",
+		vcf = outdir + "/temp/vcf/All.SNPs.vcf.gz",
+		mnpvcf = outdir + "/temp/vcf/All.SNPs.MNP.vcf.gz",
 		mnptxt = outdir + "/temp/vcf/All.SNPs.MNP.txt",
 		gzcall = outdir + "/final/" + name + ".allCalls.txt.gz"
 		

@@ -1,8 +1,8 @@
 #!/usr/bin/env Rscript
 
-library(data.table)
-library(dtplyr)
-library(dplyr)
+suppressMessages(suppressWarnings(require(data.table)))
+suppressMessages(suppressWarnings(require(dtplyr)))
+suppressMessages(suppressWarnings(require(dplyr)))
 
 # i/o
 args <- commandArgs(trailingOnly=TRUE)

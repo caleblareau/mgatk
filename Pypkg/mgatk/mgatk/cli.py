@@ -81,13 +81,18 @@ def main(mode, input, output, name, mito_genome, ncores,
 	check_software_exists("python")
 	check_software_exists("samtools")
 	check_software_exists("java")
-	check_R_packages(['mgatk', 'ggplot2', "dtplyr", "magrittr"])
+	check_R_packages(['mgatk', 'ggplot2', "dtplyr", "dplyr"])
 	
 	# -------------------------------
 	# Determine samples for analysis
 	# -------------------------------
-
+	
+	bams = []
 	bams = os.popen('ls ' + input + '/*.bam').read().strip().split("\n")
+
+	if bams[0] == '':
+		sys.exit('ERROR: Could not import any samples from the user specification; check flags, logs and input configuration; QUITTING')
+	
 	samples = []
 	samplebams = []
 	
@@ -140,7 +145,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 		os.makedirs(logfolder)
 		if not(keep_duplicates):
 			os.makedirs(logfolder + "/rmdupslogs")
-			os.makedirs(logfolder + "/filterlogs")
+		os.makedirs(logfolder + "/filterlogs")
 	if not os.path.exists(fastafolder):
 		os.makedirs(fastafolder)	
 	if not os.path.exists(internfolder):
