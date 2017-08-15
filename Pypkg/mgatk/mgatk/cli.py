@@ -20,12 +20,15 @@ from .mgatkHelp import *
 @click.command()
 @click.version_option()
 @click.argument('mode', type=click.Choice(['call', 'check']))
-@click.option('--input', '-i', required=True, help='input directory; assumes .bam / .bam.bai files are present')
-@click.option('--output', '-o', default="mgatk_out", required=True, help='Output directory for analysis')
-@click.option('--name', '-n', default="mgatk", required=True, help='Prefix for project name')
+@click.option('--input', '-i', required=True, help='input directory; assumes .bam files are present')
+@click.option('--output', '-o', default="mgatk_out", help='Output directory for analysis')
+@click.option('--name', '-n', default="mgatk",  help='Prefix for project name')
 
-@click.option('--mito-genome', '-m', default = "hg19", required=True, help='mitochondrial genome configuration. Choose hg19, mm10, or a custom .fasta file (see documentation)')
-@click.option('--ncores', '-c', default = "detect", required=True, help='Number of cores to run job in parallel.')
+@click.option('--mito-genome', '-m', default = "hg19", required=True, help='mitochondrial genome configuration. Choose hg19, mm10, or a custom .fasta file; see documentation')
+@click.option('--ncores', '-c', default = "detect", help='Number of cores to run job in parallel.')
+
+@click.option('--cluster', default = "",  help='Message to send to Snakemake to execute jobs on cluster interface; see documentation.')
+@click.option('--jobs', default = "0",  help='Max number of jobs to be running concurrently on the cluster interface.')
 
 @click.option('--atac-single', '-as', is_flag=True, help='Default parameters for ATAC-Seq single end read analyses; see documentation.')
 @click.option('--atac-paired', '-ap',  is_flag=True, help='Default parameters for ATAC-Seq paired end read analyses; see documentation.')
@@ -56,8 +59,9 @@ from .mgatkHelp import *
 
 
 def main(mode, input, output, name, mito_genome, ncores,
+	cluster, jobs,
 	atac_single, atac_paired, rna_single, rna_paired,
-	nhmax, nmmax,  
+	nhmax, nmmax, 
 	keep_duplicates, keep_indels, proper_pairs, blacklist_percentile,
 	read_qual, clipl, clipr, keep_samples, ignore_samples,
 	detailed_calls, keep_temp_files, skip_rds):
@@ -194,6 +198,14 @@ def main(mode, input, output, name, mito_genome, ncores,
 	else:
 		click.echo(gettime() + "No specific data type specified.", logf)
 
+	########################################
+	# Potentially submit jobs to the cluster
+	########################################
+	
+	snakeclust = ""
+	njobs = int(jobs)
+	if(njobs > 0 and cluster != ""):
+		snakeclust = " --jobs " + jobs + " --cluster " + cluster + " "
 	
 	
 	####################
@@ -282,7 +294,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 	#dagcall = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="' + y1 + '" --rulegraph -T'
 	#os.system(dagcall)
 	
-	snakefile1 = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="' + y1 + '" -T'
+	snakefile1 = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="' + y1 + '" -T'
 	os.system(snakefile1)
 	click.echo(gettime() + "mgatk successfully processed the supplied .bam files", logf)
 	

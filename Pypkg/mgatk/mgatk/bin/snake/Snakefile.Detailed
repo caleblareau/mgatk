@@ -1,0 +1,88 @@
+from os.path import join
+import os
+import subprocess
+import shutil
+import pysam
+
+configfile: config["cfp"]     
+           
+# Parse the configuration variables
+indir = config["input_directory"]
+outdir = config["output_directory"]
+name = config["name"]
+script_dir = config["script_dir"]
+split_output = True
+
+mito_genome = config["mito_genome"]
+mito_length = config["mito_length"]
+fasta_file = config["fasta_file"]
+
+keep_duplicates = config["keep_duplicates"]
+proper_paired = config["proper_paired"]
+skip_indels = config["skip_indels"]
+
+read_qual = config["read_qual"]
+blacklist_percentile = config["blacklist_percentile"]
+
+clipL = config["clipl"]
+clipR = config["clipr"]
+NHmax = config["NHmax"]
+NMmax = config["NMmax"]
+
+detailed_calls = config["detailed_calls"]
+
+# Software paths
+bcftools = "bcftools"
+java = "java"
+Rscript = "Rscript"
+samtools = "samtools"
+tabix = "tabix"
+python = "python"
+
+# Script locations
+filtclip_py = script_dir + "/bin/filterClipBam.py"
+detailedcall_py = script_dir + "/bin/detailedCalls.py"
+
+processBCF_R = script_dir + "/bin/R/processBCFtoolsOutput.R"
+depthTableQuery_R = script_dir + "/bin/R/depthTableQuery.R"
+makeBlacklist_R = script_dir + "/bin/R/makeBlacklist.R"
+
+MarkDuplicatesCall = java + " -Xmx4000m  -jar " + script_dir + "/bin/MarkDuplicates.jar"
+
+
+rule all:
+	input:
+		outdir + "/qc/detailed/detailed.run.txt"
+
+
+
+rule detailed_variant_calls:
+	input:
+		expand(outdir + "/temp/ready_bam/{sample}.qc.bam", sample=SAMPLES)
+	output:
+		o1 = temp(outdir + "/qc/detailed/{sample}.detailed.txt"),
+		out = outdir + "/qc/detailed/{sample}.detailed.txt.gz"
+	run:
+		if(detailed_calls == "True"):
+			pycall0 = " ".join([python, detailedcall_py, input[0], output.o1, fasta_file])
+			os.system(pycall0)
+			os.system("gzip -c " + output.o1 + " > " + output.out)
+		else:
+			with open(output.o1 , 'w') as outfile:
+				outfile.write(" ")
+			with open(output.out , 'wb') as outfile:
+				outfile.write(" ".encode())
+				
+rule gather_variant_calls:
+	input:
+		expand(outdir + "/qc/detailed/{sample}.detailed.txt.gz", sample=SAMPLES)
+	output:
+		out = outdir + "/qc/detailed/detailed.run.txt"
+	run:
+		if(detailed_calls == "True"):
+			with open(output.out , 'w') as outfile:
+				outfile.write("Detailed variant calls complete. \n")
+		else:
+			with open(output.out , 'w') as outfile:
+				outfile.write("Detailed variant calls not chosen. \n")
+		

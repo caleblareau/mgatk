@@ -11,6 +11,7 @@ indir = config["input_directory"]
 outdir = config["output_directory"]
 name = config["name"]
 script_dir = config["script_dir"]
+split_output = True
 
 mito_genome = config["mito_genome"]
 mito_length = config["mito_length"]
@@ -42,6 +43,7 @@ python = "python"
 filtclip_py = script_dir + "/bin/filterClipBam.py"
 detailedcall_py = script_dir + "/bin/detailedCalls.py"
 
+processBCF_R = script_dir + "/bin/R/processBCFtoolsOutput.R"
 depthTableQuery_R = script_dir + "/bin/R/depthTableQuery.R"
 makeBlacklist_R = script_dir + "/bin/R/makeBlacklist.R"
 
@@ -56,16 +58,20 @@ bamtxtin = '{sample}.bam.txt'
 rule all:
 	input:
 		outdir + "/final/" + name + ".depthTable.txt",
-		outdir + "/final/" + name + ".allCalls.txt.gz",
+		outdir + "/final/" + name + ".variantCalls.txt.gz",
+		outdir + "/final/" + name + ".coverage.txt.gz",
 		outdir + "/qc/detailed/detailed.run.txt",
 		outdir + "/final/" + name + ".blacklist.txt"
 
-rule filter_sort:
+rule process_one_sample:
 	input:
 		txtin = join(outdir + "/.internal/samples", bamtxtin)
 	output:
 		bam = outdir + "/temp/ready_bam/{sample}.qc.bam",
-		bai = outdir + "/temp/ready_bam/{sample}.qc.bam.bai"
+		bai = outdir + "/temp/ready_bam/{sample}.qc.bam.bai",
+		depth = outdir + "/qc/depth/{sample}.Q0.depth.txt", 
+		baq = outdir + "/qc/BAQ/{sample}.Q0.BAQ.txt", 
+#		bq = outdir + "/qc/BQ/{sample}.Q0.BQ.txt"
 	threads: 1
 	run:
 		with open(input.txtin) as f: bamfilepath = f.read()
@@ -94,17 +100,7 @@ rule filter_sort:
 			os.system("mv " + temp_bam1 + " " + output.bam)
 			os.system("mv " + temp_bam1 + ".bai " + output.bai)
 		pysam.index(output.bam)
-
-rule get_depth_bq_baq:
-	input:
-		bam = outdir + "/temp/ready_bam/{sample}.qc.bam"
-	output:
-		depth = outdir + "/qc/depth/{sample}.Q0.depth.txt", 
-		baq = outdir + "/qc/BAQ/{sample}.Q0.BAQ.txt", 
-#		bq = outdir + "/qc/BQ/{sample}.Q0.BQ.txt"
-	threads: 1
-	run:
-		bamfilepath = input.bam
+		bamfilepath = output.bam
 		
 		# Depth
 		os.system(samtools + " depth "+bamfilepath+" | awk '{sum+=$3} END {print sum/"+str(mito_length)+"}' > " + output.depth)
@@ -124,38 +120,7 @@ rule get_depth_bq_baq:
 #		os.system(tabix + " " + bq_vcf_gz)
 #		bcc2 = bcftools+" query -f '[%POS\tINFO/%I16\n]' "+bq_vcf_gz+" | sed -e 's/INFO\///g' -e 's/,/\t/g' > " + output.bq
 #		os.system(bcc2)
-
-rule detailed_variant_calls:
-	input:
-		expand(outdir + "/temp/ready_bam/{sample}.qc.bam", sample=SAMPLES)
-	output:
-		o1 = temp(outdir + "/qc/detailed/{sample}.detailed.txt"),
-		out = outdir + "/qc/detailed/{sample}.detailed.txt.gz"
-	run:
-		if(detailed_calls == "True"):
-			pycall0 = " ".join([python, detailedcall_py, input[0], output.o1, fasta_file])
-			os.system(pycall0)
-			os.system("gzip -c " + output.o1 + " > " + output.out)
-		else:
-			with open(output.o1 , 'w') as outfile:
-				outfile.write(" ")
-			with open(output.out , 'wb') as outfile:
-				outfile.write(" ".encode())
-				
-rule gather_variant_calls:
-	input:
-		expand(outdir + "/qc/detailed/{sample}.detailed.txt.gz", sample=SAMPLES)
-	output:
-		out = outdir + "/qc/detailed/detailed.run.txt"
-	run:
-		if(detailed_calls == "True"):
-			with open(output.out , 'w') as outfile:
-				outfile.write("Detailed variant calls complete. \n")
-		else:
-			with open(output.out , 'w') as outfile:
-				outfile.write("Detailed variant calls not chosen. \n")
 		
-			
 rule call_variants:
 	input:
 		expand(outdir + "/temp/ready_bam/{sample}.qc.bam", sample=SAMPLES)
@@ -164,8 +129,10 @@ rule call_variants:
 		vcf = outdir + "/temp/vcf/All.SNPs.vcf.gz",
 		mnpvcf = outdir + "/temp/vcf/All.SNPs.MNP.vcf.gz",
 		mnptxt = outdir + "/temp/vcf/All.SNPs.MNP.txt",
-		gzcall = outdir + "/final/" + name + ".allCalls.txt.gz"
-		
+		call = temp(outdir + "/final/" + name + ".variantCalls.txt"),
+		coverage = temp(outdir + "/final/" + name + ".coverage.txt"),
+		gzcall = outdir + "/final/" + name + ".variantCalls.txt.gz",
+		gzcoverage = outdir + "/final/" + name + ".coverage.txt.gz"
 	run:
 		# Make text file of all the bams
 		with open(output.bamlist, 'w') as o:
@@ -178,12 +145,15 @@ rule call_variants:
 		bcc1 = bcftools + " norm -m-both " + output.vcf + " > " + output.mnpvcf
 		os.system(bcc1)
 		
-		bcc2 = bcftools + " query -f '[%CHROM\t%POS\t%ALT\t%SAMPLE\tINFO/%AD\n]' " +  output.mnpvcf + " > " + output.mnptxt
+		ss = (outdir + "/temp/ready_bam/").replace("/", "\/")
+		bcc2 = bcftools + " query -f '[%CHROM\t%POS\t%ALT\t%SAMPLE\tINFO/%AD\n]' " +  output.mnpvcf + ''' | awk '$3 != "<*>" {print $0}' | sed -e 's/.qc.bam//g' -e 's/INFO\///g' -e 's/''' +ss + '''//g'  | tr ',' '\t' | awk '$5 != "0" {print $2"\t"$3"\t"$4"\t"$5"\t"$6}' > ''' + output.mnptxt
 		os.system(bcc2)
 		
-		outsed = (outdir + "/temp/ready_bam/").replace("/", "\/")
-		finalcmd = '''cat '''+output.mnptxt+''' | sed -e 's/INFO\///g' -e 's/,/\t/g' | awk '$3 != "<*>" && $6 != "0" {print $2"\t"$3"\t"$4"\t"$6}' | sed -e 's/INFO\///g' -e 's/''' +outsed + '''//g' | sed -e 's/INFO\///g' -e 's/.qc.bam//g' | gzip > ''' + output.gzcall
-		os.system(finalcmd)
+		Rcall = " ".join([Rscript, processBCF_R, output.mnptxt, output.call, output.coverage])
+		print(Rcall)
+		os.system(Rcall)
+		os.system("gzip -c " + output.call + " > " + output.gzcall)
+		os.system("gzip -c " + output.coverage + " > " + output.gzcoverage)
 		
 rule make_depth_table:
 	input:
