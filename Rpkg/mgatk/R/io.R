@@ -114,9 +114,15 @@ setMethod("importMito.txt", signature("character", "character", "ANY", "ANY", "A
   colnames(cov) <- ct
 
   # Set up downstream processing including robust ordering
-  samples <- levels(dt[[v.sample]])
+  # The coverage file could have slightly more variants / 
+  # individual samples depending on the calls, so base it
+  # of of them 
+  
+  samples <- levels(cov[[c.sample]])
+  dt$sample <- factor(dt$sample, levels = samples)
   cov$sample <- factor(cov$sample, levels = samples)
-  maxpos <- max(dt$pos)
+  maxpos <- max(cov$pos)
+  maxsamples <- length(samples)
 
   # determine allele with greatest count
   aldt <- dcast.data.table(dt, pos ~ allele, max, value.var = "count")
@@ -138,13 +144,13 @@ setMethod("importMito.txt", signature("character", "character", "ANY", "ANY", "A
 
   SMlist$coverage <- Matrix::sparseMatrix(
     i = c(cov[["pos"]],maxpos),
-    j = c(as.numeric(cov[["sample"]]), 1),
+    j = c(as.numeric(cov[["sample"]]), maxsamples),
     x = c(cov[["coverage"]],0)
   )
 
   SMlist$freq <- Matrix::sparseMatrix(
     i = c(d[["pos"]],maxpos),
-    j = c(as.numeric(d[["sample"]]), 1),
+    j = c(as.numeric(d[["sample"]]), maxsamples),
     x = c(d[["count"]],0)
   ) / (SMlist$coverage + 0.001) # charity count preserves zeros
 
@@ -156,7 +162,7 @@ setMethod("importMito.txt", signature("character", "character", "ANY", "ANY", "A
     sparseMatrixMake <- function(letter){
       Matrix::sparseMatrix(
         i = c(sdt[[letter]][["pos"]],maxpos),
-        j = c(as.numeric(sdt[[letter]][["sample"]]), 1),
+        j = c(as.numeric(sdt[[letter]][["sample"]]), maxsamples),
         x = c(sdt[[letter]][["count"]],0)
       )
     }
