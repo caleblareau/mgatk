@@ -127,12 +127,12 @@ setMethod("importMito.txt", signature("character", "character", "ANY", "ANY", "A
   # determine allele with greatest count
   aldt <- dcast.data.table(dt, pos ~ allele, max, value.var = "count")
   allele <- colnames(aldt)[2:5][apply(aldt[,2:5], 1, which.max)]
-
-  # Make vector of alleles for late
+  names(allele) <- as.character(aldt[["pos"]])
+  
+  # Make vector of alleles for later use
   allelesAll <- unname(allele[as.character(1:maxpos)])
 
   # Extract columns with variants per sample with counts
-  names(allele) <- as.character(aldt[["pos"]])
   dt$chosenAllele <- allele[as.character(dt[["pos"]])]
   d <- dcast.data.table(dt[dt$allele == dt$chosenAllele], pos + sample ~ ., max, value.var = "count")
   colnames(d) <- c("pos", "sample", "count")
