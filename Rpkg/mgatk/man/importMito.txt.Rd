@@ -3,45 +3,81 @@
 \docType{methods}
 \name{importMito.txt}
 \alias{importMito.txt}
-\alias{importMito.txt,character-method}
+\alias{importMito.txt,character,character-method}
 \title{Import data from plain text file into}
 \usage{
-importMito.txt(datafile, pos = 1, allele = 2, sample = 3, coverage = 4,
-  mito = "chrM")
+importMito.txt(variantCallFile, coverageFile, mito = "chrM",
+  keepACGT = FALSE, v.pos = 1, v.allele = 2, v.sample = 3,
+  v.count = 4, c.pos = 1, c.sample = 2, c.coverage = 3)
 
-\S4method{importMito.txt}{character}(datafile, pos = 1, allele = 2,
-  sample = 3, coverage = 4, mito = "chrM")
+\S4method{importMito.txt}{character,character}(variantCallFile, coverageFile,
+  mito = "chrM", keepACGT = FALSE, v.pos = 1, v.allele = 2,
+  v.sample = 3, v.count = 4, c.pos = 1, c.sample = 2, c.coverage = 3)
 }
 \arguments{
-\item{datafile}{The filepath of a plain text or gzipped file
+\item{variantCallFile}{The filepath of a plain text or gzipped file
 that contains data in a long matrix format of the position,
 allele, sample, and coverage. This will be imported and a
 data object will be rendered that enables downstream
 mgatk analyses}
 
-\item{pos}{Default = 1 column index of the genomic position}
-
-\item{allele}{Default = 2 column index of the allele (A/C/G/T)}
-
-\item{sample}{Default = 3 column index of the sample name}
-
-\item{coverage}{Default = 4 column index that shows the number
-of reads for the sample}
+\item{coverageFile}{The filepath of a plain text or gzipped file
+that contains data in a long matrix format of the position,
+sample, and coverage. This will be imported and a
+data object will be rendered that enables downstream
+mgatk analyses}
 
 \item{mito}{Default = "chrM" The `seqname` of the mitochondrial
 genome to be initialized in the}
+
+\item{keepACGT}{Default = FALSE Keep assays with sparse matrix
+counts of the ACGT alleles per base / individual.}
+
+\item{v.pos}{Default = 1 column index of the genomic position
+in the variant calls file}
+
+\item{v.allele}{Default = 2 column index of the allele (A/C/G/T)
+in the variant calls file}
+
+\item{v.sample}{Default = 3 column index of the sample name
+in the variant calls file}
+
+\item{v.count}{Default = 4 column index that shows the number
+of reads for the sample in the variant calls file}
+
+\item{c.pos}{Default = 1 column index of the genomic position
+in the coverage file}
+
+\item{c.sample}{Default = 2 column index of the sample name
+in the coverage file}
+
+\item{c.coverage}{Default = 3 column index that shows the number
+of reads covering a sample / position}
 }
 \value{
 An initialized mgatk object that is an S4 class
-RangedSummarizedExperiment
+RangedSummarizedExperiment that includes variant
+frequency and coverage as assay slots.
 }
 \description{
 \code{importMito.txt} takes a long file of position, allele,
-sample, and coverage (non-zero) in some order.
+sample, and count (non-zero) in some order as variant calls
+and a separate file of the position and sample coverage and
+produces a RangedSummarizedExperiment object that serves
+as the backbone of the R interface for mgatk.
+}
+\details{
+There are seven total v.* and c.* parameters that are the specified
+index associated with the feature of interest. If the data was
+pre-processed with the mgatk python package, you shouldn't need
+to modify these at all.
 }
 \examples{
 
-datafile <- paste0(system.file('extdata',package='mgatk'), "/mgatk_CML.txt.gz")
-mitoSE <- importMito.txt(datafile)
+path <-paste0(system.file('extdata',package='mgatk'),"/mouse_tcr/")
+variantCallFile <-paste0(path, "mouse_tcr.variantCalls.txt")
+coverageFile <- paste0(path, "mouse_tcr.coverage.txt")
+mitoSE <- importMito.txt(variantCallFile = variantCallFile, coverageFile = coverageFile)
+dim(mitoSE)
 
 }
