@@ -3,7 +3,7 @@
 </p>
 
 [![Build Status](https://travis-ci.com/aryeelab/mgatk.svg?token=snx22Bgp4cRvvH32vAmH&branch=master)](https://travis-ci.com/aryeelab/mgatk)
-[![PyPI version](https://badge.fury.io/py/proatac.svg)](https://badge.fury.io/py/proatac)
+[![PyPI version](https://badge.fury.io/py/mgatk.svg)](https://badge.fury.io/py/mgatk)
 [![Documentation Status](https://readthedocs.org/projects/mgatk/badge/?version=latest)](http://mgatk.readthedocs.io/en/latest/?badge=latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
