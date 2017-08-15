@@ -60,7 +60,6 @@ rule all:
 		outdir + "/final/" + name + ".depthTable.txt",
 		outdir + "/final/" + name + ".variantCalls.txt.gz",
 		outdir + "/final/" + name + ".coverage.txt.gz",
-		outdir + "/qc/detailed/detailed.run.txt",
 		outdir + "/final/" + name + ".blacklist.txt"
 
 rule process_one_sample:

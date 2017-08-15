@@ -67,4 +67,13 @@ done
 one will want to verify that "chrM" is the correct mitochondrial chromosome (other builds
 may have 'MT' or a similar chromosome). 
 
+### Running mgatk
+
+In OSX El Capitan and some other unix-based operating systems, the max number of file descriptors
+that you can have open is fixed (for my Mac, it was 256), which can mess up processes like
+`samtools mpileup`, which is called in *mgatk*. To change this, add `ulimit -n 1024` or some
+other large number to your `~/.bash_profile` as this is an environment variable that 
+needs to be set in each shell session. Attempting to process the mouse tcr data with *mgatk*
+without this parameter will fail.
+
 <br><br>
