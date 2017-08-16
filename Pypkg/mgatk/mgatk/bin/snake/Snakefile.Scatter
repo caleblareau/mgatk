@@ -159,12 +159,14 @@ rule make_final_sparse_matrices:
 		Gs =expand(outdir + "/temp/sparse_matrices/{sample}.G.txt", sample=SAMPLES),
 		Ts =expand(outdir + "/temp/sparse_matrices/{sample}.T.txt", sample=SAMPLES),
 		Covs =expand(outdir + "/temp/sparse_matrices/{sample}.coverage.txt", sample=SAMPLES)
+		
 	output:
 		A= outdir + "/final/" + name + ".A.txt.gz",
 		C= outdir + "/final/" + name + ".C.txt.gz",
 		G= outdir + "/final/" + name + ".G.txt.gz",
 		T= outdir + "/final/" + name + ".T.txt.gz",
 		Cov= outdir + "/final/" + name + ".coverage.txt.gz"
+		
 	threads: 1
 	run: 
 		def makeSM(iterableThing, l):
