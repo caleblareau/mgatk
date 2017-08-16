@@ -1,0 +1,17 @@
+NHmax: '1'
+NMmax: '4'
+base_qual: '20'
+blacklist_percentile: '33'
+clipl: '0'
+clipr: '0'
+detailed_calls: 'False'
+fasta_file: outbam/fasta/chrM.fasta
+input_directory: tests/humanbam/
+keep_duplicates: false
+mito_genome: chrM
+mito_length: 16571
+name: mgatk
+output_directory: outbam
+proper_paired: ''
+script_dir: /Volumes/dat/Research/AryeeResearch/lareau_dev/mgatk/Pypkg/mgatk/mgatk
+skip_indels: '--skip-indels '

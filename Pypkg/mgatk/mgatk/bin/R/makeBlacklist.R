@@ -24,5 +24,7 @@ dummy <- data.table(V1 = 1:mitoLength, altmean = -100, altmin = -100)
 out <- rbind(minMax_tbl,dummy)[, .(aMin = max(altmin), aMean = max(altmean)), by = V1]
 out <- out[order(out$V1, decreasing = FALSE),]
 colnames(out) <- c("Position" , "aMin", "aMean")
+out$aMin <- round(out$aMin,1)
+out$aMean <- round(out$aMean,1)
 write.table(data.frame(out), file = outfile, col.names = TRUE, row.names = FALSE, sep = "\t", quote = FALSE)
 

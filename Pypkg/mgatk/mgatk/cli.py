@@ -42,7 +42,7 @@ from .mgatkHelp import *
 @click.option('--keep-indels', '-ki', is_flag=True, help='Keep marked indels for analysis; not recommended as this flag has not been well-tested')
 @click.option('--proper-pairs', '-pp', is_flag=True, help='Require reads to be properly paired.')
 
-@click.option('--read-qual', '-q', default = "20", help='Minimum read quality for final filter.')
+@click.option('--base-qual', '-q', default = "20", help='Minimum base quality for deciding that a variant is real.')
 @click.option('--blacklist-percentile', '-bp', default = "33", help='Samples with percentile depth below this number will be excluded when determining the blacklist.')
 
 @click.option('--clipL', '-cl', default = "0", help='Number of variants to clip from left hand side of read.')
@@ -63,13 +63,14 @@ def main(mode, input, output, name, mito_genome, ncores,
 	atac_single, atac_paired, rna_single, rna_paired,
 	nhmax, nmmax, 
 	keep_duplicates, keep_indels, proper_pairs, blacklist_percentile,
-	read_qual, clipl, clipr, keep_samples, ignore_samples,
+	base_qual, clipl, clipr, keep_samples, ignore_samples,
 	detailed_calls, keep_temp_files, skip_rds):
 	
 	"""mgatk: a mitochondrial genome analysis toolkit."""
 	__version__ = get_distribution('mgatk').version
 	script_dir = os.path.dirname(os.path.realpath(__file__))
-
+	if os.path.exists(output):
+		sys.exit("ERROR: Output path (%s) already exists. QUITTING" % output)
 	click.echo(gettime() + "mgatk v%s" % __version__)
 	if(mode == "check"):
 		click.echo(gettime() + "checking dependencies...")
@@ -84,7 +85,8 @@ def main(mode, input, output, name, mito_genome, ncores,
 	check_software_exists("tabix")
 	check_software_exists("python")
 	check_software_exists("samtools")
-	check_software_exists("java")
+	if not keep_duplicates:
+		check_software_exists("java")
 	check_R_packages(['mgatk', 'ggplot2', "dtplyr", "dplyr"])
 	
 	# -------------------------------
@@ -270,7 +272,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 		os.makedirs(tempfolder)
 		os.makedirs(tempfolder + "/ready_bam")
 		os.makedirs(tempfolder + "/temp_bam")
-		os.makedirs(tempfolder + "/vcf")
+		os.makedirs(tempfolder + "/sparse_matrices")
 	
 	qcfolder = outfolder + "/qc"
 	if not os.path.exists(qcfolder):
@@ -282,7 +284,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 					
 	snakedict1 = {'input_directory' : input, 'output_directory' : output, 'script_dir' : script_dir,
 		'fasta_file' : fastaf, 'mito_genome' : mito_genome, 'mito_length' : mito_length, 'name' : name,
-		'read_qual' : read_qual, 'keep_duplicates' : keep_duplicates, 'blacklist_percentile' : blacklist_percentile, 
+		'base_qual' : base_qual, 'keep_duplicates' : keep_duplicates, 'blacklist_percentile' : blacklist_percentile, 
 		'skip_indels' : skip_indels, 'clipl' : clipl, 'clipr' : clipr, 'proper_paired' : proper_paired,
 		'NHmax' : nhmax, 'NMmax' : nmmax, 'detailed_calls' : str(detailed_calls)}
 	
