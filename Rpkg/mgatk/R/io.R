@@ -1,49 +1,52 @@
 #' @include coreFunctions.R
 NULL
 
-#' Import data from plain text file into
+#' Import data from plain text files explicitly point
+#' to the requisite input files and render a RangedSummarized
+#' Experiment.
 #'
-#' \code{importMito.txt} takes a long file of position, allele,
+#' \code{importMito.explicit} takes a spasre matrix file of position,
 #' sample, and count (non-zero) in some order as variant calls
-#' and a separate file of the position and sample coverage and
+#' (one file per allele) as well as
+#' a separate file of the position and sample coverage and
 #' produces a RangedSummarizedExperiment object that serves
 #' as the backbone of the R interface for mgatk.
 #'
-#' There are seven total v.* and c.* parameters that are the specified
-#' index associated with the feature of interest. If the data was
-#' pre-processed with the mgatk python package, you shouldn't need
-#' to modify these at all.
-#'
-#' @param variantCallFile The filepath of a plain text or gzipped file
+#' The filepath of a plain text or gzipped file
 #' that contains data in a long matrix format of the position,
 #' allele, sample, and coverage. This will be imported and a
 #' data object will be rendered that enables downstream
 #' mgatk analyses
+#'
+#' @param Afile Contains the position, sample, count of A alleles
+#' @param Cfile Contains the position, sample, count of C alleles
+#' @param Gfile Contains the position, sample, count of G alleles
+#' @param Tfile Contains the position, sample, count of T alleles
+#'
 #' @param coverageFile The filepath of a plain text or gzipped file
-#' that contains data in a long matrix format of the position,
+#' that contains data in a sparse matrix format of the position,
 #' sample, and coverage. This will be imported and a
 #' data object will be rendered that enables downstream
-#' mgatk analyses
+#' mgatk analyses.
 #'
-#' @param mito Default = "chrM" The `seqname` of the mitochondrial
-#' genome to be initialized in the
-#' @param keepACGT Default = FALSE Keep assays with sparse matrix
-#' counts of the ACGT alleles per base / individual.
+#' @param depthFile The filepath of a plain text or gzipped file
+#' that contains two columns indicating the sample name and the
+#' second the mean coverage of the sample about the mitochondrial
+#' genome
 #'
-#' @param v.pos Default = 1 column index of the genomic position
-#' in the variant calls file
-#' @param v.allele Default = 2 column index of the allele (A/C/G/T)
-#' in the variant calls file
-#' @param v.sample Default = 3 column index of the sample name
-#' in the variant calls file
-#' @param v.count Default = 4 column index that shows the number
-#' of reads for the sample in the variant calls file
-#' @param c.pos Default = 1 column index of the genomic position
-#' in the coverage file
-#' @param c.sample Default = 2 column index of the sample name
-#' in the coverage file
-#' @param c.coverage Default = 3 column index that shows the number
-#' of reads covering a sample / position
+#' @param referenceAlleleFile The filepath of a plain text or gzipped file
+#' that contains two columns indicating the position and designated
+#' reference allele.
+#'
+#' @param mitoChr Default = "chrM" The `seqname` of the mitochondrial
+#' genome to be initialized in the RangedSummarizedExperiment object
+#'
+#' @param maxFreq Default = 0.5 The maximum allele frequency for
+#' a called variant
+#'
+#'
+#' @param minCoverage Default = 10 The maximum number of total
+#' reads for the variant to be carried forward
 #'
 #' @return An initialized mgatk object that is an S4 class
 #' RangedSummarizedExperiment that includes variant
@@ -58,134 +61,137 @@ NULL
 #' @import GenomicRanges
 #' @examples
 #'
-#' path <-paste0(system.file('extdata',package='mgatk'),"/mouse_tcr/")
-#' variantCallFile <-paste0(path, "mouse_tcr.variantCalls.txt")
-#' coverageFile <- paste0(path, "mouse_tcr.coverage.txt")
-#' mitoSE <- importMito.txt(variantCallFile = variantCallFile, coverageFile = coverageFile)
+#' path <-paste0(system.file('extdata',package='mgatk'),"/glioma/")
+#'
+#' Afile <-paste0(path, "mgatk.A.txt")
+#' Cfile <-paste0(path, "mgatk.C.txt")
+#' Gfile <-paste0(path, "mgatk.G.txt")
+#' Tfile <-paste0(path, "mgatk.T.txt")
+#'
+#' coverageFile <- paste0(path, "mgatk.coverage.txt")
+#' depthFile <- paste0(path, "mgatk.depthTable.txt")
+#' referenceAlleleFile <- paste0(path, "mgatk.chrM_refAllele.txt")
+#'
+#' mitoSE <- importMito.explicit(Afile, Cfile, Gfile, Tfile,
+#'   coverageFile, depthFile, referenceAlleleFile)
 #' dim(mitoSE)
 #'
 #' @export
-setGeneric(name = "importMito.txt",
-           def = function(variantCallFile, coverageFile, mito = "chrM", keepACGT = FALSE,
-                          v.pos = 1, v.allele = 2, v.sample = 3, v.count = 4,
-                          c.pos = 1, c.sample = 2, c.coverage = 3)
-  standardGeneric("importMito.txt"))
+setGeneric(name = "importMito.explicit",
+           def = function(Afile, Cfile, Gfile, Tfile,
+                          coverageFile, depthFile, referenceAlleleFile,
+                          mitoChr = "chrM", maxFreq = 0.5, minCoverage = 10)
 
-#' @rdname importMito.txt
-setMethod("importMito.txt", signature("character", "character", "ANY", "ANY", "ANY", "ANY", "ANY", "ANY", "ANY", "ANY"),
-          definition = function(variantCallFile, coverageFile, mito = "chrM", keepACGT = FALSE,
-                                v.pos = 1, v.allele = 2, v.sample = 3, v.count = 4,
-                                c.pos = 1, c.sample = 2, c.coverage = 3){
+  standardGeneric("importMito.explicit"))
 
-  stopifnot(length(variantCallFile) == 1)
-  stopifnot(length(coverageFile) == 1)
+#' @rdname importMito.explicit
+setMethod("importMito.explicit", signature("character", "character", "character", "character",
+                                      "character", "character", "character", "ANY", "ANY", "ANY"),
+          definition = function(Afile, Cfile, Gfile, Tfile,
+                          coverageFile, depthFile, referenceAlleleFile,
+                          mitoChr = "chrM", maxFreq = 0.5, minCoverage = 10){
 
-  # fread variantCallFile in
-  if(tools::file_ext(variantCallFile) == "gz"){
-    dt <- fread(paste0("zcat < ", variantCallFile), stringsAsFactors = TRUE)
-  } else if(tools::file_ext(variantCallFile) %in% c("txt", "csv", "tsv")){
-    dt <- fread(paste0(variantCallFile), stringsAsFactors = TRUE)
-  } else{
-    stop("Provide a valid file format for the variant call file (.gz, .txt, .csv, or .tsv)")
-  }
+  variantFiles <- list(Afile, Cfile, Gfile, Tfile)
+  metaFiles <- list(coverageFile, depthFile, referenceAlleleFile)
 
-  stopifnot(all(dim(dt)[2] >= c(v.pos, v.allele, v.sample, v.count)))
-
-  # fread coverageFile in
-  if(tools::file_ext(coverageFile) == "gz"){
-    cov <- fread(paste0("zcat < ", coverageFile), stringsAsFactors = TRUE)
-  } else if(tools::file_ext(coverageFile) %in% c("txt", "csv", "tsv")){
-    cov <- fread(paste0(coverageFile), stringsAsFactors = TRUE)
-  } else{
-    stop("Provide a valid file format for the coverage call file (.gz, .txt, .csv, or .tsv)")
-  }
-
-  stopifnot(all(dim(cov)[2] >= c(c.pos, c.sample, c.coverage)))
-
-  # Handle column naming based on user input
-  ct <- paste0("X", 1:dim(dt)[2])
-  ct[v.pos] <- "pos"; ct[v.allele] <- "allele"
-  ct[v.sample] <- "sample"; ct[v.count] <- "count"
-  colnames(dt) <- ct
-
-  ct <- paste0("X", 1:dim(cov)[2])
-  ct[c.pos] <- "pos";
-  ct[c.sample] <- "sample"; ct[c.coverage] <- "coverage"
-  colnames(cov) <- ct
+  nullout <- lapply(c(variantFiles, metaFiles), function(file){
+    stopifnot(length(file) == 1)
+  })
 
   # Set up downstream processing including robust ordering
-  # The coverage file could have slightly more variants / 
+  # The coverage file could have slightly more variants /
   # individual samples depending on the calls, so base it
-  # of of them 
-  
-  samples <- levels(cov[[c.sample]])
-  dt$sample <- factor(dt$sample, levels = samples)
-  cov$sample <- factor(cov$sample, levels = samples)
-  maxpos <- max(cov$pos)
-  maxsamples <- length(samples)
+  # of of them
+  importDT <- function(file){
+    if(tools::file_ext(file) == "gz"){
+      cov <- fread(paste0("zcat < ", file), stringsAsFactors = TRUE)
+    } else if(tools::file_ext(file) %in% c("txt", "csv", "tsv")){
+      cov <- fread(paste0(file), stringsAsFactors = TRUE)
+    } else{
+      stop("Provide a valid file format for the  file (.gz, .txt, .csv, or .tsv)")
+    }
+  }
 
-  # determine allele with greatest count
-  aldt <- dcast.data.table(dt, pos ~ allele, max, value.var = "count")
-  allele <- colnames(aldt)[2:5][apply(aldt[,2:5], 1, which.max)]
-  names(allele) <- as.character(aldt[["pos"]])
-  
-  # Make vector of alleles for later use
-  allelesAll <- unname(allele[as.character(1:maxpos)])
+  cov <- importDT(coverageFile)
 
-  # Extract columns with variants per sample with counts
-  dt$chosenAllele <- allele[as.character(dt[["pos"]])]
-  d <- dcast.data.table(dt[dt$allele == dt$chosenAllele], pos + sample ~ ., max, value.var = "count")
-  colnames(d) <- c("pos", "sample", "count")
-  d$sample <- factor(d$sample, levels = samples)
+  samplesOrder <- levels(cov[[2]])
+  maxpos <- max(cov[[1]])
+  maxsamples <- length(samplesOrder)
 
-  # Add the frequency, coverage sensitive to the order
-  # extra element appended to all vectors is for correct dim
-  SMlist <- list()
-
-  SMlist$coverage <- Matrix::sparseMatrix(
-    i = c(cov[["pos"]],maxpos),
-    j = c(as.numeric(cov[["sample"]]), maxsamples),
-    x = c(cov[["coverage"]],0)
+  # make coverage a sparse matrix
+  covmat <- Matrix::sparseMatrix(
+    i = cov[[1]],
+    j = as.numeric(cov[[2]]),
+    x = cov[[3]]
   )
+  remove(cov)
 
-  SMlist$freq <- Matrix::sparseMatrix(
-    i = c(d[["pos"]],maxpos),
-    j = c(as.numeric(d[["sample"]]), maxsamples),
-    x = c(d[["count"]],0)
-  ) / (SMlist$coverage + 0.001) # charity count preserves zeros
-
-  if(keepACGT){
-
-    # cast the split data tables into sparse matrices
-    sdt <- lapply(split(1:nrow(dt), dt[[v.allele]]), function(x) dt[x])
-
-    sparseMatrixMake <- function(letter){
-      Matrix::sparseMatrix(
-        i = c(sdt[[letter]][["pos"]],maxpos),
-        j = c(as.numeric(sdt[[letter]][["sample"]]), maxsamples),
-        x = c(sdt[[letter]][["count"]],0)
-      )
+  importSM <- function(file){
+    # fread the individual variant calls in
+    if(tools::file_ext(file) == "gz"){
+      dt <- fread(paste0("zcat < ", file), stringsAsFactors = TRUE)
+    } else if(tools::file_ext(file) %in% c("txt", "csv", "tsv")){
+      dt <- fread(paste0(file), stringsAsFactors = TRUE)
+    } else{
+      stop("Provide a valid file format for the variant call file (.gz, .txt, .csv, or .tsv)")
     }
 
-    ACGTlist <- lapply(c("A","C","G","T"), sparseMatrixMake)
-    if(length(unique(lapply(ACGTlist, dim))) > 1) stop("Error importing")
-    names(ACGTlist) <- c("A","C","G","T")
-    SMlist <- c(SMlist, ACGTlist)
-    remove(sdt)
+    dt$sample <- factor(dt$sample, levels = samplesOrder)
+
+    mat <- Matrix::sparseMatrix(
+      i = c(dt[[1]],maxpos),
+      j = c(as.numeric(dt[[2]]), maxsamples),
+      x = c(dt[[3]],0)
+    ) / (covmat + 0.00000000001)
+    remove(dt)
+    return(round(mat,4))
   }
-  remove(dt)
+
+  ACGT <- lapply(variantFiles, importSM)
+  names(ACGT) <- c("A", "C", "G", "T")
+
+  # Call variants
+  freqMat <- sapply(ACGT, Matrix::rowMeans)
+  ref <- importDT(referenceAlleleFile)
+
+  # Make a matrix with 0s at the reference allele
+  refMat <- Matrix::sparseMatrix(
+    i = (ref[[1]])[1:maxpos],
+    j = as.numeric(factor(ref[[2]], levels = c("A", "C", "G", "T"))[1:maxpos]),
+    x = -1
+  ) + 1
+  colnames(refMat) <- c("A", "C", "G", "T")
+
+  # Zeros where reference allele or > maxFreq
+  altAllele <-  c("A", "C", "G", "T")[apply(freqMat*refMat*(freqMat < maxFreq), 1, which.max)]
+  As <- which(altAllele == "A"); Cs <- which(altAllele == "C")
+  Gs <- which(altAllele == "G"); Ts <- which(altAllele == "T")
+
+  # Get allele-specific frequences
+  freq <- rbind(ACGT[["A"]][As,], ACGT[["C"]][Cs,],
+                ACGT[["G"]][Gs,], ACGT[["T"]][Ts,])
+  remove(ACGT)
+  allorder <- c(As, Cs, Gs, Ts)
+  freq <- freq[order(allorder),]
+
+  # Add column meta data
+  depth <- data.frame(importDT(depthFile))
+  sdf <- merge(data.frame(sample = samplesOrder), depth, by.x = "sample", by.y = "V1")
+  rownames(sdf) <- samplesOrder
+  colnames(sdf) <- c("sample", "depth")
 
   # Make GRanges and include the allele chosen for analysis
-  row_g <- GRanges(seqnames = mito, IRanges(1:maxpos, width = 1),
-                   mcols = DataFrame(allele = allelesAll))
+  row_g <- GenomicRanges::GRanges(seqnames = mitoChr,
+                   IRanges::IRanges(1:maxpos, width = 1),
+                   mcols = DataFrame(refAllele = ref[[2]][1:maxpos], altAllele = altAllele))
 
   # Make a summarized experiment
-  SE <- SummarizedExperiment(
-    assays = SMlist,
-    colData = DataFrame(samples = samples, row.names = samples),
+  SE <- SummarizedExperiment::SummarizedExperiment(
+    assays = list("frequency" = freq, "coverage" = covmat),
+    colData = DataFrame(sdf),
     rowData = row_g
   )
 
   # Remove only positions that we got coverage for
-  return(SE[!is.na(allelesAll),])
+  return(SE[Matrix::rowSums(covmat) > 10, ])
 })
