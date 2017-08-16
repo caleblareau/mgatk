@@ -69,8 +69,6 @@ def main(mode, input, output, name, mito_genome, ncores,
 	"""mgatk: a mitochondrial genome analysis toolkit."""
 	__version__ = get_distribution('mgatk').version
 	script_dir = os.path.dirname(os.path.realpath(__file__))
-	if os.path.exists(output):
-		sys.exit("ERROR: Output path (%s) already exists. QUITTING" % output)
 	click.echo(gettime() + "mgatk v%s" % __version__)
 	if(mode == "check"):
 		click.echo(gettime() + "checking dependencies...")
@@ -273,6 +271,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 		os.makedirs(tempfolder + "/ready_bam")
 		os.makedirs(tempfolder + "/temp_bam")
 		os.makedirs(tempfolder + "/sparse_matrices")
+		os.makedirs(tempfolder + "/vcf")
 	
 	qcfolder = outfolder + "/qc"
 	if not os.path.exists(qcfolder):
