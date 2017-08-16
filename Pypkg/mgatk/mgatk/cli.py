@@ -38,7 +38,7 @@ from .mgatkHelp import *
 @click.option('--NHmax', default = "1", help='Maximum number of read alignments allowed as governed by the NH flag.')
 @click.option('--NMmax', default = "4", help='Maximum number of paired mismatches allowed represented by the NM/nM tags.')
 
-@click.option('--keep-duplicates', '-kd', is_flag=True, help='Keep marked (presumably PCR) duplicates; recommended for low-coverage RNA-Seq')
+@click.option('--remove-duplicates', '-rd', is_flag=True, help='Removed marked (presumably PCR) duplicates from Picard; not recommended for low-coverage RNA-Seq')
 @click.option('--keep-indels', '-ki', is_flag=True, help='Keep marked indels for analysis; not recommended as this flag has not been well-tested')
 @click.option('--proper-pairs', '-pp', is_flag=True, help='Require reads to be properly paired.')
 
@@ -62,7 +62,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 	cluster, jobs,
 	atac_single, atac_paired, rna_single, rna_paired,
 	nhmax, nmmax, 
-	keep_duplicates, keep_indels, proper_pairs, blacklist_percentile,
+	remove_duplicates, keep_indels, proper_pairs, blacklist_percentile,
 	base_qual, clipl, clipr, keep_samples, ignore_samples,
 	detailed_calls, keep_temp_files, skip_rds):
 	
@@ -83,7 +83,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 	check_software_exists("tabix")
 	check_software_exists("python")
 	check_software_exists("samtools")
-	if not keep_duplicates:
+	if remove_duplicates:
 		check_software_exists("java")
 	check_R_packages(['mgatk', 'ggplot2', "dtplyr", "dplyr"])
 	
@@ -147,7 +147,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 		os.makedirs(outfolder + "/final")
 	if not os.path.exists(logfolder):
 		os.makedirs(logfolder)
-		if not(keep_duplicates):
+		if (remove_duplicates):
 			os.makedirs(logfolder + "/rmdupslogs")
 		os.makedirs(logfolder + "/filterlogs")
 	if not os.path.exists(fastafolder):
@@ -283,7 +283,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 					
 	snakedict1 = {'input_directory' : input, 'output_directory' : output, 'script_dir' : script_dir,
 		'fasta_file' : fastaf, 'mito_genome' : mito_genome, 'mito_length' : mito_length, 'name' : name,
-		'base_qual' : base_qual, 'keep_duplicates' : keep_duplicates, 'blacklist_percentile' : blacklist_percentile, 
+		'base_qual' : base_qual, 'remove_duplicates' : remove_duplicates, 'blacklist_percentile' : blacklist_percentile, 
 		'skip_indels' : skip_indels, 'clipl' : clipl, 'clipr' : clipr, 'proper_paired' : proper_paired,
 		'NHmax' : nhmax, 'NMmax' : nmmax, 'detailed_calls' : str(detailed_calls)}
 	

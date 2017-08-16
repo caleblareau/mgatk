@@ -17,7 +17,7 @@ mito_genome = config["mito_genome"]
 mito_length = str(config["mito_length"])
 fasta_file = config["fasta_file"]
 
-keep_duplicates = config["keep_duplicates"]
+remove_duplicates = config["remove_duplicates"]
 proper_paired = config["proper_paired"]
 skip_indels = config["skip_indels"]
 
@@ -58,7 +58,12 @@ bamtxtin = '{sample}.bam.txt'
 rule all:
 	input:
 		outdir + "/final/" + name + ".depthTable.txt",
-		outdir + "/final/" + name + ".blacklist.txt"
+		outdir + "/final/" + name + ".blacklist.txt",
+		outdir + "/final/" + name + ".A.txt.gz",
+		outdir + "/final/" + name + ".C.txt.gz",
+		outdir + "/final/" + name + ".G.txt.gz",
+		outdir + "/final/" + name + ".T.txt.gz",
+		outdir + "/final/" + name + ".coverage.txt.gz"
 
 rule process_one_sample:
 	input:
@@ -68,32 +73,39 @@ rule process_one_sample:
 		bai = outdir + "/temp/ready_bam/{sample}.qc.bam.bai",
 		depth = outdir + "/qc/depth/{sample}.Q0.depth.txt", 
 		A = outdir + "/temp/sparse_matrices/{sample}.A.txt",
+		C = outdir + "/temp/sparse_matrices/{sample}.C.txt",
+		G = outdir + "/temp/sparse_matrices/{sample}.G.txt",
+		T = outdir + "/temp/sparse_matrices/{sample}.T.txt",
+		cov = outdir + "/temp/sparse_matrices/{sample}.coverage.txt",
 		baq = outdir + "/qc/BAQ/{sample}.Q0.BAQ.txt", 
 #		bq = outdir + "/qc/BQ/{sample}.Q0.BQ.txt"
 	threads: 1
 	run:
 		sample = output.bam.replace(outdir + "/temp/ready_bam/", "").replace(".qc.bam", "")
-		
 		with open(input.txtin) as f: bamfilepath = f.read()
+		
+		# File paths
 		rmlog = output.bam.replace(".qc.bam", ".rmdups.log").replace("/temp/ready_bam/", "/logs/rmdupslogs/")
 		filtlog = output.bam.replace(".qc.bam", ".filter.log").replace("/temp/ready_bam/", "/logs/filterlogs/")
 		temp_bam0 = output.bam.replace(".qc.bam", ".temp0.bam").replace("/temp/ready_bam/", "/temp/temp_bam/")
 		temp_bam1 = output.bam.replace(".qc.bam", ".temp1.bam").replace("/temp/ready_bam/", "/temp/temp_bam/")
 		
+		
+		# Filter call
 		pycall = " ".join([python, filtclip_py, bamfilepath, filtlog, clipL, "-"+clipR, mito_genome, NHmax, NMmax])
 		
 		if(len(proper_paired) > 0):
 			pycallout = pycall + proper_paried + " > " + temp_bam0 # samtools
 		else:
 			pycallout = pycall+ " > " + temp_bam0
-			
 		os.system(pycallout)
 		
 		# Sort the filtered bam file
 		pysam.sort("-o", temp_bam1, temp_bam0)
 		pysam.index(temp_bam1)
 		
-		if not keep_duplicates:
+		# Remove duplicates
+		if remove_duplicates:
 			mdc_long = MarkDuplicatesCall + " INPUT="+temp_bam1+" OUTPUT="+output.bam+" METRICS_FILE="+rmlog+" REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT"
 			os.system(mdc_long)
 		else: # just move the previous output
@@ -102,16 +114,16 @@ rule process_one_sample:
 		pysam.index(output.bam)
 		bamfilepath = output.bam
 		
-		# Allele counts
+		# Get allele counts per sample / base pair
 		prefix = outdir + "/temp/sparse_matrices/" + sample
 		print(prefix)
 		pycall = " ".join([python, DNAcounts_py, output.bam, prefix, mito_genome, mito_length, base_qual, sample])
 		os.system(pycall)
 		
-		# Depth
+		# Get depth the OG way
 		os.system(samtools + " depth "+bamfilepath+" | awk '{sum+=$3} END {print sum/"+str(mito_length)+"}' > " + output.depth)
 		
-		# BAQ
+		# Get the BAQ for all variants
 		baq_vcf_gz = output.baq.replace(".Q0.BAQ.txt", ".Q0.BAQ.vcf.gz").replace("/qc/BAQ/", "/temp/vcf/")
 		stc = samtools + " mpileup -d8000 -f "+fasta_file+" -r "+mito_genome+" -Q0 -t AD,ADF,ADR "+skip_indels+"-v "+bamfilepath+" > " + baq_vcf_gz
 		os.system(stc)
@@ -127,8 +139,6 @@ rule process_one_sample:
 #		bcc2 = bcftools+" query -f '[%POS\tINFO/%I16\n]' "+bq_vcf_gz+" | sed -e 's/INFO\///g' -e 's/,/\t/g' > " + output.bq
 #		os.system(bcc2)
 
-		
-
 rule make_depth_table:
 	input:
 		expand(outdir + "/qc/depth/{sample}.Q0.depth.txt", sample=SAMPLES)
@@ -141,6 +151,33 @@ rule make_depth_table:
 				sample = i.replace(outdir+ "/qc/depth/", '').replace(".Q0.depth.txt", '')
 				result = subprocess.run(['cat', i], stdout=subprocess.PIPE)
 				f.write(sample + " " + result.stdout.strip().decode("utf-8") + "\n")
+
+rule make_final_sparse_matrices:
+	input:
+		As =expand(outdir + "/temp/sparse_matrices/{sample}.A.txt", sample=SAMPLES),
+		Cs =expand(outdir + "/temp/sparse_matrices/{sample}.C.txt", sample=SAMPLES),
+		Gs =expand(outdir + "/temp/sparse_matrices/{sample}.G.txt", sample=SAMPLES),
+		Ts =expand(outdir + "/temp/sparse_matrices/{sample}.T.txt", sample=SAMPLES),
+		Covs =expand(outdir + "/temp/sparse_matrices/{sample}.coverage.txt", sample=SAMPLES)
+	output:
+		A= outdir + "/final/" + name + ".A.txt.gz",
+		C= outdir + "/final/" + name + ".C.txt.gz",
+		G= outdir + "/final/" + name + ".G.txt.gz",
+		T= outdir + "/final/" + name + ".T.txt.gz",
+		Cov= outdir + "/final/" + name + ".coverage.txt.gz"
+	threads: 1
+	run: 
+		def makeSM(iterableThing, l):
+			for i in iterableThing:
+				os.system("cat " + i + " >> " + outdir + "/final/" + name + "."+l+".txt")
+			os.system("gzip " + outdir + "/final/" + name + "."+l+".txt")
+			
+		makeSM(input.As, "A")
+		makeSM(input.Cs, "C")
+		makeSM(input.Gs, "G")
+		makeSM(input.Ts, "T")
+		makeSM(input.Covs, "coverage")
+		
 
 rule make_blacklist:
 	input:
