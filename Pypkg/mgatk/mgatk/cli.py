@@ -205,7 +205,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 	snakeclust = ""
 	njobs = int(jobs)
 	if(njobs > 0 and cluster != ""):
-		snakeclust = " --jobs " + jobs + " --cluster " + cluster + " "
+		snakeclust = " --jobs " + jobs + " --cluster '" + cluster + "' "
 	
 	
 	####################
@@ -296,6 +296,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 	#os.system(dagcall)
 	
 	snakefile1 = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="' + y1 + '" -T'
+	print(snakefile1)
 	os.system(snakefile1)
 	click.echo(gettime() + "mgatk successfully processed the supplied .bam files", logf)
 	
