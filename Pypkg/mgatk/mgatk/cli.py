@@ -77,14 +77,14 @@ def main(mode, input, output, name, mito_genome, ncores,
 	# -------------------------------
 	# Verify dependencies
 	# -------------------------------
-	
-	check_software_exists("R")
-	check_software_exists("bcftools")
-	check_software_exists("tabix")
+
 	check_software_exists("python")
 	check_software_exists("samtools")
+	
 	if remove_duplicates:
 		check_software_exists("java")
+
+	check_software_exists("R")
 	check_R_packages(['mgatk', 'ggplot2', "dtplyr", "dplyr"])
 	
 	# -------------------------------
@@ -276,9 +276,8 @@ def main(mode, input, output, name, mito_genome, ncores,
 	qcfolder = outfolder + "/qc"
 	if not os.path.exists(qcfolder):
 		os.makedirs(qcfolder)
-		os.makedirs(qcfolder + "/BAQ")
-		os.makedirs(qcfolder + "/BQ")
-		os.makedirs(qcfolder + "/depth")
+		os.makedirs(qcfolder + "/quality")
+		os.makedirs(qcfolder + "/depth")	
 		os.makedirs(qcfolder + "/detailed")
 					
 	snakedict1 = {'input_directory' : input, 'output_directory' : output, 'script_dir' : script_dir,
@@ -307,7 +306,8 @@ def main(mode, input, output, name, mito_genome, ncores,
 		shutil.rmtree(internfolder)
 		shutil.rmtree(tempfolder)
 		if not detailed_calls:
-			shutil.rmtree(qcfolder + "/detailed")
+			if os.path.exists(qcfolder + "/detailed"):
+				shutil.rmtree(qcfolder + "/detailed")
 		click.echo(gettime() + "Intermediate files successfully removed.", logf)
 		
 	# Suspend logging

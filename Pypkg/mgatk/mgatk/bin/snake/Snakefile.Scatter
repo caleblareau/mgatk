@@ -40,9 +40,10 @@ tabix = "tabix"
 python = "python"
 
 # Script locations
-filtclip_py = script_dir + "/bin/filterClipBam.py"
-detailedcall_py = script_dir + "/bin/detailedCalls.py"
-DNAcounts_py = script_dir + "/bin/DNAcounts.py"
+filtclip_py = script_dir + "/bin/python/filterClipBam.py"
+quality_py = script_dir + "/bin/python/quality.py"
+detailedcall_py = script_dir + "/bin/python/detailedCalls.py"
+DNAcounts_py = script_dir + "/bin/python/DNAcounts.py"
 
 depthTableQuery_R = script_dir + "/bin/R/depthTableQuery.R"
 makeBlacklist_R = script_dir + "/bin/R/makeBlacklist.R"
@@ -58,7 +59,7 @@ bamtxtin = '{sample}.bam.txt'
 rule all:
 	input:
 		outdir + "/final/" + name + ".depthTable.txt",
-		outdir + "/final/" + name + ".blacklist.txt",
+#		outdir + "/final/" + name + ".blacklist.txt",
 		outdir + "/final/" + name + ".A.txt.gz",
 		outdir + "/final/" + name + ".C.txt.gz",
 		outdir + "/final/" + name + ".G.txt.gz",
@@ -77,8 +78,7 @@ rule process_one_sample:
 		G = outdir + "/temp/sparse_matrices/{sample}.G.txt",
 		T = outdir + "/temp/sparse_matrices/{sample}.T.txt",
 		cov = outdir + "/temp/sparse_matrices/{sample}.coverage.txt",
-		baq = outdir + "/qc/BAQ/{sample}.Q0.BAQ.txt", 
-#		bq = outdir + "/qc/BQ/{sample}.Q0.BQ.txt"
+		quality = outdir + "/qc/quality/{sample}.quality.txt"
 	threads: 1
 	run:
 		sample = output.bam.replace(outdir + "/temp/ready_bam/", "").replace(".qc.bam", "")
@@ -116,35 +116,22 @@ rule process_one_sample:
 		
 		# Get allele counts per sample / base pair
 		prefix = outdir + "/temp/sparse_matrices/" + sample
-		print(prefix)
 		pycall = " ".join([python, DNAcounts_py, output.bam, prefix, mito_genome, mito_length, base_qual, sample])
 		os.system(pycall)
 		
 		# Get depth the OG way
 		os.system(samtools + " depth "+bamfilepath+" | awk '{sum+=$3} END {print sum/"+str(mito_length)+"}' > " + output.depth)
 		
-		# Get the BAQ for all variants
-		baq_vcf_gz = output.baq.replace(".Q0.BAQ.txt", ".Q0.BAQ.vcf.gz").replace("/qc/BAQ/", "/temp/vcf/")
-		stc = samtools + " mpileup -d8000 -f "+fasta_file+" -r "+mito_genome+" -Q0 -t AD,ADF,ADR "+skip_indels+"-v "+bamfilepath+" > " + baq_vcf_gz
-		os.system(stc)
-		os.system(tabix + " " + baq_vcf_gz)
-		bcc = bcftools+" query -f '[%POS\tINFO/%I16\n]' "+baq_vcf_gz+" | sed -e 's/INFO\///g' -e 's/,/\t/g' > " + output.baq
-		os.system(bcc)
-		
-		# BQ
-#		bq_vcf_gz = output.bq.replace(".Q0.BQ.txt", ".Q0.BQ.vcf.gz").replace("/qc/BQ/", "/temp/vcf/")
-#		stc2 = samtools + " mpileup -d8000 -f "+fasta_file+" -r "+mito_genome+" -Q0 -B -t AD,ADF,ADR "+skip_indels+"-v "+bamfilepath+" > " + bq_vcf_gz
-#		os.system(stc2)
-#		os.system(tabix + " " + bq_vcf_gz)
-#		bcc2 = bcftools+" query -f '[%POS\tINFO/%I16\n]' "+bq_vcf_gz+" | sed -e 's/INFO\///g' -e 's/,/\t/g' > " + output.bq
-#		os.system(bcc2)
+		# Get per-base quality
+		prefix = outdir + "/qc/quality/" + sample
+		pycall = " ".join([python, quality_py, output.bam, prefix, mito_genome, mito_length, sample])
+		os.system(pycall)
 
 rule make_depth_table:
 	input:
 		expand(outdir + "/qc/depth/{sample}.Q0.depth.txt", sample=SAMPLES)
 	output:
 		outdir + "/final/" + name + ".depthTable.txt"
-	threads: 1
 	run: 
 		with open(output[0], 'w') as f:
 			for i in input:
@@ -154,21 +141,21 @@ rule make_depth_table:
 
 rule make_final_sparse_matrices:
 	input:
-		As =expand(outdir + "/temp/sparse_matrices/{sample}.A.txt", sample=SAMPLES),
-		Cs =expand(outdir + "/temp/sparse_matrices/{sample}.C.txt", sample=SAMPLES),
-		Gs =expand(outdir + "/temp/sparse_matrices/{sample}.G.txt", sample=SAMPLES),
-		Ts =expand(outdir + "/temp/sparse_matrices/{sample}.T.txt", sample=SAMPLES),
-		Covs =expand(outdir + "/temp/sparse_matrices/{sample}.coverage.txt", sample=SAMPLES)
+		As = expand(outdir + "/temp/sparse_matrices/{sample}.A.txt", sample=SAMPLES),
+		Cs = expand(outdir + "/temp/sparse_matrices/{sample}.C.txt", sample=SAMPLES),
+		Gs = expand(outdir + "/temp/sparse_matrices/{sample}.G.txt", sample=SAMPLES),
+		Ts = expand(outdir + "/temp/sparse_matrices/{sample}.T.txt", sample=SAMPLES),
+		Covs = expand(outdir + "/temp/sparse_matrices/{sample}.coverage.txt", sample=SAMPLES)
 		
 	output:
-		A= outdir + "/final/" + name + ".A.txt.gz",
-		C= outdir + "/final/" + name + ".C.txt.gz",
-		G= outdir + "/final/" + name + ".G.txt.gz",
-		T= outdir + "/final/" + name + ".T.txt.gz",
-		Cov= outdir + "/final/" + name + ".coverage.txt.gz"
+		A = outdir + "/final/" + name + ".A.txt.gz",
+		C = outdir + "/final/" + name + ".C.txt.gz",
+		G = outdir + "/final/" + name + ".G.txt.gz",
+		T = outdir + "/final/" + name + ".T.txt.gz",
+		Cov = outdir + "/final/" + name + ".coverage.txt.gz"
 		
-	threads: 1
 	run: 
+	
 		def makeSM(iterableThing, l):
 			for i in iterableThing:
 				os.system("cat " + i + " >> " + outdir + "/final/" + name + "."+l+".txt")
@@ -188,7 +175,6 @@ rule make_blacklist:
 		o1 = outdir + "/temp/" + name + ".samplesFor.blacklist.txt",
 		allBAQ = outdir + "/temp/" + name + ".allBAQfor.blacklist.txt.gz",
 		out = outdir + "/final/" + name + ".blacklist.txt"
-	threads: 1
 	run: 
 		# Determine samples
 		Rcall1 = " ".join([Rscript, depthTableQuery_R, input[0], output.o1, blacklist_percentile])
