@@ -23,6 +23,7 @@ skip_indels = config["skip_indels"]
 
 base_qual = str(config["base_qual"])
 blacklist_percentile = config["blacklist_percentile"]
+max_javamem  = config["max_javamem"]
 
 clipL = config["clipl"]
 clipR = config["clipr"]
@@ -32,11 +33,9 @@ NMmax = config["NMmax"]
 detailed_calls = config["detailed_calls"]
 
 # Software paths
-bcftools = "bcftools"
 java = "java"
 Rscript = "Rscript"
 samtools = "samtools"
-tabix = "tabix"
 python = "python"
 
 # Script locations
@@ -48,7 +47,7 @@ DNAcounts_py = script_dir + "/bin/python/DNAcounts.py"
 depthTableQuery_R = script_dir + "/bin/R/depthTableQuery.R"
 makeBlacklist_R = script_dir + "/bin/R/makeBlacklist.R"
 
-MarkDuplicatesCall = java + " -Xmx4000m  -jar " + script_dir + "/bin/MarkDuplicates.jar"
+MarkDuplicatesCall = java + " -Xmx"+max_javamem+"  -jar " + script_dir + "/bin/MarkDuplicates.jar"
 
 # A Snakemake regular expression matching the bam files that were all aligned
 SAMPLES, = glob_wildcards(join(outdir, ".internal/samples/{sample}.bam.txt"))
@@ -58,13 +57,7 @@ bamtxtin = '{sample}.bam.txt'
 
 rule all:
 	input:
-		outdir + "/final/" + name + ".depthTable.txt",
-#		outdir + "/final/" + name + ".blacklist.txt",
-		outdir + "/final/" + name + ".A.txt.gz",
-		outdir + "/final/" + name + ".C.txt.gz",
-		outdir + "/final/" + name + ".G.txt.gz",
-		outdir + "/final/" + name + ".T.txt.gz",
-		outdir + "/final/" + name + ".coverage.txt.gz"
+		outdir + "/final/" + name + ".depthTable.txt"
 
 rule process_one_sample:
 	input:
@@ -72,121 +65,69 @@ rule process_one_sample:
 	output:
 		bam = outdir + "/temp/ready_bam/{sample}.qc.bam",
 		bai = outdir + "/temp/ready_bam/{sample}.qc.bam.bai",
-		depth = outdir + "/qc/depth/{sample}.Q0.depth.txt", 
+		depth = outdir + "/qc/depth/{sample}.depth.txt", 
 		A = outdir + "/temp/sparse_matrices/{sample}.A.txt",
 		C = outdir + "/temp/sparse_matrices/{sample}.C.txt",
 		G = outdir + "/temp/sparse_matrices/{sample}.G.txt",
 		T = outdir + "/temp/sparse_matrices/{sample}.T.txt",
 		cov = outdir + "/temp/sparse_matrices/{sample}.coverage.txt",
 		quality = outdir + "/qc/quality/{sample}.quality.txt"
-	threads: 1
 	run:
+		# Get sample information
 		sample = output.bam.replace(outdir + "/temp/ready_bam/", "").replace(".qc.bam", "")
 		with open(input.txtin) as f: bamfilepath = f.read()
 		
-		# File paths
+		# Prepare filepath locations
 		rmlog = output.bam.replace(".qc.bam", ".rmdups.log").replace("/temp/ready_bam/", "/logs/rmdupslogs/")
 		filtlog = output.bam.replace(".qc.bam", ".filter.log").replace("/temp/ready_bam/", "/logs/filterlogs/")
 		temp_bam0 = output.bam.replace(".qc.bam", ".temp0.bam").replace("/temp/ready_bam/", "/temp/temp_bam/")
 		temp_bam1 = output.bam.replace(".qc.bam", ".temp1.bam").replace("/temp/ready_bam/", "/temp/temp_bam/")
+		prefixSM = outdir + "/temp/sparse_matrices/" + sample
+		prefixQS = outdir + "/qc/quality/" + sample
 		
-		
-		# Filter call
+		# 1) Filter bam files
 		pycall = " ".join([python, filtclip_py, bamfilepath, filtlog, clipL, "-"+clipR, mito_genome, NHmax, NMmax])
-		
 		if(len(proper_paired) > 0):
 			pycallout = pycall + proper_paried + " > " + temp_bam0 # samtools
 		else:
 			pycallout = pycall+ " > " + temp_bam0
 		os.system(pycallout)
 		
-		# Sort the filtered bam file
+		# 2) Sort the filtered bam file
 		pysam.sort("-o", temp_bam1, temp_bam0)
 		pysam.index(temp_bam1)
 		
-		# Remove duplicates
+		# 3) (Optional) Remove duplicates
 		if remove_duplicates:
 			mdc_long = MarkDuplicatesCall + " INPUT="+temp_bam1+" OUTPUT="+output.bam+" METRICS_FILE="+rmlog+" REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT"
 			os.system(mdc_long)
 		else: # just move the previous output
 			os.system("mv " + temp_bam1 + " " + output.bam)
-			os.system("mv " + temp_bam1 + ".bai " + output.bai)
 		pysam.index(output.bam)
-		bamfilepath = output.bam
 		
-		# Get allele counts per sample / base pair
-		prefix = outdir + "/temp/sparse_matrices/" + sample
-		pycall = " ".join([python, DNAcounts_py, output.bam, prefix, mito_genome, mito_length, base_qual, sample])
+		# 4) Get allele counts per sample / base pair
+		pycall = " ".join([python, DNAcounts_py, output.bam, prefixSM, mito_genome, mito_length, base_qual, sample])
 		os.system(pycall)
 		
-		# Get depth the OG way
-		os.system(samtools + " depth "+bamfilepath+" | awk '{sum+=$3} END {print sum/"+str(mito_length)+"}' > " + output.depth)
-		
-		# Get per-base quality
-		prefix = outdir + "/qc/quality/" + sample
-		pycall = " ".join([python, quality_py, output.bam, prefix, mito_genome, mito_length, sample])
+		# 5) Get depth from the coverage sparse matrix
+		with open(prefixSM + ".coverage.txt", 'r') as coverage:
+			depth = 0
+			for row in coverage:
+				s = row.split(",")
+				depth += int(s[2].strip())
+		with open(output.depth, 'w') as d:
+			d.write(sample + "\t" + str(round(float(depth)/float(mito_length),2)) + "\n")
+			
+		# 6) Get per-base quality scores
+		pycall = " ".join([python, quality_py, output.bam, prefixQS, mito_genome, mito_length, sample])
 		os.system(pycall)
 
 rule make_depth_table:
 	input:
-		expand(outdir + "/qc/depth/{sample}.Q0.depth.txt", sample=SAMPLES)
+		depths = expand(outdir + "/qc/depth/{sample}.depth.txt", sample=SAMPLES)
 	output:
-		outdir + "/final/" + name + ".depthTable.txt"
+		depthtable = outdir + "/final/" + name + ".depthTable.txt"
 	run: 
-		with open(output[0], 'w') as f:
-			for i in input:
-				sample = i.replace(outdir+ "/qc/depth/", '').replace(".Q0.depth.txt", '')
-				result = subprocess.run(['cat', i], stdout=subprocess.PIPE)
-				f.write(sample + " " + result.stdout.strip().decode("utf-8") + "\n")
-
-rule make_final_sparse_matrices:
-	input:
-		As = expand(outdir + "/temp/sparse_matrices/{sample}.A.txt", sample=SAMPLES),
-		Cs = expand(outdir + "/temp/sparse_matrices/{sample}.C.txt", sample=SAMPLES),
-		Gs = expand(outdir + "/temp/sparse_matrices/{sample}.G.txt", sample=SAMPLES),
-		Ts = expand(outdir + "/temp/sparse_matrices/{sample}.T.txt", sample=SAMPLES),
-		Covs = expand(outdir + "/temp/sparse_matrices/{sample}.coverage.txt", sample=SAMPLES)
-		
-	output:
-		A = outdir + "/final/" + name + ".A.txt.gz",
-		C = outdir + "/final/" + name + ".C.txt.gz",
-		G = outdir + "/final/" + name + ".G.txt.gz",
-		T = outdir + "/final/" + name + ".T.txt.gz",
-		Cov = outdir + "/final/" + name + ".coverage.txt.gz"
-		
-	run: 
-	
-		def makeSM(iterableThing, l):
-			for i in iterableThing:
-				os.system("cat " + i + " >> " + outdir + "/final/" + name + "."+l+".txt")
-			os.system("gzip " + outdir + "/final/" + name + "."+l+".txt")
-			
-		makeSM(input.As, "A")
-		makeSM(input.Cs, "C")
-		makeSM(input.Gs, "G")
-		makeSM(input.Ts, "T")
-		makeSM(input.Covs, "coverage")
-		
-
-rule make_blacklist:
-	input:
-		table = outdir + "/final/" + name + ".depthTable.txt"
-	output:
-		o1 = outdir + "/temp/" + name + ".samplesFor.blacklist.txt",
-		allBAQ = outdir + "/temp/" + name + ".allBAQfor.blacklist.txt.gz",
-		out = outdir + "/final/" + name + ".blacklist.txt"
-	run: 
-		# Determine samples
-		Rcall1 = " ".join([Rscript, depthTableQuery_R, input[0], output.o1, blacklist_percentile])
-		os.system(Rcall1)
-		
-		# Cat together BAQ files
-		with open(output.o1) as f:
-			content = f.readlines()
-		content = [x.strip() for x in content] 
-		files = [outdir + "/qc/BAQ/" + s + ".Q0.BAQ.txt" for s in content]
-		os.system("cat " + " ".join(files) + " | gzip > " + output.allBAQ)
-		
-		# Do the blacklist stuff
-		Rcall2 = " ".join([Rscript, makeBlacklist_R, output.allBAQ, output.out, str(mito_length)])
-		os.system(Rcall2)
+		with open(output.depthtable, 'w') as f:
+			for file in input.depths:
+				os.system("cat " + file + " >> " + output.depthtable)

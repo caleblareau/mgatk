@@ -39,6 +39,8 @@ from .mgatkHelp import *
 @click.option('--NMmax', default = "4", help='Maximum number of paired mismatches allowed represented by the NM/nM tags.')
 
 @click.option('--remove-duplicates', '-rd', is_flag=True, help='Removed marked (presumably PCR) duplicates from Picard; not recommended for low-coverage RNA-Seq')
+@click.option('--max-javamem', '-jm', default = "4000m", help='Maximum memory for java')
+
 @click.option('--keep-indels', '-ki', is_flag=True, help='Keep marked indels for analysis; not recommended as this flag has not been well-tested')
 @click.option('--proper-pairs', '-pp', is_flag=True, help='Require reads to be properly paired.')
 
@@ -62,7 +64,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 	cluster, jobs,
 	atac_single, atac_paired, rna_single, rna_paired,
 	nhmax, nmmax, 
-	remove_duplicates, keep_indels, proper_pairs, blacklist_percentile,
+	remove_duplicates, max_javamem, keep_indels, proper_pairs, blacklist_percentile,
 	base_qual, clipl, clipr, keep_samples, ignore_samples,
 	detailed_calls, keep_temp_files, skip_rds):
 	
@@ -147,9 +149,10 @@ def main(mode, input, output, name, mito_genome, ncores,
 		os.makedirs(outfolder + "/final")
 	if not os.path.exists(logfolder):
 		os.makedirs(logfolder)
+		os.makedirs(logfolder + "/filterlogs")
+	if not os.path.exists(logfolder + "/rmdupslogs"):
 		if (remove_duplicates):
 			os.makedirs(logfolder + "/rmdupslogs")
-		os.makedirs(logfolder + "/filterlogs")
 	if not os.path.exists(fastafolder):
 		os.makedirs(fastafolder)	
 	if not os.path.exists(internfolder):
@@ -284,7 +287,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 		'fasta_file' : fastaf, 'mito_genome' : mito_genome, 'mito_length' : mito_length, 'name' : name,
 		'base_qual' : base_qual, 'remove_duplicates' : remove_duplicates, 'blacklist_percentile' : blacklist_percentile, 
 		'skip_indels' : skip_indels, 'clipl' : clipl, 'clipr' : clipr, 'proper_paired' : proper_paired,
-		'NHmax' : nhmax, 'NMmax' : nmmax, 'detailed_calls' : str(detailed_calls)}
+		'NHmax' : nhmax, 'NMmax' : nmmax, 'detailed_calls' : str(detailed_calls), 'max_javamem' : max_javamem}
 	
 	y1 = parselfolder + "/snake.scatter.yaml"
 	with open(y1, 'w') as yaml_file:

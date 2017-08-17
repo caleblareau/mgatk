@@ -1,0 +1,53 @@
+
+
+rule make_final_sparse_matrices:
+	input:
+		As = expand(outdir + "/temp/sparse_matrices/{sample}.A.txt", sample=SAMPLES),
+		Cs = expand(outdir + "/temp/sparse_matrices/{sample}.C.txt", sample=SAMPLES),
+		Gs = expand(outdir + "/temp/sparse_matrices/{sample}.G.txt", sample=SAMPLES),
+		Ts = expand(outdir + "/temp/sparse_matrices/{sample}.T.txt", sample=SAMPLES),
+		Covs = expand(outdir + "/temp/sparse_matrices/{sample}.coverage.txt", sample=SAMPLES)
+		
+	output:
+		A = outdir + "/final/" + name + ".A.txt.gz",
+		C = outdir + "/final/" + name + ".C.txt.gz",
+		G = outdir + "/final/" + name + ".G.txt.gz",
+		T = outdir + "/final/" + name + ".T.txt.gz",
+		Cov = outdir + "/final/" + name + ".coverage.txt.gz"
+		
+	run: 
+	
+		def makeSM(iterableThing, l):
+			for i in iterableThing:
+				os.system("cat " + i + " >> " + outdir + "/final/" + name + "."+l+".txt")
+			os.system("gzip " + outdir + "/final/" + name + "."+l+".txt")
+			
+		makeSM(input.As, "A")
+		makeSM(input.Cs, "C")
+		makeSM(input.Gs, "G")
+		makeSM(input.Ts, "T")
+		makeSM(input.Covs, "coverage")
+		
+
+rule make_blacklist:
+	input:
+		table = outdir + "/final/" + name + ".depthTable.txt"
+	output:
+		o1 = outdir + "/temp/" + name + ".samplesFor.blacklist.txt",
+		allBAQ = outdir + "/temp/" + name + ".allBAQfor.blacklist.txt.gz",
+		out = outdir + "/final/" + name + ".blacklist.txt"
+	run: 
+		# Determine samples
+		Rcall1 = " ".join([Rscript, depthTableQuery_R, input[0], output.o1, blacklist_percentile])
+		os.system(Rcall1)
+		
+		# Cat together BAQ files
+		with open(output.o1) as f:
+			content = f.readlines()
+		content = [x.strip() for x in content] 
+		files = [outdir + "/qc/BAQ/" + s + ".Q0.BAQ.txt" for s in content]
+		os.system("cat " + " ".join(files) + " | gzip > " + output.allBAQ)
+		
+		# Do the blacklist stuff
+		Rcall2 = " ".join([Rscript, makeBlacklist_R, output.allBAQ, output.out, str(mito_length)])
+		os.system(Rcall2)
