@@ -16,7 +16,6 @@ rule make_final_sparse_matrices:
 		Cov = outdir + "/final/" + name + ".coverage.txt.gz"
 		
 	run: 
-	
 		def makeSM(iterableThing, l):
 			for i in iterableThing:
 				os.system("cat " + i + " >> " + outdir + "/final/" + name + "."+l+".txt")

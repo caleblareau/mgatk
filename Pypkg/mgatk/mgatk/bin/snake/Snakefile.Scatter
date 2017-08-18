@@ -5,55 +5,16 @@ import shutil
 import pysam
 
 configfile: config["cfp"]     
-           
-# Parse the configuration variables
 indir = config["input_directory"]
 outdir = config["output_directory"]
-name = config["name"]
 script_dir = config["script_dir"]
-split_output = True
+name = config["name"]          
 
-mito_genome = config["mito_genome"]
-mito_length = str(config["mito_length"])
-fasta_file = config["fasta_file"]
-
-remove_duplicates = config["remove_duplicates"]
-proper_paired = config["proper_paired"]
-skip_indels = config["skip_indels"]
-
-base_qual = str(config["base_qual"])
-blacklist_percentile = config["blacklist_percentile"]
-max_javamem  = config["max_javamem"]
-
-clipL = config["clipl"]
-clipR = config["clipr"]
-NHmax = config["NHmax"]
-NMmax = config["NMmax"]
-
-detailed_calls = config["detailed_calls"]
-
-# Software paths
-java = "java"
-Rscript = "Rscript"
-samtools = "samtools"
-python = "python"
-
-# Script locations
-filtclip_py = script_dir + "/bin/python/filterClipBam.py"
-quality_py = script_dir + "/bin/python/quality.py"
-detailedcall_py = script_dir + "/bin/python/detailedCalls.py"
-DNAcounts_py = script_dir + "/bin/python/DNAcounts.py"
-
-depthTableQuery_R = script_dir + "/bin/R/depthTableQuery.R"
-makeBlacklist_R = script_dir + "/bin/R/makeBlacklist.R"
-
-MarkDuplicatesCall = java + " -Xmx"+max_javamem+"  -jar " + script_dir + "/bin/MarkDuplicates.jar"
-
-# A Snakemake regular expression matching the bam files that were all aligned
+# A Snakemake regular expression matching the bam file paths
 SAMPLES, = glob_wildcards(join(outdir, ".internal/samples/{sample}.bam.txt"))
-
 bamtxtin = '{sample}.bam.txt'
 
+oneSample_py = script_dir + "/bin/python/oneSample.py"
 
 rule all:
 	input:
@@ -75,51 +36,9 @@ rule process_one_sample:
 	run:
 		# Get sample information
 		sample = output.bam.replace(outdir + "/temp/ready_bam/", "").replace(".qc.bam", "")
-		with open(input.txtin) as f: bamfilepath = f.read()
-		
-		# Prepare filepath locations
-		rmlog = output.bam.replace(".qc.bam", ".rmdups.log").replace("/temp/ready_bam/", "/logs/rmdupslogs/")
-		filtlog = output.bam.replace(".qc.bam", ".filter.log").replace("/temp/ready_bam/", "/logs/filterlogs/")
-		temp_bam0 = output.bam.replace(".qc.bam", ".temp0.bam").replace("/temp/ready_bam/", "/temp/temp_bam/")
-		temp_bam1 = output.bam.replace(".qc.bam", ".temp1.bam").replace("/temp/ready_bam/", "/temp/temp_bam/")
-		prefixSM = outdir + "/temp/sparse_matrices/" + sample
-		prefixQS = outdir + "/qc/quality/" + sample
-		
-		# 1) Filter bam files
-		pycall = " ".join([python, filtclip_py, bamfilepath, filtlog, clipL, "-"+clipR, mito_genome, NHmax, NMmax])
-		if(len(proper_paired) > 0):
-			pycallout = pycall + proper_paried + " > " + temp_bam0 # samtools
-		else:
-			pycallout = pycall+ " > " + temp_bam0
-		os.system(pycallout)
-		
-		# 2) Sort the filtered bam file
-		pysam.sort("-o", temp_bam1, temp_bam0)
-		pysam.index(temp_bam1)
-		
-		# 3) (Optional) Remove duplicates
-		if remove_duplicates:
-			mdc_long = MarkDuplicatesCall + " INPUT="+temp_bam1+" OUTPUT="+output.bam+" METRICS_FILE="+rmlog+" REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT"
-			os.system(mdc_long)
-		else: # just move the previous output
-			os.system("mv " + temp_bam1 + " " + output.bam)
-		pysam.index(output.bam)
-		
-		# 4) Get allele counts per sample / base pair
-		pycall = " ".join([python, DNAcounts_py, output.bam, prefixSM, mito_genome, mito_length, base_qual, sample])
-		os.system(pycall)
-		
-		# 5) Get depth from the coverage sparse matrix
-		with open(prefixSM + ".coverage.txt", 'r') as coverage:
-			depth = 0
-			for row in coverage:
-				s = row.split(",")
-				depth += int(s[2].strip())
-		with open(output.depth, 'w') as d:
-			d.write(sample + "\t" + str(round(float(depth)/float(mito_length),2)) + "\n")
-			
-		# 6) Get per-base quality scores
-		pycall = " ".join([python, quality_py, output.bam, prefixQS, mito_genome, mito_length, sample])
+		with open(input.txtin) as f:
+			inputbam = f.read()
+		pycall = " ".join(['python', oneSample_py, config["cfp"], inputbam, output.bam, sample])
 		os.system(pycall)
 
 rule make_depth_table:

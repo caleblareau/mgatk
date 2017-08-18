@@ -1,6 +1,7 @@
 import click
 import os
-import yaml
+from ruamel import yaml
+from ruamel.yaml.scalarstring import SingleQuotedScalarString as sqs
 import os.path
 import sys
 import shutil
@@ -69,12 +70,15 @@ def main(mode, input, output, name, mito_genome, ncores,
 	detailed_calls, keep_temp_files, skip_rds):
 	
 	"""mgatk: a mitochondrial genome analysis toolkit."""
+	
 	__version__ = get_distribution('mgatk').version
 	script_dir = os.path.dirname(os.path.realpath(__file__))
 	click.echo(gettime() + "mgatk v%s" % __version__)
+	
 	if(mode == "check"):
 		click.echo(gettime() + "checking dependencies...")
-
+		
+	cwd = os.getcwd()
 
 	# -------------------------------
 	# Verify dependencies
@@ -133,48 +137,38 @@ def main(mode, input, output, name, mito_genome, ncores,
 		sys.exit(gettime() + "mgatk check passed! "+nsamplesNote+" if same parameters are run in `call` mode")
 	
 	# -------------------------------
-	# Setup output folder
+	# Configure the output setup
 	# -------------------------------
 	
-	outfolder = output
-	logfolder = outfolder + "/logs"
-	fastafolder = outfolder + "/fasta"
-	internfolder = outfolder + "/.internal"
-	parselfolder = internfolder + "/parseltongue"
-	samplesfolder = internfolder + "/samples"
+	of = output
+	tf = of + "/temp"
+	qc = of + "/qc"
 	
-	# Check if output directories exist; make if not
-	if not os.path.exists(outfolder):
-		os.makedirs(outfolder)
-		os.makedirs(outfolder + "/final")
-	if not os.path.exists(logfolder):
-		os.makedirs(logfolder)
-		os.makedirs(logfolder + "/filterlogs")
-	if not os.path.exists(logfolder + "/rmdupslogs"):
-		if (remove_duplicates):
-			os.makedirs(logfolder + "/rmdupslogs")
-	if not os.path.exists(fastafolder):
-		os.makedirs(fastafolder)	
-	if not os.path.exists(internfolder):
-		os.makedirs(internfolder)
-		with open(internfolder + "/README" , 'w') as outfile:
-			outfile.write("This folder creates important (small) intermediate; don't modify it.\n\n")	
-	if not os.path.exists(parselfolder):
-		os.makedirs(parselfolder)
-		with open(parselfolder + "/README" , 'w') as outfile:
-			outfile.write("This folder creates intermediate output to be interpreted by Snakemake; don't modify it.\n\n")
-	if not os.path.exists(samplesfolder):
-		os.makedirs(samplesfolder)
-		with open(samplesfolder + "/README" , 'w') as outfile:
-			outfile.write("This folder creates samples to be interpreted by Snakemake; don't modify it.\n\n")
+	folders = [of + "/logs", of + "/logs/filterlogs", of + "/fasta", of + "/.internal",
+		 of + "/.internal/parseltongue", of + "/.internal/samples", of + "/final", 
+		 tf, tf + "/ready_bam", tf + "/temp_bam", tf + "/sparse_matrices", tf + "/vcf", 
+		 qc, qc + "/quality", qc + "/depth", qc + "/detailed"]
+
+	mkfolderout = [make_folder(x) for x in folders]
+	
+	if (remove_duplicates):
+			make_folder(of + "/logs/rmdupslogs")
+	
+	# Give the users some heads up
+	with open(of + "/.internal" + "/README" , 'w') as outfile:
+		outfile.write("This folder creates important (small) intermediate; don't modify it.\n\n")	
+	with open(of + "/.internal" + "/parseltongue" + "/README" , 'w') as outfile:
+		outfile.write("This folder creates intermediate output to be interpreted by Snakemake; don't modify it.\n\n")
+	with open(of + "/.internal" + "/samples" + "/README" , 'w') as outfile:
+		outfile.write("This folder creates samples to be interpreted by Snakemake; don't modify it.\n\n")
 	
 	# Set up sample bam plain text file
 	for i in range(len(samples)):
-		with open(samplesfolder + "/" + samples[i] + ".bam.txt" , 'w') as outfile:
+		with open(of + "/.internal/samples/" + samples[i] + ".bam.txt" , 'w') as outfile:
 			outfile.write(samplebams[i])
-				
-	cwd = os.getcwd()
-	logf = open(logfolder + "/base.mgatk.log", 'a')
+	
+	# Logging		
+	logf = open(of + "/logs" + "/base.mgatk.log", 'a')
 	click.echo(gettime() + "Starting analysis with mgatk", logf)
 	click.echo(gettime() + nsamplesNote, logf)
 	
@@ -210,37 +204,13 @@ def main(mode, input, output, name, mito_genome, ncores,
 	if(njobs > 0 and cluster != ""):
 		snakeclust = " --jobs " + jobs + " --cluster '" + cluster + "' "
 	
-	
 	####################
 	# Handle .fasta file
 	####################
-	
 	supported_genomes = ['hg19', 'mm10']
 	if any(mito_genome in s for s in supported_genomes):
 		click.echo(gettime() + "Found designated mitochondrial genome: %s" % mito_genome, logf)
-		fastaf = script_dir + "/bin/anno/fasta/" + mito_genome + "_mtDNA.fasta"
-	else:
-		if os.path.exists(mito_genome):
-			fastaf = mito_genome
-		else:
-			sys.exit('ERROR: Could not find file ' + mito_genome + '; QUITTING')
-	fasta = parse_fasta(fastaf)	
-
-	if(len(fasta.keys()) != 1):
-		sys.exit('ERROR: .fasta file has multiple chromosomes; supply file with only 1; QUITTING')
-	mito_genome, mito_seq = list(fasta.items())[0]
-	mito_length = len(mito_seq)
-	
-	shutil.copyfile(fastaf, fastafolder + "/" + mito_genome + ".fasta")
-	fastaf = fastafolder + "/" + mito_genome + ".fasta"
-	pysam.faidx(fastaf)
-	
-	f = open(outfolder + "/final/" + name + "." + mito_genome + "_refAllele.txt", 'w')
-	b = 1
-	for base in mito_seq:
-		f.write(str(b) + "\t" + base + "\n")
-		b += 1
-	f.close()
+	fastaf, mito_genome, mito_seq, mito_length = handle_fasta(mito_genome, supported_genomes, script_dir, of, name)
 		
 	##############################
 	# Other command line arguments
@@ -265,37 +235,16 @@ def main(mode, input, output, name, mito_genome, ncores,
 	if(detailed_calls):
 		click.echo(gettime() + "Also performing detailed variant calling.")
 		
-	# -------------------
-	# Process each sample
-	# -------------------
-	tempfolder = outfolder + "/temp"
-	if not os.path.exists(tempfolder):
-		os.makedirs(tempfolder)
-		os.makedirs(tempfolder + "/ready_bam")
-		os.makedirs(tempfolder + "/temp_bam")
-		os.makedirs(tempfolder + "/sparse_matrices")
-		os.makedirs(tempfolder + "/vcf")
+	# add sqs to get .yaml to play friendly https://stackoverflow.com/questions/39262556/preserve-quotes-and-also-add-data-with-quotes-in-ruamel
+	snakedict1 = {'input_directory' : sqs(input), 'output_directory' : sqs(output), 'script_dir' : sqs(script_dir),
+		'fasta_file' : sqs(fastaf), 'mito_genome' : sqs(mito_genome), 'mito_length' : sqs(mito_length), 'name' : sqs(name),
+		'base_qual' : sqs(base_qual), 'remove_duplicates' : sqs(remove_duplicates), 'blacklist_percentile' : sqs(blacklist_percentile), 
+		'skip_indels' : sqs(skip_indels), 'clipl' : sqs(clipl), 'clipr' : sqs(clipr), 'proper_paired' : sqs(proper_paired),
+		'NHmax' : sqs(nhmax), 'NMmax' : sqs(nmmax), 'detailed_calls' : sqs(detailed_calls), 'max_javamem' : sqs(max_javamem)}
 	
-	qcfolder = outfolder + "/qc"
-	if not os.path.exists(qcfolder):
-		os.makedirs(qcfolder)
-		os.makedirs(qcfolder + "/quality")
-		os.makedirs(qcfolder + "/depth")	
-		os.makedirs(qcfolder + "/detailed")
-					
-	snakedict1 = {'input_directory' : input, 'output_directory' : output, 'script_dir' : script_dir,
-		'fasta_file' : fastaf, 'mito_genome' : mito_genome, 'mito_length' : mito_length, 'name' : name,
-		'base_qual' : base_qual, 'remove_duplicates' : remove_duplicates, 'blacklist_percentile' : blacklist_percentile, 
-		'skip_indels' : skip_indels, 'clipl' : clipl, 'clipr' : clipr, 'proper_paired' : proper_paired,
-		'NHmax' : nhmax, 'NMmax' : nmmax, 'detailed_calls' : str(detailed_calls), 'max_javamem' : max_javamem}
-	
-	y1 = parselfolder + "/snake.scatter.yaml"
+	y1 = of + "/.internal/parseltongue/snake.scatter.yaml"
 	with open(y1, 'w') as yaml_file:
-		yaml.dump(snakedict1, yaml_file, default_flow_style=False)
-	
-	# For making the DAG
-	#dagcall = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="' + y1 + '" --rulegraph -T'
-	#os.system(dagcall)
+		yaml.dump(snakedict1, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
 	
 	snakefile1 = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="' + y1 + '" -T'
 	print(snakefile1)
@@ -305,9 +254,9 @@ def main(mode, input, output, name, mito_genome, ncores,
 	if keep_temp_files:
 		click.echo(gettime() + "Temporary files not deleted since --keep-temp-files was specified.", logf)
 	else:
-		shutil.rmtree(fastafolder)
-		shutil.rmtree(internfolder)
-		shutil.rmtree(tempfolder)
+		shutil.rmtree(of + "/fasta")
+		shutil.rmtree(of + "/.internal")
+		shutil.rmtree(of + "/temp")
 		if not detailed_calls:
 			if os.path.exists(qcfolder + "/detailed"):
 				shutil.rmtree(qcfolder + "/detailed")
@@ -315,5 +264,4 @@ def main(mode, input, output, name, mito_genome, ncores,
 		
 	# Suspend logging
 	logf.close()
-	
 	
