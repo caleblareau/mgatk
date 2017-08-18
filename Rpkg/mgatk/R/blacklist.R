@@ -29,6 +29,7 @@ NULL
 #' @seealso filterKnownBlacklist
 #' @import GenomicRanges
 #' @import SummarizedExperiment
+#' @importFrom utils read.table
 #'
 #' @examples
 #' # Import an object

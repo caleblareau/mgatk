@@ -255,6 +255,6 @@ setMethod("importMito", signature("character"),
   mitoChr <- sv[length(sv)]
 
   SE <- importMito.explicit(Afile, Cfile, Gfile, Tfile,
-                      coverageFile, depthFile, referenceAlleleFile, mitoChr...)
+                      coverageFile, depthFile, referenceAlleleFile, mitoChr, ...)
   return(SE)
 })
