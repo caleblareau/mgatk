@@ -46,7 +46,8 @@ n = int(maxBP)
 counts = [0.00000001] * n # initialize with a pseudo count to avoid dividing by zero
 qualities = [0.0] * n
 
-for read in bam:
+bam2 = pysam.AlignmentFile(bamfile, "rb")
+for read in bam2:
 	seq = read.seq
 	quality = read.query_qualities
 	for qpos, refpos in read.get_aligned_pairs(True):
@@ -56,7 +57,7 @@ for read in bam:
 
 meanQual = [round(x/y,3) for x, y in zip(qualities, counts)]
 
-qoutpre = outpre.replace("/temp/sparse_matrices/","/qc/quality/")
+qoutpre = outpre.replace("/temp/sparse_matrices/","/temp/quality/")
 with open(qoutpre + ".quality.txt", 'w') as f:
 	f.write(sample + "\n")
 	for b in range(0,n):

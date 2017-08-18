@@ -1,11 +1,10 @@
-from os.path import join
 import os
 import subprocess
 import shutil
 import pysam
+from os.path import join
 
 configfile: config["cfp"]     
-indir = config["input_directory"]
 outdir = config["output_directory"]
 script_dir = config["script_dir"]
 name = config["name"]          
@@ -18,7 +17,7 @@ oneSample_py = script_dir + "/bin/python/oneSample.py"
 
 rule all:
 	input:
-		outdir + "/final/" + name + ".depthTable.txt"
+		outdir + "/temp/" + name + ".allSamples.txt"
 
 rule process_one_sample:
 	input:
@@ -32,21 +31,24 @@ rule process_one_sample:
 		G = outdir + "/temp/sparse_matrices/{sample}.G.txt",
 		T = outdir + "/temp/sparse_matrices/{sample}.T.txt",
 		cov = outdir + "/temp/sparse_matrices/{sample}.coverage.txt",
-		quality = outdir + "/qc/quality/{sample}.quality.txt"
+		quality = outdir + "/temp/quality/{sample}.quality.txt"
 	run:
 		# Get sample information
 		sample = output.bam.replace(outdir + "/temp/ready_bam/", "").replace(".qc.bam", "")
 		with open(input.txtin) as f:
 			inputbam = f.read()
+		
+		# Process one samle
 		pycall = " ".join(['python', oneSample_py, config["cfp"], inputbam, output.bam, sample])
 		os.system(pycall)
 
-rule make_depth_table:
+# Collate everything
+rule make_sample_list:
 	input:
 		depths = expand(outdir + "/qc/depth/{sample}.depth.txt", sample=SAMPLES)
 	output:
-		depthtable = outdir + "/final/" + name + ".depthTable.txt"
-	run: 
-		with open(output.depthtable, 'w') as f:
-			for file in input.depths:
-				os.system("cat " + file + " >> " + output.depthtable)
+		allSamplesFile = outdir + "/temp/" + name + ".allSamples.txt"
+	run: 	
+		for file in input.depths:
+			sample = file.replace(outdir + "/qc/depth/", "").replace(".depth.txt", "")
+			os.system("echo " + sample + " >> " + output.allSamplesFile)

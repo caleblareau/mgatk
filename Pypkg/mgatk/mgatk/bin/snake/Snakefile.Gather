@@ -1,25 +1,57 @@
+import os
+import subprocess
+import shutil
+import pysam
+from os.path import join
 
+configfile: config["cfp"]     
+mgatk_directory = config["mgatk_directory"]
+name = config["name"]          
+
+# A Snakemake regular expression matching the bam file paths
+SAMPLES, = glob_wildcards(join(mgatk_directory, "temp/ready_bam/{sample}.qc.bam"))
+
+rule all:
+	input:
+		mgatk_directory + "/final/" + name + ".depthTable.txt",
+		mgatk_directory + "/qc/quality/" + name + ".qualTable.txt", # need to update with blacklist
+		mgatk_directory + "/final/" + name + ".A.txt.gz",
+		mgatk_directory + "/final/" + name + ".C.txt.gz",
+		mgatk_directory + "/final/" + name + ".G.txt.gz",
+		mgatk_directory + "/final/" + name + ".T.txt.gz",
+		mgatk_directory + "/final/" + name + ".coverage.txt.gz"
+
+
+rule make_depth_table:
+	input:
+		depths = expand(mgatk_directory + "/qc/depth/{sample}.depth.txt", sample=SAMPLES)
+	output:
+		depthtable = mgatk_directory + "/final/" + name + ".depthTable.txt"
+	run: 
+		with open(output.depthtable, 'w') as f:
+			for file in input.depths:
+				os.system("cat " + file + " >> " + output.depthtable)
 
 rule make_final_sparse_matrices:
 	input:
-		As = expand(outdir + "/temp/sparse_matrices/{sample}.A.txt", sample=SAMPLES),
-		Cs = expand(outdir + "/temp/sparse_matrices/{sample}.C.txt", sample=SAMPLES),
-		Gs = expand(outdir + "/temp/sparse_matrices/{sample}.G.txt", sample=SAMPLES),
-		Ts = expand(outdir + "/temp/sparse_matrices/{sample}.T.txt", sample=SAMPLES),
-		Covs = expand(outdir + "/temp/sparse_matrices/{sample}.coverage.txt", sample=SAMPLES)
+		As = expand(mgatk_directory + "/temp/sparse_matrices/{sample}.A.txt", sample=SAMPLES),
+		Cs = expand(mgatk_directory + "/temp/sparse_matrices/{sample}.C.txt", sample=SAMPLES),
+		Gs = expand(mgatk_directory + "/temp/sparse_matrices/{sample}.G.txt", sample=SAMPLES),
+		Ts = expand(mgatk_directory + "/temp/sparse_matrices/{sample}.T.txt", sample=SAMPLES),
+		Covs = expand(mgatk_directory + "/temp/sparse_matrices/{sample}.coverage.txt", sample=SAMPLES)
 		
 	output:
-		A = outdir + "/final/" + name + ".A.txt.gz",
-		C = outdir + "/final/" + name + ".C.txt.gz",
-		G = outdir + "/final/" + name + ".G.txt.gz",
-		T = outdir + "/final/" + name + ".T.txt.gz",
-		Cov = outdir + "/final/" + name + ".coverage.txt.gz"
+		A = mgatk_directory + "/final/" + name + ".A.txt.gz",
+		C = mgatk_directory + "/final/" + name + ".C.txt.gz",
+		G = mgatk_directory + "/final/" + name + ".G.txt.gz",
+		T = mgatk_directory + "/final/" + name + ".T.txt.gz",
+		Cov = mgatk_directory + "/final/" + name + ".coverage.txt.gz"
 		
 	run: 
 		def makeSM(iterableThing, l):
 			for i in iterableThing:
-				os.system("cat " + i + " >> " + outdir + "/final/" + name + "."+l+".txt")
-			os.system("gzip " + outdir + "/final/" + name + "."+l+".txt")
+				os.system("cat " + i + " >> " + mgatk_directory + "/final/" + name + "."+l+".txt")
+			os.system("gzip " + mgatk_directory + "/final/" + name + "."+l+".txt")
 			
 		makeSM(input.As, "A")
 		makeSM(input.Cs, "C")
@@ -30,23 +62,10 @@ rule make_final_sparse_matrices:
 
 rule make_blacklist:
 	input:
-		table = outdir + "/final/" + name + ".depthTable.txt"
+		qualCols = expand(mgatk_directory + "/temp/quality/{sample}.quality.txt", sample=SAMPLES)
 	output:
-		o1 = outdir + "/temp/" + name + ".samplesFor.blacklist.txt",
-		allBAQ = outdir + "/temp/" + name + ".allBAQfor.blacklist.txt.gz",
-		out = outdir + "/final/" + name + ".blacklist.txt"
+		qualTable = mgatk_directory + "/qc/quality/" + name + ".qualTable.txt"
+		
 	run: 
-		# Determine samples
-		Rcall1 = " ".join([Rscript, depthTableQuery_R, input[0], output.o1, blacklist_percentile])
-		os.system(Rcall1)
-		
-		# Cat together BAQ files
-		with open(output.o1) as f:
-			content = f.readlines()
-		content = [x.strip() for x in content] 
-		files = [outdir + "/qc/BAQ/" + s + ".Q0.BAQ.txt" for s in content]
-		os.system("cat " + " ".join(files) + " | gzip > " + output.allBAQ)
-		
-		# Do the blacklist stuff
-		Rcall2 = " ".join([Rscript, makeBlacklist_R, output.allBAQ, output.out, str(mito_length)])
-		os.system(Rcall2)
+		os.system("paste " + " ".join(input) + " >> " + output.qualTable)
+

@@ -69,7 +69,11 @@ def main(mode, input, output, name, mito_genome, ncores,
 	base_qual, clipl, clipr, keep_samples, ignore_samples,
 	detailed_calls, keep_temp_files, skip_rds):
 	
-	"""mgatk: a mitochondrial genome analysis toolkit."""
+	"""
+	mgatk: a mitochondrial genome analysis toolkit. \n
+	MODE = ['call', 'one', 'check', 'gather'] \n
+	See https://mgatk.readthedocs.io for more details.
+	"""
 	
 	__version__ = get_distribution('mgatk').version
 	script_dir = os.path.dirname(os.path.realpath(__file__))
@@ -146,7 +150,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 	
 	folders = [of + "/logs", of + "/logs/filterlogs", of + "/fasta", of + "/.internal",
 		 of + "/.internal/parseltongue", of + "/.internal/samples", of + "/final", 
-		 tf, tf + "/ready_bam", tf + "/temp_bam", tf + "/sparse_matrices", tf + "/vcf", 
+		 tf, tf + "/ready_bam", tf + "/temp_bam", tf + "/sparse_matrices", tf + "/quality",
 		 qc, qc + "/quality", qc + "/depth", qc + "/detailed"]
 
 	mkfolderout = [make_folder(x) for x in folders]
@@ -176,9 +180,9 @@ def main(mode, input, output, name, mito_genome, ncores,
 	# Parse user-specified parameteres
 	# -----------------------------------
 
-	##########################
+	#-------------------------
 	# Handle read filter flags
-	##########################
+	#-------------------------
 	
 	if(rna_paired):
 		click.echo(gettime() + "Adding read filtering flags for paired RNA.", logf)
@@ -195,26 +199,27 @@ def main(mode, input, output, name, mito_genome, ncores,
 	else:
 		click.echo(gettime() + "No specific data type specified.", logf)
 
-	########################################
-	# Potentially submit jobs to the cluster
-	########################################
+	#-----------------------------------
+	# Potentially submit jobs to cluster
+	#-----------------------------------
 	
 	snakeclust = ""
 	njobs = int(jobs)
 	if(njobs > 0 and cluster != ""):
 		snakeclust = " --jobs " + jobs + " --cluster '" + cluster + "' "
 	
-	####################
+	#-------------------
 	# Handle .fasta file
-	####################
+	#-------------------
+	
 	supported_genomes = ['hg19', 'mm10']
 	if any(mito_genome in s for s in supported_genomes):
 		click.echo(gettime() + "Found designated mitochondrial genome: %s" % mito_genome, logf)
 	fastaf, mito_genome, mito_seq, mito_length = handle_fasta(mito_genome, supported_genomes, script_dir, of, name)
 		
-	##############################
+	#-----------------------------
 	# Other command line arguments
-	##############################
+	#-----------------------------
 	
 	if(keep_indels):
 		skip_indels = ""
@@ -234,7 +239,11 @@ def main(mode, input, output, name, mito_genome, ncores,
 	click.echo(gettime() + "Processing .bams with "+ncores+" cores")
 	if(detailed_calls):
 		click.echo(gettime() + "Also performing detailed variant calling.")
-		
+	
+	#--------
+	# Scatter
+	#--------
+	
 	# add sqs to get .yaml to play friendly https://stackoverflow.com/questions/39262556/preserve-quotes-and-also-add-data-with-quotes-in-ruamel
 	snakedict1 = {'input_directory' : sqs(input), 'output_directory' : sqs(output), 'script_dir' : sqs(script_dir),
 		'fasta_file' : sqs(fastaf), 'mito_genome' : sqs(mito_genome), 'mito_length' : sqs(mito_length), 'name' : sqs(name),
@@ -242,14 +251,31 @@ def main(mode, input, output, name, mito_genome, ncores,
 		'skip_indels' : sqs(skip_indels), 'clipl' : sqs(clipl), 'clipr' : sqs(clipr), 'proper_paired' : sqs(proper_paired),
 		'NHmax' : sqs(nhmax), 'NMmax' : sqs(nmmax), 'detailed_calls' : sqs(detailed_calls), 'max_javamem' : sqs(max_javamem)}
 	
-	y1 = of + "/.internal/parseltongue/snake.scatter.yaml"
-	with open(y1, 'w') as yaml_file:
+	y_s = of + "/.internal/parseltongue/snake.scatter.yaml"
+	with open(y_s, 'w') as yaml_file:
 		yaml.dump(snakedict1, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
 	
-	snakefile1 = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="' + y1 + '" -T'
-	print(snakefile1)
-	os.system(snakefile1)
+	snakecmd_scatter = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="' + y_s + '" -T'
+	os.system(snakecmd_scatter)
 	click.echo(gettime() + "mgatk successfully processed the supplied .bam files", logf)
+	
+	#-------
+	# Gather
+	#-------
+	
+	snakedict2 = {'mgatk_directory' : sqs(output), 'name' : sqs(name), 'script_dir' : sqs(script_dir)}
+	
+	y_g = of + "/.internal/parseltongue/snake.gather.yaml"
+	with open(y_g, 'w') as yaml_file:
+		yaml.dump(snakedict2, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
+	
+	snakecmd_gather = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Gather --cores '+ncores+' --config cfp="' + y_g + '" -T'
+	os.system(snakecmd_gather)
+	click.echo(gettime() + "Successfully created final output files", logf)
+	
+	#--------
+	# Cleanup
+	#--------
 	
 	if keep_temp_files:
 		click.echo(gettime() + "Temporary files not deleted since --keep-temp-files was specified.", logf)
@@ -258,8 +284,8 @@ def main(mode, input, output, name, mito_genome, ncores,
 		shutil.rmtree(of + "/.internal")
 		shutil.rmtree(of + "/temp")
 		if not detailed_calls:
-			if os.path.exists(qcfolder + "/detailed"):
-				shutil.rmtree(qcfolder + "/detailed")
+			if os.path.exists(of + "/qc/detailed"):
+				shutil.rmtree(of + "/qc/detailed")
 		click.echo(gettime() + "Intermediate files successfully removed.", logf)
 		
 	# Suspend logging

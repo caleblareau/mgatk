@@ -78,7 +78,7 @@ pysam.sort("-o", temp_bam1, temp_bam0)
 pysam.index(temp_bam1)
 
 # 3) (Optional) Remove duplicates
-if remove_duplicates:
+if (remove_duplicates == "true"):
 	mdc_long = MarkDuplicatesCall + " INPUT="+temp_bam1+" OUTPUT="+outputbam+" METRICS_FILE="+rmlog+" REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT"
 	os.system(mdc_long)
 else: # just move the previous output
