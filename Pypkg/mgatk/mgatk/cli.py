@@ -20,8 +20,8 @@ from .mgatkHelp import *
 
 @click.command()
 @click.version_option()
-@click.argument('mode', type=click.Choice(['call', 'check']))
-@click.option('--input', '-i', required=True, help='input directory; assumes .bam files are present')
+@click.argument('mode', type=click.Choice(['call', 'check', 'support']))
+@click.option('--input', '-i', default = ".", required=True, help='input directory; assumes .bam files are present')
 @click.option('--output', '-o', default="mgatk_out", help='Output directory for analysis')
 @click.option('--name', '-n', default="mgatk",  help='Prefix for project name')
 
@@ -71,7 +71,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 	
 	"""
 	mgatk: a mitochondrial genome analysis toolkit. \n
-	MODE = ['call', 'one', 'check', 'gather'] \n
+	MODE = ['call', 'one', 'check', 'gather', 'support'] \n
 	See https://mgatk.readthedocs.io for more details.
 	"""
 	
@@ -79,6 +79,15 @@ def main(mode, input, output, name, mito_genome, ncores,
 	script_dir = os.path.dirname(os.path.realpath(__file__))
 	click.echo(gettime() + "mgatk v%s" % __version__)
 	
+	 
+	rawsg = os.popen('ls ' + script_dir + "/bin/anno/fasta/*.fasta").read().strip().split("\n")
+	supported_genomes = [x.replace(script_dir + "/bin/anno/fasta/", "").replace(".fasta", "") for x in rawsg]  
+	
+	if(mode == "support"):
+		click.echo(gettime() + "List of built-in genomes supported in mgatk:")
+		click.echo(gettime() + str(supported_genomes))
+		sys.exit(gettime() + 'Specify one of these genomes or provide your own .fasta file with the --mito-genome flag')
+		
 	if(mode == "check"):
 		click.echo(gettime() + "checking dependencies...")
 		
@@ -212,7 +221,6 @@ def main(mode, input, output, name, mito_genome, ncores,
 	# Handle .fasta file
 	#-------------------
 	
-	supported_genomes = ['hg19', 'mm10']
 	if any(mito_genome in s for s in supported_genomes):
 		click.echo(gettime() + "Found designated mitochondrial genome: %s" % mito_genome, logf)
 	fastaf, mito_genome, mito_seq, mito_length = handle_fasta(mito_genome, supported_genomes, script_dir, of, name)

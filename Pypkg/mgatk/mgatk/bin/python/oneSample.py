@@ -43,7 +43,6 @@ detailed_calls = config["detailed_calls"]
 
 # Software paths
 java = "java"
-Rscript = "Rscript"
 samtools = "samtools"
 python = "python"
 
@@ -51,10 +50,6 @@ python = "python"
 filtclip_py = script_dir + "/bin/python/filterClipBam.py"
 detailedcall_py = script_dir + "/bin/python/detailedCalls.py"
 sumstatsBP_py = script_dir + "/bin/python/sumstatsBP.py"
-
-depthTableQuery_R = script_dir + "/bin/R/depthTableQuery.R"
-makeBlacklist_R = script_dir + "/bin/R/makeBlacklist.R"
-
 MarkDuplicatesCall = java + " -Xmx"+max_javamem+"  -jar " + script_dir + "/bin/MarkDuplicates.jar"
 
 # Prepare filepath locations
