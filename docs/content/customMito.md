@@ -7,7 +7,7 @@ genome name accordingly-- other examples may be `MT`). Here's what we did for th
 genome--
 
 ```
-samtools faidx mm10.fa chrM  >> mm10_mtDNA.fasta
+samtools faidx mm10.fa chrM  >> mm10.fasta
 ```
 
 With the abridged `.fasta` file generated, one can supply it as the value to the 

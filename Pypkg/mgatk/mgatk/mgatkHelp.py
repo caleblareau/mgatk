@@ -78,7 +78,7 @@ def make_folder(folder):
 
 def handle_fasta(mito_genome, supported_genomes, script_dir, of, name):
 	if any(mito_genome in s for s in supported_genomes):
-		fastaf = script_dir + "/bin/anno/fasta/" + mito_genome + "_mtDNA.fasta"
+		fastaf = script_dir + "/bin/anno/fasta/" + mito_genome + ".fasta"
 	else:
 		if os.path.exists(mito_genome):
 			fastaf = mito_genome

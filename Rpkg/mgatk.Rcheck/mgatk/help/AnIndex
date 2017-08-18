@@ -1,0 +1,13 @@
+mgatk-package	mgatk
+computeWeightedDistance	computeWeightedDistance
+computeWeightedDistance,ANY-method	computeWeightedDistance
+filterKnownBlacklist	filterKnownBlacklist
+filterKnownBlacklist,SummarizedExperiment,character-method	filterKnownBlacklist
+giniCols	giniCols
+giniCpp	giniCpp
+giniRows	giniRows
+importMito	importMito
+importMito,character-method	importMito
+importMito.explicit	importMito.explicit
+importMito.explicit,character,character,character,character,character,character,character-method	importMito.explicit
+mgatk	mgatk

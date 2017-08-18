@@ -1,0 +1,25 @@
+Package: mgatk
+Title: A mitocondrial genome analysis toolkit
+Version: 0.2.1
+Authors@R: c(
+    person("Caleb", "Lareau", email = "caleblareau@g.harvard.edu", role = c("aut", "cre")),
+    person("Jacob", "Ulirsch", email = "julirsch@g.harvard.edu", role = c("aut"))
+    )
+Description: An R package tailored for the analysis, quanity control, filtering, 
+  annotation, and analysis of mitochondrial variants. 
+License: MIT + file LICENSE
+Imports: Rcpp (>= 0.12.12), methods, data.table, S4Vectors,
+        GenomicRanges, SummarizedExperiment, Matrix, IRanges
+LinkingTo: Rcpp
+LazyData: TRUE
+Suggests: knitr, rmarkdown, testthat, microbenchmark, ineq, gaston
+Collate: 'RcppExports.R' 'mgatk.R' 'coreFunctions.R' 'io.R'
+        'blacklist.R'
+VignetteBuilder: knitr
+RoxygenNote: 6.0.1
+NeedsCompilation: yes
+Packaged: 2017-08-18 23:53:38 UTC; lareauc
+Author: Caleb Lareau [aut, cre],
+  Jacob Ulirsch [aut]
+Maintainer: Caleb Lareau <caleblareau@g.harvard.edu>
+Built: R 3.4.1; x86_64-apple-darwin15.6.0; 2017-08-18 23:53:43 UTC; unix

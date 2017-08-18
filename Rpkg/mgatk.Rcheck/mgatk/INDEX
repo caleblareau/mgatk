@@ -1,0 +1,15 @@
+computeWeightedDistance
+                        Compute weighted distance function.
+filterKnownBlacklist    Filter variants based on pre-defined blacklist
+                        files
+giniCols                Calculate a vector of gini indices from the
+                        rows of a matrix
+giniCpp                 Calculate the Gini Index using Rcpp
+giniRows                Calculate a vector of gini indices from the
+                        rows of a matrix
+importMito              Import data from folder output of mgatk python
+                        run.
+importMito.explicit     Import data from plain text files explicitly
+                        point to the requisite input files and render a
+                        RangedSummarized Experiment.
+mgatk                   mgatk: a mitochondrial genome analysis toolkit
