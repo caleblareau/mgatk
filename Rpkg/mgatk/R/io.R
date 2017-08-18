@@ -204,8 +204,8 @@ setMethod("importMito.explicit", signature("character", "character", "character"
 #' in mgatk. This is typically the `final` folder when running
 #' the python mgatk utility.
 #'
-#' @param minCoverage Default = 10 The maximum number of total
-#' reads for the variant to be carried forward
+#' @param folder Filepath to folder (likely ending in 'final')
+#' that contains all the vital input / output files for mgatk
 #'
 #' @param ... Additional parameters to pass to the
 #' importMito.explict function

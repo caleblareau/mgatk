@@ -11,11 +11,11 @@ importMito(folder, ...)
 \S4method{importMito}{character}(folder)
 }
 \arguments{
+\item{folder}{Filepath to folder (likely ending in 'final')
+that contains all the vital input / output files for mgatk}
+
 \item{...}{Additional parameters to pass to the
 importMito.explict function}
-
-\item{minCoverage}{Default = 10 The maximum number of total
-reads for the variant to be carried forward}
 }
 \value{
 An initialized mgatk object that is an S4 class
