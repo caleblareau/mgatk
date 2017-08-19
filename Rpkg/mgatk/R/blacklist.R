@@ -1,7 +1,6 @@
 #' @include io.R
 NULL
 
-
 #' Filter variants based on pre-defined blacklist files
 #'
 #' \code{filterKnownBlacklist} takes a RangedSummarizedExperiment
@@ -17,10 +16,8 @@ NULL
 #' 'hg19_TF1'
 #'
 #' @param mitoSE A RangedSummarizedExperiment intialized by mgatk
-#' @param filter A
-#'
-#' @param ... Additional parameters to pass to the
-#' importMito.explict function
+#' @param filter A character signifing the position file to
+#' filter mitochondrial variants from.
 #'
 #' @return Another mgatk object that is an S4 class
 #' RangedSummarizedExperiment that removes variants
@@ -57,4 +54,4 @@ setMethod("filterKnownBlacklist", signature("SummarizedExperiment", "character")
   blacklist <- read.table(blfile)
   return(mitoSE[start(rowRanges(mitoSE)) %ni% blacklist[,1],])
 
-  })
+})

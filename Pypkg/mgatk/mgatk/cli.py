@@ -34,7 +34,6 @@ from ruamel.yaml.scalarstring import SingleQuotedScalarString as sqs
 @click.option('--remove-duplicates', '-rd', is_flag=True, help='Removed marked (presumably PCR) duplicates from Picard; not recommended for low-coverage RNA-Seq')
 @click.option('--max-javamem', '-jm', default = "4000m", help='Maximum memory for java')
 
-@click.option('--keep-indels', '-ki', is_flag=True, help='Keep marked indels for analysis; not recommended as this flag has not been well-tested')
 @click.option('--proper-pairs', '-pp', is_flag=True, help='Require reads to be properly paired.')
 
 @click.option('--base-qual', '-q', default = "20", help='Minimum base quality for deciding that a variant is real.')
@@ -55,7 +54,7 @@ from ruamel.yaml.scalarstring import SingleQuotedScalarString as sqs
 
 def main(mode, input, output, name, mito_genome, ncores,
 	cluster, jobs, nhmax, nmmax, 
-	remove_duplicates, max_javamem, keep_indels, proper_pairs, blacklist_percentile,
+	remove_duplicates, max_javamem, proper_pairs, blacklist_percentile,
 	base_qual, clipl, clipr, keep_samples, ignore_samples,
 	detailed_calls, keep_temp_files, skip_r):
 	
@@ -220,20 +219,11 @@ def main(mode, input, output, name, mito_genome, ncores,
 				f.close()
 		
 		# Other command line arguments	
-		if(keep_indels):
-			skip_indels = ""
-		else:
-			skip_indels = "--skip-indels "
-		
 		if(ncores == "detect"):
 			ncores = str(available_cpu_count())
 		else:
 			ncores = str(ncores)
-	
-		proper_paired = ""
-		if(proper_pairs):
-			proper_paired = " | samtools view -f 0x2 -b - "
-		
+
 
 		click.echo(gettime() + "Processing .bams with "+ncores+" threads")
 		if(detailed_calls):
@@ -244,7 +234,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 		dict1 = {'input_directory' : sqs(input), 'output_directory' : sqs(output), 'script_dir' : sqs(script_dir),
 			'fasta_file' : sqs(fastaf), 'mito_genome' : sqs(mito_genome), 'mito_length' : sqs(mito_length), 
 			'base_qual' : sqs(base_qual), 'remove_duplicates' : sqs(remove_duplicates), 'blacklist_percentile' : sqs(blacklist_percentile), 
-			'skip_indels' : sqs(skip_indels), 'clipl' : sqs(clipl), 'clipr' : sqs(clipr), 'proper_paired' : sqs(proper_paired),
+			'clipl' : sqs(clipl), 'clipr' : sqs(clipr), 'proper_paired' : sqs(proper_pairs),
 			'NHmax' : sqs(nhmax), 'NMmax' : sqs(nmmax), 'detailed_calls' : sqs(detailed_calls), 'max_javamem' : sqs(max_javamem)}
 		
 		if(mode == "call"):
@@ -289,30 +279,24 @@ def main(mode, input, output, name, mito_genome, ncores,
 	if(mode == "gather" or mode == "call"):
 		
 		if(mode == "call"):
-			dict2 = {'mgatk_directory' : sqs(output), 'name' : sqs(name), 'script_dir' : sqs(script_dir)}
-			y_g = of + "/.internal/parseltongue/snake.gather.yaml"
+			mgatk_directory = output
 			
 		elif(mode == "gather"): # in gather, the input argument specifies where things are
 			logf = open(input + "/logs" + "/base.mgatk.log", 'a')
 			click.echo(gettime() + "Gathering samples that were pre-called with `one`.", logf)
-			dict2 = {'mgatk_directory' : sqs(input), 'name' : sqs(name), 'script_dir' : sqs(script_dir)}
-			y_g = input + "/.internal/parseltongue/snake.gather.yaml"
-		
+			mgatk_directory = input
+			
+		dict2 = {'mgatk_directory' : sqs(mgatk_directory), 'name' : sqs(name), 'script_dir' : sqs(script_dir)}
+		y_g = mgatk_directory + "/.internal/parseltongue/snake.gather.yaml"
 		with open(y_g, 'w') as yaml_file:
 			yaml.dump(dict2, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
-		
-		# Potentially submit jobs to cluster
-		snakeclust = ""
-		njobs = int(jobs)
-		if(njobs > 0 and cluster != ""):
-			snakeclust = " --jobs " + jobs + " --cluster '" + cluster + "' "
-			click.echo(gettime() + "Recognized flags to process jobs on a computing cluster.", logf)
-		
+
 		snakecmd_gather = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Gather --config cfp="' + y_g + '" -T'
 		os.system(snakecmd_gather)
 		
-		# Make .rds file
-		
+		# Make .rds file from the output
+		Rcall = "Rscript " + script_dir + "/bin/R/toRDS.R " + mgatk_directory + "/final " + name
+		os.system(Rcall)
 		
 		click.echo(gettime() + "Successfully created final output files", logf)
 	

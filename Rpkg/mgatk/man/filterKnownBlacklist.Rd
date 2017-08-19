@@ -13,10 +13,8 @@ filterKnownBlacklist(mitoSE, filter)
 \arguments{
 \item{mitoSE}{A RangedSummarizedExperiment intialized by mgatk}
 
-\item{filter}{A}
-
-\item{...}{Additional parameters to pass to the
-importMito.explict function}
+\item{filter}{A character signifing the position file to
+filter mitochondrial variants from.}
 }
 \value{
 Another mgatk object that is an S4 class

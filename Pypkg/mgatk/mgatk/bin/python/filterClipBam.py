@@ -14,8 +14,9 @@ logfile = sys.argv[2]
 clipL = sys.argv[3]
 clipR = sys.argv[4]
 mtchr = sys.argv[5]
-NHmax = sys.argv[6]
-NMmax = sys.argv[7]
+proper_pair = sys.argv[6]
+NHmax = sys.argv[7]
+NMmax = sys.argv[8]
 
 # https://github.com/pysam-developers/pysam/issues/509
 bam = pysam.AlignmentFile(bamfile, "rb")
@@ -33,11 +34,18 @@ def filterReadTags(intags):
         		return(False)
     return(True)
 
+def pairing(read):
+	'''Check if read is paired, properly paired, etc.'''
+	if(proper_pair != "True"): # then user doesn't care to filter it
+		return(True)
+	else:
+		read.is_proper_pair()
+
 def processRead(read):
 	global keepCount
 	global filtCount
 	
-	if(filterReadTags(read.tags) and read.reference_name == mtchr):
+	if(filterReadTags(read.tags) and read.reference_name == mtchr and pairing(read)):
 		keepCount += 1
 		out.write(read)
 	else:

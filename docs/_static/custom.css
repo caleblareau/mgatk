@@ -7,15 +7,15 @@ span.pre {
 }
 
 a {
-   color: #3c4d7d !important;
+   color: #000000 !important;
 }
 
 a:visited {
-   color: #3c4d7d !important;
+   color: #000000 !important;
 }
 
 a span.pre, a tt {
-   color: #3c4d7d !important;
+   color: #000000 !important;
 }
 
 h2 {

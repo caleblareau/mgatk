@@ -1,4 +1,4 @@
-##!/usr/bin/env Rscript
+#!/usr/bin/env Rscript
 
 # Reads depth table and computes quantiles
 # before determining which samples to keep

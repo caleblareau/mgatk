@@ -80,7 +80,7 @@ Tfile <-paste0(path, "mgatk.T.txt")
 
 coverageFile <- paste0(path, "mgatk.coverage.txt")
 depthFile <- paste0(path, "mgatk.depthTable.txt")
-referenceAlleleFile <- paste0(path, "mgatk.chrM_refAllele.txt")
+referenceAlleleFile <- paste0(path, "chrM_refAllele.txt")
 
 mitoSE <- importMito.explicit(Afile, Cfile, Gfile, Tfile,
   coverageFile, depthFile, referenceAlleleFile)

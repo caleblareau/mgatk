@@ -27,7 +27,6 @@ fasta_file = config["fasta_file"]
 
 remove_duplicates = config["remove_duplicates"]
 proper_paired = config["proper_paired"]
-skip_indels = config["skip_indels"]
 
 base_qual = str(config["base_qual"])
 blacklist_percentile = config["blacklist_percentile"]
@@ -60,12 +59,8 @@ prefixSM = outdir + "/temp/sparse_matrices/" + sample
 outputdepth = outdir + "/qc/depth/" + sample + ".depth.txt"
 
 # 1) Filter bam files
-pycall = " ".join([python, filtclip_py, inputbam, filtlog, clipL, "-"+clipR, mito_genome, NHmax, NMmax])
-if(len(proper_paired) > 0):
-	pycallout = pycall + proper_paried + " > " + temp_bam0 # samtools
-else:
-	pycallout = pycall+ " > " + temp_bam0
-os.system(pycallout)
+pycall = " ".join([python, filtclip_py, inputbam, filtlog, clipL, "-"+clipR, mito_genome, proper_paired, NHmax, NMmax]) + " > " + temp_bam0
+os.system(pycall)
 
 # 2) Sort the filtered bam file
 pysam.sort("-o", temp_bam1, temp_bam0)
@@ -77,6 +72,7 @@ if (remove_duplicates == "true"):
 	os.system(mdc_long)
 else: # just move the previous output
 	os.system("mv " + temp_bam1 + " " + outputbam)
+	os.system("rm " + temp_bam1 + ".bai")
 pysam.index(outputbam)
 
 # 4) Get allele counts per sample / base pair and per-base quality scores

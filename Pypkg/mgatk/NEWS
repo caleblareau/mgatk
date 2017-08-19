@@ -1,6 +1,12 @@
 
+# 0.2.5
+- Creates .rds for easy i/o into R package
+- Efficient sparse matrices for final text-based output
+- Added additional run modes. 5 total now (call, one, gather, support, check)
+
 # 0.1.0
 - Alpha version uploaded to PyPi
 
 # 0.0.1
 - Added NEWS
+
