@@ -8,7 +8,7 @@
 \usage{
 importMito(folder, ...)
 
-\S4method{importMito}{character}(folder)
+\S4method{importMito}{character}(folder, ...)
 }
 \arguments{
 \item{folder}{Filepath to folder (likely ending in 'final')

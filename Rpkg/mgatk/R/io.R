@@ -223,13 +223,10 @@ setMethod("importMito.explicit", signature("character", "character", "character"
 #' dim(mitoSE)
 #'
 #' @export
-setGeneric(name = "importMito", def = function(folder, ...)
-
-  standardGeneric("importMito"))
+setGeneric(name = "importMito", def = function(folder, ...) standardGeneric("importMito"))
 
 #' @rdname importMito
-setMethod("importMito", signature("character"),
-          definition = function(folder){
+setMethod("importMito", signature("character"), definition = function(folder, ...){
 
   files <- list.files(folder, full.names = TRUE)
 
