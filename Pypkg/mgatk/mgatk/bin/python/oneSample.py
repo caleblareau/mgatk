@@ -41,7 +41,6 @@ detailed_calls = config["detailed_calls"]
 
 # Software paths
 java = "java"
-samtools = "samtools"
 python = "python"
 
 # Script locations

@@ -53,10 +53,10 @@ from ruamel.yaml.scalarstring import SingleQuotedScalarString as sqs
 
 
 def main(mode, input, output, name, mito_genome, ncores,
-	cluster, jobs, nhmax, nmmax, 
-	remove_duplicates, max_javamem, proper_pairs, blacklist_percentile,
-	base_qual, clipl, clipr, keep_samples, ignore_samples,
-	detailed_calls, keep_temp_files, skip_r):
+	cluster, jobs, nhmax, nmmax, remove_duplicates, max_javamem, 
+	proper_pairs, base_qual, blacklist_percentile,
+	clipl, clipr, keep_samples, ignore_samples,
+	keep_temp_files, detailed_calls, skip_r):
 	
 	"""
 	mgatk: a mitochondrial genome analysis toolkit. \n
@@ -82,10 +82,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 		click.echo(gettime() + "checking dependencies...")
 	
 
-	# Verify dependencies
-	check_software_exists("python")
-	check_software_exists("samtools")
-	
+	# Verify dependencies	
 	if remove_duplicates:
 		check_software_exists("java")
 	

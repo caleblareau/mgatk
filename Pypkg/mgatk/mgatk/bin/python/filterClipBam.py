@@ -26,8 +26,10 @@ keepCount = 0
 filtCount = 0
 
 def filterReadTags(intags):
-    '''Checks for aligner-specific read tags and filters'''
-
+    '''
+    Checks for aligner-specific read tags and filters
+	'''
+	
     for tg in intags:
     	if(('NH' == tg[0] and int(tg[1]) > int(NHmax)) or \
     		(('NM' == tg[0] or 'nM' == tg[0]) and int(tg[1]) > int(NMmax))):
@@ -35,11 +37,14 @@ def filterReadTags(intags):
     return(True)
 
 def pairing(read):
-	'''Check if read is paired, properly paired, etc.'''
+	'''
+	Check if read is paired, properly paired, etc.
+	'''
+	
 	if(proper_pair != "True"): # then user doesn't care to filter it
 		return(True)
 	else:
-		read.is_proper_pair()
+		return(read.is_proper_pair())
 
 def processRead(read):
 	global keepCount
@@ -68,7 +73,7 @@ elif(int(clipR) < 0):
 		processRead(read)
 			
 # Clip left
-if(int(clipL) > 0):
+elif(int(clipL) > 0):
 	for read in bam:
 		q = read.qual
 		read.seq = "N"*int(clipL) + read.seq[int(clipL):]
