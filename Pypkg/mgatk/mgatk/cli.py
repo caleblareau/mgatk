@@ -212,7 +212,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 			fastaf = newfastaf
 			pysam.faidx(fastaf)
 	
-			with open(of + "/final/" + name + "." + mito_genome + "_refAllele.txt", 'w') as f:
+			with open(of + "/final/" + mito_genome + "_refAllele.txt", 'w') as f:
 				b = 1
 				for base in mito_seq:
 					f.write(str(b) + "\t" + base + "\n")
@@ -242,7 +242,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 		
 		# add sqs to get .yaml to play friendly https://stackoverflow.com/questions/39262556/preserve-quotes-and-also-add-data-with-quotes-in-ruamel
 		dict1 = {'input_directory' : sqs(input), 'output_directory' : sqs(output), 'script_dir' : sqs(script_dir),
-			'fasta_file' : sqs(fastaf), 'mito_genome' : sqs(mito_genome), 'mito_length' : sqs(mito_length), 'name' : sqs(name),
+			'fasta_file' : sqs(fastaf), 'mito_genome' : sqs(mito_genome), 'mito_length' : sqs(mito_length), 
 			'base_qual' : sqs(base_qual), 'remove_duplicates' : sqs(remove_duplicates), 'blacklist_percentile' : sqs(blacklist_percentile), 
 			'skip_indels' : sqs(skip_indels), 'clipl' : sqs(clipl), 'clipr' : sqs(clipr), 'proper_paired' : sqs(proper_paired),
 			'NHmax' : sqs(nhmax), 'NMmax' : sqs(nmmax), 'detailed_calls' : sqs(detailed_calls), 'max_javamem' : sqs(max_javamem)}
@@ -274,10 +274,6 @@ def main(mode, input, output, name, mito_genome, ncores,
 			inputbam = samplebams[0]
 			outputbam = output + "/temp/ready_bam/"+sample+".qc.bam"
 			
-			print(sample)
-			print(inputbam)
-			print(outputbam)
-			
 			y_s = of + "/.internal/samples/"+sample+".yaml"
 			with open(y_s, 'w') as yaml_file:
 				yaml.dump(dict1, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
@@ -294,18 +290,30 @@ def main(mode, input, output, name, mito_genome, ncores,
 		
 		if(mode == "call"):
 			dict2 = {'mgatk_directory' : sqs(output), 'name' : sqs(name), 'script_dir' : sqs(script_dir)}
-		elif(mode == "gather"): # in gather, the input argument specifies where things are
-			logf = open(output + "/logs" + "/base.mgatk.log", 'a')
-			click.echo(gettime() + "Gathering samples that were pre-called with `one`.", logf)
-			click.echo(gettime() + nsamplesNote, logf)
-			dict2 = {'mgatk_directory' : sqs(input), 'name' : sqs(name), 'script_dir' : sqs(script_dir)}
+			y_g = of + "/.internal/parseltongue/snake.gather.yaml"
 			
-		y_g = of + "/.internal/parseltongue/snake.gather.yaml"
+		elif(mode == "gather"): # in gather, the input argument specifies where things are
+			logf = open(input + "/logs" + "/base.mgatk.log", 'a')
+			click.echo(gettime() + "Gathering samples that were pre-called with `one`.", logf)
+			dict2 = {'mgatk_directory' : sqs(input), 'name' : sqs(name), 'script_dir' : sqs(script_dir)}
+			y_g = input + "/.internal/parseltongue/snake.gather.yaml"
+		
 		with open(y_g, 'w') as yaml_file:
 			yaml.dump(dict2, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
-	
-		snakecmd_gather = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Gather --cores '+ncores+' --config cfp="' + y_g + '" -T'
+		
+		# Potentially submit jobs to cluster
+		snakeclust = ""
+		njobs = int(jobs)
+		if(njobs > 0 and cluster != ""):
+			snakeclust = " --jobs " + jobs + " --cluster '" + cluster + "' "
+			click.echo(gettime() + "Recognized flags to process jobs on a computing cluster.", logf)
+		
+		snakecmd_gather = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Gather --config cfp="' + y_g + '" -T'
 		os.system(snakecmd_gather)
+		
+		# Make .rds file
+		
+		
 		click.echo(gettime() + "Successfully created final output files", logf)
 	
 	#--------
@@ -315,12 +323,17 @@ def main(mode, input, output, name, mito_genome, ncores,
 		if keep_temp_files:
 			click.echo(gettime() + "Temporary files not deleted since --keep-temp-files was specified.", logf)
 		else:
-			shutil.rmtree(of + "/fasta")
-			shutil.rmtree(of + "/.internal")
-			shutil.rmtree(of + "/temp")
+			if(mode == "call"):
+				byefolder = of
+			if(mode == "gather"):
+				byefolder = input
+			
+			shutil.rmtree(byefolder + "/fasta")
+			shutil.rmtree(byefolder + "/.internal")
+			shutil.rmtree(byefolder + "/temp")
 			if not detailed_calls:
-				if os.path.exists(of + "/qc/detailed"):
-					shutil.rmtree(of + "/qc/detailed")
+				if os.path.exists(byefolder + "/qc/detailed"):
+					shutil.rmtree(byefolder + "/qc/detailed")
 			click.echo(gettime() + "Intermediate files successfully removed.", logf)
 		
 		# Suspend logging

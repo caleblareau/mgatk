@@ -1,1 +1,0 @@
-tests/humanbam/MGH60-P6-A11.mito.bam

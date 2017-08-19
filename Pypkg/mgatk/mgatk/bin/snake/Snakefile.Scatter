@@ -6,8 +6,7 @@ from os.path import join
 
 configfile: config["cfp"]     
 outdir = config["output_directory"]
-script_dir = config["script_dir"]
-name = config["name"]          
+script_dir = config["script_dir"]          
 
 # A Snakemake regular expression matching the bam file paths
 SAMPLES, = glob_wildcards(join(outdir, ".internal/samples/{sample}.bam.txt"))
@@ -17,7 +16,7 @@ oneSample_py = script_dir + "/bin/python/oneSample.py"
 
 rule all:
 	input:
-		outdir + "/temp/" + name + ".allSamples.txt"
+		outdir + "/temp/scattered.allSamples.txt"
 
 rule process_one_sample:
 	input:
@@ -47,7 +46,7 @@ rule make_sample_list:
 	input:
 		depths = expand(outdir + "/qc/depth/{sample}.depth.txt", sample=SAMPLES)
 	output:
-		allSamplesFile = outdir + "/temp/" + name + ".allSamples.txt"
+		allSamplesFile = outdir + "/temp/scattered.allSamples.txt"
 	run: 	
 		for file in input.depths:
 			sample = file.replace(outdir + "/qc/depth/", "").replace(".depth.txt", "")

@@ -19,7 +19,6 @@ with open(configFile, 'r') as stream:
 # Parse the configuration variables
 indir = config["input_directory"]
 outdir = config["output_directory"]
-name = config["name"]
 script_dir = config["script_dir"]
 
 mito_genome = config["mito_genome"]
