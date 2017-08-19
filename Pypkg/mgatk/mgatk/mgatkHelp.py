@@ -71,45 +71,19 @@ def parse_fasta(filename):
 
 def make_folder(folder):
 	"""
-	
+	Function to only make a given folder if it does not already exist
 	"""
 	if not os.path.exists(folder):
 		os.makedirs(folder)
 
-def handle_fasta(mito_genome, supported_genomes, script_dir, of, name):
-	if any(mito_genome in s for s in supported_genomes):
-		fastaf = script_dir + "/bin/anno/fasta/" + mito_genome + ".fasta"
-	else:
-		if os.path.exists(mito_genome):
-			fastaf = mito_genome
-		else:
-			sys.exit('ERROR: Could not find file ' + mito_genome + '; QUITTING')
-	fasta = parse_fasta(fastaf)	
-
-	if(len(fasta.keys()) != 1):
-		sys.exit('ERROR: .fasta file has multiple chromosomes; supply file with only 1; QUITTING')
-	mito_genome, mito_seq = list(fasta.items())[0]
-	mito_length = len(mito_seq)
-	
-	newfastaf = of + "/fasta/" + mito_genome + ".fasta"
-	shutil.copyfile(fastaf, newfastaf)
-	fastaf = newfastaf
-	pysam.faidx(fastaf)
-	
-	f = open(of + "/final/" + name + "." + mito_genome + "_refAllele.txt", 'w')
-	b = 1
-	for base in mito_seq:
-		f.write(str(b) + "\t" + base + "\n")
-		b += 1
-	f.close()
-	return(fastaf, mito_genome, mito_seq, mito_length)
 
 # https://stackoverflow.com/questions/1006289/how-to-find-out-the-number-of-cpus-using-python	
 def available_cpu_count():
-    """ Number of available virtual or physical CPUs on this system, i.e.
+    """
+    Number of available virtual or physical CPUs on this system, i.e.
     user/real as output by time(1) when called with an optimally scaling
-    userspace-only program"""
-
+    userspace-only program
+	"""
     # cpuset
     # cpuset may restrict the number of *available* processors
     try:

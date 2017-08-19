@@ -1,7 +1,5 @@
 import click
 import os
-from ruamel import yaml
-from ruamel.yaml.scalarstring import SingleQuotedScalarString as sqs
 import os.path
 import sys
 import shutil
@@ -10,13 +8,12 @@ import string
 import itertools
 import time
 import pysam
+
 from pkg_resources import get_distribution
 from subprocess import call, check_call
 from .mgatkHelp import *
-
-# ------------------------------
-# Command line arguments
-# ------------------------------	
+from ruamel import yaml
+from ruamel.yaml.scalarstring import SingleQuotedScalarString as sqs
 
 @click.command()
 @click.version_option()
@@ -52,7 +49,7 @@ from .mgatkHelp import *
 @click.option('--keep-temp-files', '-z', is_flag=True, help='Keep all intermediate files.')
 @click.option('--detailed-calls', '-dc', is_flag=True, help='Perform detailed variant calling; may be slow.')
 
-@click.option('--skip-rds', '-s', is_flag=True, help='Generate plain-text only output. Otherwise, this generates a .rds obejct that can be immediately read into R')
+@click.option('--skip-R', '-sr', is_flag=True, help='Generate plain-text only output. Otherwise, this generates a .rds obejct that can be immediately read into R for downstream analysis.')
 
 
 
@@ -60,7 +57,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 	cluster, jobs, nhmax, nmmax, 
 	remove_duplicates, max_javamem, keep_indels, proper_pairs, blacklist_percentile,
 	base_qual, clipl, clipr, keep_samples, ignore_samples,
-	detailed_calls, keep_temp_files, skip_rds):
+	detailed_calls, keep_temp_files, skip_r):
 	
 	"""
 	mgatk: a mitochondrial genome analysis toolkit. \n
@@ -68,11 +65,12 @@ def main(mode, input, output, name, mito_genome, ncores,
 	See https://mgatk.readthedocs.io for more details.
 	"""
 	
-	__version__ = get_distribution('mgatk').version
 	script_dir = os.path.dirname(os.path.realpath(__file__))
+	cwd = os.getcwd()
+	__version__ = get_distribution('mgatk').version
 	click.echo(gettime() + "mgatk v%s" % __version__)
 	
-	 
+	# Determine which genomes are available
 	rawsg = os.popen('ls ' + script_dir + "/bin/anno/fasta/*.fasta").read().strip().split("\n")
 	supported_genomes = [x.replace(script_dir + "/bin/anno/fasta/", "").replace(".fasta", "") for x in rawsg]  
 	
@@ -84,24 +82,24 @@ def main(mode, input, output, name, mito_genome, ncores,
 	if(mode == "check"):
 		click.echo(gettime() + "checking dependencies...")
 	
-	cwd = os.getcwd()
 
-	# -------------------------------
 	# Verify dependencies
-	# -------------------------------
-
 	check_software_exists("python")
 	check_software_exists("samtools")
 	
 	if remove_duplicates:
 		check_software_exists("java")
-
-	check_software_exists("R")
-	check_R_packages(['mgatk', 'ggplot2', "dtplyr", "dplyr"])
+	
+	if (mode == "call" or mode == "gather"):
+		if not skip_r:	
+			check_software_exists("R")
+			check_R_packages(['mgatk', 'ggplot2', "dtplyr", "dplyr"])
+	
 	
 	# -------------------------------
 	# Determine samples for analysis
 	# -------------------------------
+	sampleregex = re.compile(r"^[^.]*")
 	
 	if(mode == "check" or mode == "call"):
 	
@@ -115,8 +113,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 		samplebams = []
 	
 		for bam in bams:
-			find = re.compile(r"^[^.]*")
-			samples.append(re.search(find, os.path.basename(bam)).group(0))
+			samples.append(re.search(sampleregex, os.path.basename(bam)).group(0))
 			samplebams.append(bam)
 	
 		if(keep_samples != "ALL"):
@@ -138,70 +135,91 @@ def main(mode, input, output, name, mito_genome, ncores,
 			sys.exit('ERROR: Could not import any samples from the user specification; check flags, logs and input configuration; QUITTING')
 	
 		nsamplesNote = "mgatk will process " + str(len(samples)) + " samples"
-	
+		
 	if(mode == "check"):
-		sys.exit(gettime() + "mgatk check passed! "+nsamplesNote+" if same parameters are run in `call` mode")
+		# Exit gracefully
+		sys.exit(gettime() + "mgatk check passed! "+nsamplesNote+" if same parameters are run in `call` mode")		
+	elif(mode == "one"):
+		# Input argument is assumed to be a .bam file
+		filename, file_extension = os.path.splitext(input)
+		if(file_extension != ".bam"):
+			sys.exit('ERROR: in `one` mode, the input should be an individual .bam file.')
+		if not os.path.exists(input):
+			sys.exist('ERROR: No file found called "' + input + '"; please specify a valid .bam file')
+		samples = [re.search(sampleregex, os.path.basename(input)).group(0)]
+		samplebams = [input]
 	
-	# -------------------------------------
-	# Configure the output folder hierarchy
-	# -------------------------------------
-	
+
 	if(mode == "call" or mode == "one"):
-		of = output
-		tf = of + "/temp"
-		qc = of + "/qc"
 	
+		# Make all of the output folders if necessary
+		of = output; tf = of + "/temp"; qc = of + "/qc"
 		folders = [of + "/logs", of + "/logs/filterlogs", of + "/fasta", of + "/.internal",
 			 of + "/.internal/parseltongue", of + "/.internal/samples", of + "/final", 
 			 tf, tf + "/ready_bam", tf + "/temp_bam", tf + "/sparse_matrices", tf + "/quality",
 			 qc, qc + "/quality", qc + "/depth", qc + "/detailed"]
 
 		mkfolderout = [make_folder(x) for x in folders]
-	
+
+		if(mode == "call"):
+			# Logging		
+			logf = open(output + "/logs" + "/base.mgatk.log", 'a')
+			click.echo(gettime() + "Starting analysis with mgatk", logf)
+			click.echo(gettime() + nsamplesNote, logf)
+
 		if (remove_duplicates):
 				make_folder(of + "/logs/rmdupslogs")
 	
-		# Give the users some heads up
-		with open(of + "/.internal" + "/README" , 'w') as outfile:
-			outfile.write("This folder creates important (small) intermediate; don't modify it.\n\n")	
-		with open(of + "/.internal" + "/parseltongue" + "/README" , 'w') as outfile:
-			outfile.write("This folder creates intermediate output to be interpreted by Snakemake; don't modify it.\n\n")
-		with open(of + "/.internal" + "/samples" + "/README" , 'w') as outfile:
-			outfile.write("This folder creates samples to be interpreted by Snakemake; don't modify it.\n\n")
+		# Create internal README files 
+		if not os.path.exists(of + "/.internal/README"):
+			with open(of + "/.internal/README" , 'w') as outfile:
+				outfile.write("This folder creates important (small) intermediate; don't modify it.\n\n")
+		if not os.path.exists(of + "/.internal/parseltongue/README"):	
+			with open(of + "/.internal/parseltongue/README" , 'w') as outfile:
+				outfile.write("This folder creates intermediate output to be interpreted by Snakemake; don't modify it.\n\n")
+		if not os.path.exists(of + "/.internal/samples/README"):
+			with open(of + "/.internal" + "/samples" + "/README" , 'w') as outfile:
+				outfile.write("This folder creates samples to be interpreted by Snakemake; don't modify it.\n\n")
 	
 		# Set up sample bam plain text file
 		for i in range(len(samples)):
 			with open(of + "/.internal/samples/" + samples[i] + ".bam.txt" , 'w') as outfile:
 				outfile.write(samplebams[i])
 	
-		# Logging		
-		logf = open(of + "/logs" + "/base.mgatk.log", 'a')
-		click.echo(gettime() + "Starting analysis with mgatk", logf)
-		click.echo(gettime() + nsamplesNote, logf)
-	
 		#-------------------
 		# Handle .fasta file
 		#-------------------
 	
 		if any(mito_genome in s for s in supported_genomes):
-			click.echo(gettime() + "Found designated mitochondrial genome: %s" % mito_genome, logf)
-		fastaf, mito_genome, mito_seq, mito_length = handle_fasta(mito_genome, supported_genomes, script_dir, of, name)
+			fastaf = script_dir + "/bin/anno/fasta/" + mito_genome + ".fasta"
+			if(mode == "call"):
+				click.echo(gettime() + "Found designated mitochondrial genome: %s" % mito_genome, logf)
+		else:
+			if os.path.exists(mito_genome):
+				fastaf = mito_genome
+			else:
+				sys.exit('ERROR: Could not find file ' + mito_genome + '; QUITTING')
+		fasta = parse_fasta(fastaf)	
+
+		if(len(fasta.keys()) != 1):
+			sys.exit('ERROR: .fasta file has multiple chromosomes; supply file with only 1; QUITTING')
+		mito_genome, mito_seq = list(fasta.items())[0]
+		mito_length = len(mito_seq)
+	
+		newfastaf = of + "/fasta/" + mito_genome + ".fasta"
+		if not os.path.exists(newfastaf):
+			shutil.copyfile(fastaf, newfastaf)
+			fastaf = newfastaf
+			pysam.faidx(fastaf)
+	
+			with open(of + "/final/" + name + "." + mito_genome + "_refAllele.txt", 'w') as f:
+				b = 1
+				for base in mito_seq:
+					f.write(str(b) + "\t" + base + "\n")
+					b += 1
+				f.close()
 		
-
-		#-----------------------------------
-		# Potentially submit jobs to cluster
-		#-----------------------------------
-	
-		snakeclust = ""
-		njobs = int(jobs)
-		if(njobs > 0 and cluster != ""):
-			snakeclust = " --jobs " + jobs + " --cluster '" + cluster + "' "
-	
-
-		#-----------------------------
-		# Other command line arguments
-		#-----------------------------
-	
+		# Other command line arguments	
 		if(keep_indels):
 			skip_indels = ""
 		else:
@@ -215,30 +233,59 @@ def main(mode, input, output, name, mito_genome, ncores,
 		proper_paired = ""
 		if(proper_pairs):
 			proper_paired = " | samtools view -f 0x2 -b - "
-	
-		click.echo(gettime() + "Processing .bams with "+ncores+" threads", logf)
+		
+
 		click.echo(gettime() + "Processing .bams with "+ncores+" threads")
 		if(detailed_calls):
 			click.echo(gettime() + "Also performing detailed variant calling.")
 	
-		#--------
-		# Scatter
-		#--------
-	
+		
 		# add sqs to get .yaml to play friendly https://stackoverflow.com/questions/39262556/preserve-quotes-and-also-add-data-with-quotes-in-ruamel
-		snakedict1 = {'input_directory' : sqs(input), 'output_directory' : sqs(output), 'script_dir' : sqs(script_dir),
+		dict1 = {'input_directory' : sqs(input), 'output_directory' : sqs(output), 'script_dir' : sqs(script_dir),
 			'fasta_file' : sqs(fastaf), 'mito_genome' : sqs(mito_genome), 'mito_length' : sqs(mito_length), 'name' : sqs(name),
 			'base_qual' : sqs(base_qual), 'remove_duplicates' : sqs(remove_duplicates), 'blacklist_percentile' : sqs(blacklist_percentile), 
 			'skip_indels' : sqs(skip_indels), 'clipl' : sqs(clipl), 'clipr' : sqs(clipr), 'proper_paired' : sqs(proper_paired),
 			'NHmax' : sqs(nhmax), 'NMmax' : sqs(nmmax), 'detailed_calls' : sqs(detailed_calls), 'max_javamem' : sqs(max_javamem)}
-	
-		y_s = of + "/.internal/parseltongue/snake.scatter.yaml"
-		with open(y_s, 'w') as yaml_file:
-			yaml.dump(snakedict1, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
-	
-		snakecmd_scatter = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="' + y_s + '" -T'
-		os.system(snakecmd_scatter)
-		click.echo(gettime() + "mgatk successfully processed the supplied .bam files", logf)
+		
+		if(mode == "call"):
+			
+			# Potentially submit jobs to cluster
+			snakeclust = ""
+			njobs = int(jobs)
+			if(njobs > 0 and cluster != ""):
+				snakeclust = " --jobs " + jobs + " --cluster '" + cluster + "' "
+				click.echo(gettime() + "Recognized flags to process jobs on a computing cluster.", logf)
+				
+			click.echo(gettime() + "Processing .bams with "+ncores+" threads", logf)
+			
+			y_s = of + "/.internal/parseltongue/snake.scatter.yaml"
+			with open(y_s, 'w') as yaml_file:
+				yaml.dump(dict1, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
+			
+			# Execute snakemake
+			snakecmd_scatter = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="' + y_s + '" -T'
+			os.system(snakecmd_scatter)
+			click.echo(gettime() + "mgatk successfully processed the supplied .bam files", logf)
+		
+		if(mode == "one"):
+		
+			# Don't run this through snakemake as we may be trying to handle multiple at the same time
+			sample = samples[0]
+			inputbam = samplebams[0]
+			outputbam = output + "/temp/ready_bam/"+sample+".qc.bam"
+			
+			print(sample)
+			print(inputbam)
+			print(outputbam)
+			
+			y_s = of + "/.internal/samples/"+sample+".yaml"
+			with open(y_s, 'w') as yaml_file:
+				yaml.dump(dict1, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
+			
+			# Call the python script
+			oneSample_py = script_dir + "/bin/python/oneSample.py"
+			pycall = " ".join(['python', oneSample_py, y_s, inputbam, outputbam, sample])
+			os.system(pycall)
 	
 	#-------
 	# Gather
@@ -246,13 +293,16 @@ def main(mode, input, output, name, mito_genome, ncores,
 	if(mode == "gather" or mode == "call"):
 		
 		if(mode == "call"):
-			snakedict2 = {'mgatk_directory' : sqs(output), 'name' : sqs(name), 'script_dir' : sqs(script_dir)}
-		else: # in gather, the input argument specifies where things are
-			snakedict2 = {'mgatk_directory' : sqs(input), 'name' : sqs(name), 'script_dir' : sqs(script_dir)}
+			dict2 = {'mgatk_directory' : sqs(output), 'name' : sqs(name), 'script_dir' : sqs(script_dir)}
+		elif(mode == "gather"): # in gather, the input argument specifies where things are
+			logf = open(output + "/logs" + "/base.mgatk.log", 'a')
+			click.echo(gettime() + "Gathering samples that were pre-called with `one`.", logf)
+			click.echo(gettime() + nsamplesNote, logf)
+			dict2 = {'mgatk_directory' : sqs(input), 'name' : sqs(name), 'script_dir' : sqs(script_dir)}
 			
 		y_g = of + "/.internal/parseltongue/snake.gather.yaml"
 		with open(y_g, 'w') as yaml_file:
-			yaml.dump(snakedict2, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
+			yaml.dump(dict2, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
 	
 		snakecmd_gather = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Gather --cores '+ncores+' --config cfp="' + y_g + '" -T'
 		os.system(snakecmd_gather)
@@ -273,6 +323,6 @@ def main(mode, input, output, name, mito_genome, ncores,
 					shutil.rmtree(of + "/qc/detailed")
 			click.echo(gettime() + "Intermediate files successfully removed.", logf)
 		
-	# Suspend logging
-	logf.close()
+		# Suspend logging
+		logf.close()
 	
