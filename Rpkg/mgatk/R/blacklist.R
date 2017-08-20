@@ -1,7 +1,7 @@
 #' @include io.R
 NULL
 
-#' Filter variants based on pre-defined blacklist files
+#' Make a data.frame of reduced features for plotting
 #'
 #' \code{filterKnownBlacklist} takes a RangedSummarizedExperiment
 #' used in mgatk and returns a subsetted object where mitochondrial
@@ -37,6 +37,8 @@ NULL
 #' # Filter blacklist
 #' mitoSE2 <- filterKnownBlacklist(mitoSE, "hg19_TF1")
 #' dim(mitoSE)
+#'
+#' # Get
 #'
 #' @export
 setGeneric(name = "filterKnownBlacklist", def = function(mitoSE, filter)

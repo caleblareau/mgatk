@@ -4,7 +4,7 @@
 \name{filterKnownBlacklist}
 \alias{filterKnownBlacklist}
 \alias{filterKnownBlacklist,SummarizedExperiment,character-method}
-\title{Filter variants based on pre-defined blacklist files}
+\title{Make a data.frame of reduced features for plotting}
 \usage{
 filterKnownBlacklist(mitoSE, filter)
 
@@ -44,6 +44,8 @@ dim(mitoSE)
 # Filter blacklist
 mitoSE2 <- filterKnownBlacklist(mitoSE, "hg19_TF1")
 dim(mitoSE)
+
+# Get
 
 }
 \seealso{

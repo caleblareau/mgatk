@@ -1,6 +1,6 @@
 Package: mgatk
 Title: A mitocondrial genome analysis toolkit
-Version: 0.2.2
+Version: 0.2.5
 Authors@R: c(
     person("Caleb", "Lareau", email = "caleblareau@g.harvard.edu", role = c("aut", "cre")),
     person("Jacob", "Ulirsch", email = "julirsch@g.harvard.edu", role = c("aut"))
@@ -16,7 +16,9 @@ Imports:
   GenomicRanges,
   SummarizedExperiment,
   Matrix,
-  IRanges
+  IRanges,
+  Rtsne,
+  irlba
 LinkingTo: Rcpp
 LazyData: TRUE
 Suggests:
@@ -32,5 +34,6 @@ Collate:
     'coreFunctions.R'
     'io.R'
     'blacklist.R'
+    'reduction.R'
 VignetteBuilder: knitr
 RoxygenNote: 6.0.1

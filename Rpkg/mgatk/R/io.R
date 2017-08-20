@@ -80,7 +80,7 @@ NULL
 setGeneric(name = "importMito.explicit",
            def = function(Afile, Cfile, Gfile, Tfile,
                           coverageFile, depthFile, referenceAlleleFile,
-                          mitoChr = "chrM", maxFreq = 0.5, minCoverage = 10)
+                          mitoChr = "chrM", maxFreq = 0.9, minCoverage = 10)
 
   standardGeneric("importMito.explicit"))
 
@@ -89,7 +89,7 @@ setMethod("importMito.explicit", signature("character", "character", "character"
                                       "character", "character", "character", "ANY", "ANY", "ANY"),
           definition = function(Afile, Cfile, Gfile, Tfile,
                           coverageFile, depthFile, referenceAlleleFile,
-                          mitoChr = "chrM", maxFreq = 0.5, minCoverage = 10){
+                          mitoChr = "chrM", maxFreq = 0.9, minCoverage = 10){
 
   variantFiles <- list(Afile, Cfile, Gfile, Tfile)
   metaFiles <- list(coverageFile, depthFile, referenceAlleleFile)
@@ -157,7 +157,7 @@ setMethod("importMito.explicit", signature("character", "character", "character"
   # Make a matrix with 0s at the reference allele
   refMat <- Matrix::sparseMatrix(
     i = (ref[[1]])[1:maxpos],
-    j = as.numeric(factor(ref[[2]], levels = c("A", "C", "G", "T"))[1:maxpos]),
+    j = as.numeric(factor(toupper(ref[[2]]), levels = c("A", "C", "G", "T"))[1:maxpos]),
     x = -1
   ) + 1
   colnames(refMat) <- c("A", "C", "G", "T")
@@ -193,7 +193,7 @@ setMethod("importMito.explicit", signature("character", "character", "character"
   )
 
   # Remove only positions that we got coverage for
-  return(SE[Matrix::rowSums(covmat) > 10, ])
+  return(SE[Matrix::rowSums(covmat) > minCoverage, ])
 })
 
 
