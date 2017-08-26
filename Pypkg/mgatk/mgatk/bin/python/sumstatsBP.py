@@ -6,6 +6,7 @@
 
 import sys
 import re
+import os
 import pysam
 
 bamfile = sys.argv[1]
@@ -14,6 +15,7 @@ mito_genome = sys.argv[3]
 maxBP = sys.argv[4]
 base_qual = sys.argv[5]
 sample = sys.argv[6]
+fasta_file = sys.argv[7]
 
 ################
 # Allele counts
@@ -41,12 +43,16 @@ writeSparseMatrix("T", cc[3])
 # Quality scores
 ################
 
+
 n = int(maxBP)
 
 counts = [0.00000001] * n # initialize with a pseudo count to avoid dividing by zero
 qualities = [0.0] * n
 
-bam2 = pysam.AlignmentFile(bamfile, "rb")
+baq_bam = bamfile.replace(".qc.bam", ".baq.bam")
+os.system("samtools calmd -bAr " + bamfile + " " + fasta_file + " > " + baq_bam)
+
+bam2 = pysam.AlignmentFile(baq_bam, "rb")
 for read in bam2:
 	seq = read.seq
 	quality = read.query_qualities
@@ -62,4 +68,3 @@ with open(qoutpre + ".quality.txt", 'w') as f:
 	f.write(sample + "\n")
 	for b in range(0,n):
 		f.write(str(meanQual[b]) + "\n")
-
