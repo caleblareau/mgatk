@@ -30,7 +30,6 @@ rule process_one_sample:
 		G = outdir + "/temp/sparse_matrices/{sample}.G.txt",
 		T = outdir + "/temp/sparse_matrices/{sample}.T.txt",
 		cov = outdir + "/temp/sparse_matrices/{sample}.coverage.txt",
-		quality = outdir + "/temp/quality/{sample}.quality.txt"
 	run:
 		# Get sample information
 		sample = output.bam.replace(outdir + "/temp/ready_bam/", "").replace(".qc.bam", "")

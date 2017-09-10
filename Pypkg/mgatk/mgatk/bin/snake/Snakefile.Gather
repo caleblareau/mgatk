@@ -14,13 +14,11 @@ SAMPLES, = glob_wildcards(join(mgatk_directory, "temp/ready_bam/{sample}.qc.bam"
 rule all:
 	input:
 		mgatk_directory + "/final/" + name + ".depthTable.txt",
-		mgatk_directory + "/qc/quality/" + name + ".qualTable.txt", # need to update with blacklist
 		mgatk_directory + "/final/" + name + ".A.txt.gz",
 		mgatk_directory + "/final/" + name + ".C.txt.gz",
 		mgatk_directory + "/final/" + name + ".G.txt.gz",
-		mgatk_directory + "/final/" + name + ".T.txt.gz",
-		mgatk_directory + "/final/" + name + ".coverage.txt.gz"
-
+		mgatk_directory + "/final/" + name + ".T.txt.gz",	
+		mgatk_directory + "/final/" + name + ".coverage.txt.gz",
 
 rule make_depth_table:
 	input:
@@ -58,14 +56,4 @@ rule make_final_sparse_matrices:
 		makeSM(input.Gs, "G")
 		makeSM(input.Ts, "T")
 		makeSM(input.Covs, "coverage")
-		
-
-rule make_blacklist:
-	input:
-		qualCols = expand(mgatk_directory + "/temp/quality/{sample}.quality.txt", sample=SAMPLES)
-	output:
-		qualTable = mgatk_directory + "/qc/quality/" + name + ".qualTable.txt"
-		
-	run: 
-		os.system("paste " + " ".join(input) + " >> " + output.qualTable)
 

@@ -75,8 +75,8 @@ else: # just move the previous output
 pysam.index(outputbam)
 
 # 4) Get allele counts per sample / base pair and per-base quality scores
-pycall = " ".join([python, sumstatsBP_py, outputbam, prefixSM, mito_genome, mito_length, base_qual, sample, fasta_file])
-os.system(pycall)
+alleleCountcall = " ".join([python, sumstatsBP_py, outputbam, prefixSM, mito_genome, mito_length, base_qual, sample, fasta_file])
+os.system(alleleCountcall)
 
 # 5) Get depth from the coverage sparse matrix
 with open(prefixSM + ".coverage.txt", 'r') as coverage:

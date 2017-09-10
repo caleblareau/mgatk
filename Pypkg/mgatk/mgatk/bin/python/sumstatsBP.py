@@ -17,54 +17,67 @@ base_qual = sys.argv[5]
 sample = sys.argv[6]
 fasta_file = sys.argv[7]
 
-################
-# Allele counts
-################
-
-minBP = 0
-bam = pysam.AlignmentFile(bamfile, "rb")
-cc = bam.count_coverage(mito_genome, minBP, int(maxBP),quality_threshold=int(base_qual))
-zipped_list = zip(list(cc[0]),list(cc[1]),list(cc[2]),list(cc[3]))
-sums = [sum(item) for item in zipped_list]
-
+# Export Functions
 def writeSparseMatrix(mid, vec):
 	with open(outpre + "."+mid+".txt","w") as V:
 		for i in range(1,int(maxBP)-1):
 			if(vec[i] > 0):
 				V.write(str(i+1)+","+sample+","+str(vec[i])+"\n")
-			
-writeSparseMatrix("coverage", sums)
-writeSparseMatrix("A", cc[0])
-writeSparseMatrix("C", cc[1])
-writeSparseMatrix("G", cc[2])
-writeSparseMatrix("T", cc[3])
 
-################
-# Quality scores
-################
 
+def writeSparseMatrix2(mid, vec1, vec2):
+	with open(outpre + "."+mid+".txt","w") as V:
+		for i in range(1,int(maxBP)-1):
+			if(vec1[i] > 0):
+				V.write(str(i+1)+","+sample+","+str(vec1[i])+","+str(vec2[i])+"\n")
 
 n = int(maxBP)
+# BAQ
+# initialize with a pseudo count to avoid dividing by zero
+countsA = [0.00000001] * n 
+countsC = [0.00000001] * n 
+countsG = [0.00000001] * n 
+countsT = [0.00000001] * n 
 
-counts = [0.00000001] * n # initialize with a pseudo count to avoid dividing by zero
-qualities = [0.0] * n
+qualA = [0.0] * n
+qualC = [0.0] * n
+qualG = [0.0] * n
+qualT = [0.0] * n
 
-baq_bam = bamfile.replace(".qc.bam", ".baq.bam")
-os.system("samtools calmd -bAr " + bamfile + " " + fasta_file + " > " + baq_bam)
-
-bam2 = pysam.AlignmentFile(baq_bam, "rb")
+bam2 = pysam.AlignmentFile(bamfile, "rb")
 for read in bam2:
 	seq = read.seq
 	quality = read.query_qualities
 	for qpos, refpos in read.get_aligned_pairs(True):
 		if qpos is not None and refpos is not None:
-			counts[refpos] += 1
-			qualities[refpos] += qpos
+			if(seq[qpos] == "A"):
+				qualA[refpos] += quality[qpos]
+				countsA[refpos] += 1
+			elif(seq[qpos] == "C"):
+				qualC[refpos] += quality[qpos]
+				countsC[refpos] += 1
+			elif(seq[qpos] == "G"):
+				qualG[refpos] += quality[qpos]
+				countsG[refpos] += 1
+			elif(seq[qpos] == "T"):
+				qualT[refpos] += quality[qpos]
+				countsT[refpos] += 1
+			
+meanQualA = [round(x/y,1) for x, y in zip(qualA, countsA)]
+meanQualC = [round(x/y,1) for x, y in zip(qualC, countsC)]
+meanQualG = [round(x/y,1) for x, y in zip(qualG, countsG)]
+meanQualT = [round(x/y,1) for x, y in zip(qualT, countsT)]
 
-meanQual = [round(x/y,3) for x, y in zip(qualities, counts)]
+# Allele Counts
+minBP = 0
+bam = pysam.AlignmentFile(bamfile, "rb")
+cc = bam.count_coverage(mito_genome, minBP, int(maxBP),quality_threshold=int(base_qual))
 
-qoutpre = outpre.replace("/temp/sparse_matrices/","/temp/quality/")
-with open(qoutpre + ".quality.txt", 'w') as f:
-	f.write(sample + "\n")
-	for b in range(0,n):
-		f.write(str(meanQual[b]) + "\n")
+writeSparseMatrix2("A", cc[0], meanQualA)
+writeSparseMatrix2("C", cc[1], meanQualC)
+writeSparseMatrix2("G", cc[2], meanQualG)
+writeSparseMatrix2("T", cc[3], meanQualT)
+
+zipped_list = zip(list(cc[0]),list(cc[1]),list(cc[2]),list(cc[3]))
+sums = [sum(item) for item in zipped_list]
+writeSparseMatrix("coverage", sums)
