@@ -2,28 +2,30 @@
 context("Verify importing and blacklisting works")
 
 path <-paste0(system.file('extdata',package='mgatk'),"/glioma/final/")
-Afile <-paste0(path, "mgatk.A.txt")
-Cfile <-paste0(path, "mgatk.C.txt")
-Gfile <-paste0(path, "mgatk.G.txt")
-Tfile <-paste0(path, "mgatk.T.txt")
+Afile <-paste0(path, "glio.A.txt")
+Cfile <-paste0(path, "glio.C.txt")
+Gfile <-paste0(path, "glio.G.txt")
+Tfile <-paste0(path, "glio.T.txt")
 
-coverageFile <- paste0(path, "mgatk.coverage.txt")
-depthFile <- paste0(path, "mgatk.depthTable.txt")
+coverageFile <- paste0(path, "glio.coverage.txt")
+depthFile <- paste0(path, "glio.depthTable.txt")
 referenceAlleleFile <- paste0(path, "chrM_refAllele.txt")
-mitoSE1 <- importMito.explicit(Afile, Cfile, Gfile, Tfile,
+mitoMAE1 <- importMito.explicit(Afile, Cfile, Gfile, Tfile,
    coverageFile, depthFile, referenceAlleleFile)
 
 folder <-paste0(system.file('extdata',package='mgatk'),"/glioma/final")
-mitoSE2 <- importMito(folder)
-
+mitoMAE2 <- importMito(folder)
 
 test_that("Explicit and casual imports work the same", {
- expect_equal(dim(mitoSE1)[1], dim(mitoSE2)[1])
- expect_equal(dim(mitoSE1)[2], dim(mitoSE2)[2])
+ expect_equal(dim(mitoMAE1@colData)[1], dim(mitoMAE2@colData)[1])
+ expect_equal(dim(mitoMAE1@colData)[2], dim(mitoMAE2@colData)[2])
 })
 
 test_that("Blacklist subsetting works", {
- mitoSEbl <- filterKnownBlacklist(mitoSE2, "hg19_TF1")
- expect_equal(dim(mitoSEbl)[2], dim(mitoSE2)[2])
- expect_less_than(dim(mitoSEbl)[1], dim(mitoSE2)[1])
+ mitoMAEbl <- filterKnownBlacklist(mitoMAE2, "hg19_TF1")
+ expect_equal(dim(mitoMAEbl@ExperimentList[["coverage"]])[2],
+              dim(mitoMAE2@ExperimentList[["coverage"]])[2])
+
+ expect_less_than(dim(mitoMAEbl@ExperimentList[["coverage"]])[1],
+              dim(mitoMAE2@ExperimentList[["coverage"]])[1])
 })

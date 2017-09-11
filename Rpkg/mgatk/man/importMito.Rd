@@ -19,7 +19,7 @@ importMito.explict function}
 }
 \value{
 An initialized mgatk object that is an S4 class
-RangedSummarizedExperiment that includes variant
+MultiAssayExperiment that includes variant
 frequency and coverage as assay slots.
 }
 \description{

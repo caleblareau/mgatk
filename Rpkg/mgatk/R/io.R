@@ -9,7 +9,7 @@ NULL
 #' sample, and count (non-zero) in some order as variant calls
 #' (one file per allele) as well as
 #' a separate file of the position and sample coverage and
-#' produces a RangedSummarizedExperiment object that serves
+#' produces a MultiAssayExperiment object that serves
 #' as the backbone of the R interface for mgatk.
 #'
 #' The filepath of a plain text or gzipped file
@@ -41,16 +41,9 @@ NULL
 #' @param mitoChr Default = "chrM" The `seqname` of the mitochondrial
 #' genome to be initialized in the RangedSummarizedExperiment object
 #'
-#' @param maxFreq Default = 0.5 The maximum allele frequency for
-#' a called variant
-#'
-#'
-#' @param minCoverage Default = 10 The maximum number of total
-#' reads for the variant to be carried forward
-#'
 #' @return An initialized mgatk object that is an S4 class
-#' RangedSummarizedExperiment that includes variant
-#' frequency and coverage as assay slots.
+#' MultiAssayExperiment that includes variant
+#' count and coverage as assay slots.
 #'
 #' @import Matrix
 #' @importFrom data.table fread dcast.data.table
@@ -59,17 +52,18 @@ NULL
 #' @importFrom S4Vectors DataFrame
 #' @import SummarizedExperiment
 #' @import GenomicRanges
+#' @import MultiAssayExperiment
 #' @examples
 #'
 #' path <-paste0(system.file('extdata',package='mgatk'),"/glioma/final/")
 #'
-#' Afile <-paste0(path, "mgatk.A.txt")
-#' Cfile <-paste0(path, "mgatk.C.txt")
-#' Gfile <-paste0(path, "mgatk.G.txt")
-#' Tfile <-paste0(path, "mgatk.T.txt")
+#' Afile <-paste0(path, "glio.A.txt")
+#' Cfile <-paste0(path, "glio.C.txt")
+#' Gfile <-paste0(path, "glio.G.txt")
+#' Tfile <-paste0(path, "glio.T.txt")
 #'
-#' coverageFile <- paste0(path, "mgatk.coverage.txt")
-#' depthFile <- paste0(path, "mgatk.depthTable.txt")
+#' coverageFile <- paste0(path, "glio.coverage.txt")
+#' depthFile <- paste0(path, "glio.depthTable.txt")
 #' referenceAlleleFile <- paste0(path, "chrM_refAllele.txt")
 #'
 #' mitoSE <- importMito.explicit(Afile, Cfile, Gfile, Tfile,
@@ -80,16 +74,16 @@ NULL
 setGeneric(name = "importMito.explicit",
            def = function(Afile, Cfile, Gfile, Tfile,
                           coverageFile, depthFile, referenceAlleleFile,
-                          mitoChr = "chrM", maxFreq = 0.9, minCoverage = 10)
+                          mitoChr = "chrM")
 
   standardGeneric("importMito.explicit"))
 
 #' @rdname importMito.explicit
 setMethod("importMito.explicit", signature("character", "character", "character", "character",
-                                      "character", "character", "character", "ANY", "ANY", "ANY"),
+                                      "character", "character", "character", "ANY"),
           definition = function(Afile, Cfile, Gfile, Tfile,
                           coverageFile, depthFile, referenceAlleleFile,
-                          mitoChr = "chrM", maxFreq = 0.9, minCoverage = 10){
+                          mitoChr = "chrM"){
 
   variantFiles <- list(Afile, Cfile, Gfile, Tfile)
   metaFiles <- list(coverageFile, depthFile, referenceAlleleFile)
@@ -126,7 +120,8 @@ setMethod("importMito.explicit", signature("character", "character", "character"
   )
   remove(cov)
 
-  importSM <- function(file){
+  # Import Counts and BAQ
+  importSMs <- function(file){
     # fread the individual variant calls in
     if(tools::file_ext(file) == "gz"){
       dt <- fread(paste0("zcat < ", file), stringsAsFactors = TRUE)
@@ -138,62 +133,84 @@ setMethod("importMito.explicit", signature("character", "character", "character"
 
     dt$sample <- factor(dt$sample, levels = samplesOrder)
 
-    mat <- Matrix::sparseMatrix(
+    counts <- Matrix::sparseMatrix(
       i = c(dt[[1]],maxpos),
       j = c(as.numeric(dt[[2]]), maxsamples),
       x = c(dt[[3]],0)
-    ) / (covmat + 0.00000000001)
+    )
+
+    BAQ <- Matrix::sparseMatrix(
+      i = c(dt[[1]],maxpos),
+      j = c(as.numeric(dt[[2]]), maxsamples),
+      x = c(dt[[4]],0)
+    )
     remove(dt)
-    return(round(mat,4))
+    return(list("counts" = counts, "BAQ" = BAQ))
   }
 
-  ACGT <- lapply(variantFiles, importSM)
+  ACGT <- lapply(variantFiles, importSMs)
   names(ACGT) <- c("A", "C", "G", "T")
 
-  # Call variants
-  freqMat <- sapply(ACGT, Matrix::rowMeans)
+  # Make a long matrix of BAQ and Counts for non-reference alleles
   ref <- importDT(referenceAlleleFile)
+  whichA <- which(ref[["V2"]][1:maxpos] != "A")
+  whichC <- which(ref[["V2"]][1:maxpos] != "C")
+  whichG <- which(ref[["V2"]][1:maxpos] != "G")
+  whichT <- which(ref[["V2"]][1:maxpos] != "T")
 
-  # Make a matrix with 0s at the reference allele
-  refMat <- Matrix::sparseMatrix(
-    i = (ref[[1]])[1:maxpos],
-    j = as.numeric(factor(toupper(ref[[2]]), levels = c("A", "C", "G", "T"))[1:maxpos]),
-    x = -1
-  ) + 1
-  colnames(refMat) <- c("A", "C", "G", "T")
+  longBAQ <- rbind(
+    ACGT[["A"]][["BAQ"]][whichA,],
+    ACGT[["C"]][["BAQ"]][whichC,],
+    ACGT[["G"]][["BAQ"]][whichG,],
+    ACGT[["T"]][["BAQ"]][whichT,]
+  )
 
-  # Zeros where reference allele or > maxFreq
-  altAllele <-  c("A", "C", "G", "T")[apply(freqMat*refMat*(freqMat < maxFreq), 1, which.max)]
-  As <- which(altAllele == "A"); Cs <- which(altAllele == "C")
-  Gs <- which(altAllele == "G"); Ts <- which(altAllele == "T")
+  longCounts <- rbind(
+    ACGT[["A"]][["counts"]][whichA,],
+    ACGT[["C"]][["counts"]][whichC,],
+    ACGT[["G"]][["counts"]][whichG,],
+    ACGT[["T"]][["counts"]][whichT,]
+  )
 
-  # Get allele-specific frequences
-  freq <- rbind(ACGT[["A"]][As,], ACGT[["C"]][Cs,],
-                ACGT[["G"]][Gs,], ACGT[["T"]][Ts,])
   remove(ACGT)
-  allorder <- c(As, Cs, Gs, Ts)
-  freq <- freq[order(allorder),]
 
-  # Add column meta data
+  # Create colData
   depth <- data.frame(importDT(depthFile))
   sdf <- merge(data.frame(sample = samplesOrder), depth, by.x = "sample", by.y = "V1")
   rownames(sdf) <- samplesOrder
   colnames(sdf) <- c("sample", "depth")
 
-  # Make GRanges and include the allele chosen for analysis
-  row_g <- GenomicRanges::GRanges(seqnames = mitoChr,
+  # Make row Ranges for each object
+  row_g_cov <- GenomicRanges::GRanges(seqnames = mitoChr,
                    IRanges::IRanges(1:maxpos, width = 1),
-                   mcols = DataFrame(refAllele = ref[[2]][1:maxpos], altAllele = altAllele))
+                   mcols = DataFrame(refAllele = ref[[2]][1:maxpos]))
 
-  # Make a summarized experiment
-  SE <- SummarizedExperiment::SummarizedExperiment(
-    assays = list("frequency" = freq, "coverage" = covmat),
+  row_g_allele <- GenomicRanges::GRanges(seqnames = mitoChr,
+                   IRanges::IRanges(1:maxpos, width = 1),
+                   mcols = DataFrame(refAllele = ref[[2]][1:maxpos]))[c(whichA, whichC, whichG, whichT)]
+
+
+  # Make summarized experiments and
+  coverage <- SummarizedExperiment::SummarizedExperiment(
+    assays = list("coverage" = covmat),
     colData = DataFrame(sdf),
-    rowData = row_g
+    rowData = row_g_cov
   )
 
-  # Remove only positions that we got coverage for
-  return(SE[Matrix::rowSums(covmat) > minCoverage, ])
+  alleles <- SummarizedExperiment::SummarizedExperiment(
+    assays = list("BAQ" = longBAQ, "counts" = longCounts),
+    colData = DataFrame(sdf),
+    rowData = row_g_allele
+  )
+
+  remove(longBAQ)
+  remove(longCounts)
+
+  MAE <- MultiAssayExperiment::MultiAssayExperiment(
+    list("alleles" = alleles, "coverage" = coverage),
+    colData = DataFrame(sdf)
+  )
+  return(MAE)
 })
 
 
@@ -211,7 +228,7 @@ setMethod("importMito.explicit", signature("character", "character", "character"
 #' importMito.explict function
 #'
 #' @return An initialized mgatk object that is an S4 class
-#' RangedSummarizedExperiment that includes variant
+#' MultiAssayExperiment that includes variant
 #' frequency and coverage as assay slots.
 #'
 #' @seealso importMito.explicit

@@ -3,7 +3,7 @@ NULL
 
 #' Make a data.frame of reduced features for plotting
 #'
-#' \code{filterKnownBlacklist} takes a RangedSummarizedExperiment
+#' \code{filterKnownBlacklist} takes a MultiAssayExperiment
 #' used in mgatk and returns a subsetted object where mitochondrial
 #' variant positions are removed based on pre-defined.
 #'
@@ -15,45 +15,46 @@ NULL
 #'
 #' 'hg19_TF1'
 #'
-#' @param mitoSE A RangedSummarizedExperiment intialized by mgatk
+#' @param mitoMAE A MultiAssayExperiment intialized by mgatk
 #' @param filter A character signifing the position file to
 #' filter mitochondrial variants from.
 #'
 #' @return Another mgatk object that is an S4 class
-#' RangedSummarizedExperiment that removes variants
+#' MultiAssayExperiment that removes variants
 #' that are included in the specified blacklist.
 #'
 #' @seealso filterKnownBlacklist
 #' @import GenomicRanges
 #' @import SummarizedExperiment
+#' @import MultiAssayExperiment
 #' @importFrom utils read.table
 #'
 #' @examples
 #' # Import an object
 #' folder <-paste0(system.file('extdata',package='mgatk'),"/glioma/final")
-#' mitoSE <- importMito(folder)
-#' dim(mitoSE)
+#' mitoMAE <- importMito(folder)
+#' dim(mitoMAE@ExperimentList[["coverage"]])
 #'
 #' # Filter blacklist
-#' mitoSE2 <- filterKnownBlacklist(mitoSE, "hg19_TF1")
-#' dim(mitoSE)
-#'
-#' # Get
+#' mitoMAE2 <- filterKnownBlacklist(mitoMAE, "hg19_TF1")
+#' dim(mitoMAE2@ExperimentList[["coverage"]])
 #'
 #' @export
-setGeneric(name = "filterKnownBlacklist", def = function(mitoSE, filter)
+setGeneric(name = "filterKnownBlacklist", def = function(mitoMAE, filter)
 
   standardGeneric("filterKnownBlacklist"))
 
 #' @rdname filterKnownBlacklist
-setMethod("filterKnownBlacklist", signature("SummarizedExperiment", "character"),
-          definition = function(mitoSE, filter){
+setMethod("filterKnownBlacklist", signature("MultiAssayExperiment", "character"),
+          definition = function(mitoMAE, filter){
 
   stopifnot(filter %in% c("hg19_TF1"))
   "%ni%" <- Negate("%in%")
 
   blfile <- paste0(system.file('extdata',package='mgatk'),"/blacklist/", filter,".txt")
   blacklist <- read.table(blfile)
-  return(mitoSE[start(rowRanges(mitoSE)) %ni% blacklist[,1],])
-
+  grblack <- GenomicRanges::GRanges(seqnames = getMitoChr(mitoMAE),
+                   IRanges::IRanges(blacklist[,1], width = 1))
+  subsetted <- subsetByRow(mitoMAE, grblack)
+  return(subsetted)
 })

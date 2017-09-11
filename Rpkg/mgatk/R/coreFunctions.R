@@ -1,6 +1,34 @@
 #' @include mgatk.R
 NULL
 
+#' Get the mitochondrial chromosome from a MAE object
+#'
+#' \code{getMitoChr} takes a MultiAssayExperiment Object
+#' and returns a character of the mitochondrial chromosome
+#' name (e.g. "chrM" or "MT")
+#'
+#' @param mitoMAE A MultiAssayExperiment initilized by mgatk
+#'
+#' @return Character associated with the mitochondrial
+#' chromosomes used in mgatk
+#'
+#' @examples
+#'
+#' folder <-paste0(system.file('extdata',package='mgatk'),"/glioma/final")
+#' mitoMAE <- importMito(folder)
+#' getMitoChr(mitoMAE)
+#'
+#' @export
+setGeneric(name = "getMitoChr", def = function(mitoMAE)
+  standardGeneric("getMitoChr"))
+
+#' @rdname getMitoChr
+setMethod("getMitoChr", signature("MultiAssayExperiment"),
+          definition = function(mitoMAE) {
+  chr <- levels(seqnames(mitoMAE@ExperimentList[["coverage"]]@rowRanges))[1]
+  return(chr)
+})
+
 #' Compute weighted distance function.
 #'
 #' \code{computeWeightedDistance} takes a matrix of features x samples.
@@ -52,34 +80,3 @@ setMethod("computeWeightedDistance", signature("ANY", "ANY", "ANY"),
             return(mat)
           })
 
-####################
-# Internal Functions
-####################
-
-# Function returns a data.matrix
-# of the total allele counts per nucleotide / position
-matACTG <- function(mitoSE){
-  d <- data.matrix(data.frame(
-    A = rowSums((assays(mitoSE)[["A"]])),
-    C = rowSums((assays(mitoSE)[["C"]])),
-    G = rowSums((assays(mitoSE)[["G"]])),
-    T = rowSums((assays(mitoSE)[["T"]]))
-  ))
-  return(d)
-}
-
-
-# Function returns a vector of a comma separated list of DNA
-# nucleotides by decreasing prevalence in a Summarized Experiment
-orderACTG <- function(mitoSE){
-  DNA <- c('A', 'C', 'G', 'T')
-  stopifnot(all(DNA %in% names(assays(mitoSE))))
-  d <- matACTG(mitoSE)
-
-  orderACTGvec <- function(vec){
-    names(vec) <- DNA
-    paste(names(vec)[order(vec, decreasing = TRUE)], collapse = ",")
-  }
-  acgtVec <- apply(d, 1, orderACTGvec)
-  return(acgtVec)
-}

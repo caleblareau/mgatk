@@ -3,26 +3,26 @@
 \docType{methods}
 \name{filterKnownBlacklist}
 \alias{filterKnownBlacklist}
-\alias{filterKnownBlacklist,SummarizedExperiment,character-method}
+\alias{filterKnownBlacklist,MultiAssayExperiment,character-method}
 \title{Make a data.frame of reduced features for plotting}
 \usage{
-filterKnownBlacklist(mitoSE, filter)
+filterKnownBlacklist(mitoMAE, filter)
 
-\S4method{filterKnownBlacklist}{SummarizedExperiment,character}(mitoSE, filter)
+\S4method{filterKnownBlacklist}{MultiAssayExperiment,character}(mitoMAE, filter)
 }
 \arguments{
-\item{mitoSE}{A RangedSummarizedExperiment intialized by mgatk}
+\item{mitoMAE}{A MultiAssayExperiment intialized by mgatk}
 
 \item{filter}{A character signifing the position file to
 filter mitochondrial variants from.}
 }
 \value{
 Another mgatk object that is an S4 class
-RangedSummarizedExperiment that removes variants
+MultiAssayExperiment that removes variants
 that are included in the specified blacklist.
 }
 \description{
-\code{filterKnownBlacklist} takes a RangedSummarizedExperiment
+\code{filterKnownBlacklist} takes a MultiAssayExperiment
 used in mgatk and returns a subsetted object where mitochondrial
 variant positions are removed based on pre-defined.
 }
@@ -38,14 +38,12 @@ Current filters that are valid include:
 \examples{
 # Import an object
 folder <-paste0(system.file('extdata',package='mgatk'),"/glioma/final")
-mitoSE <- importMito(folder)
-dim(mitoSE)
+mitoMAE <- importMito(folder)
+dim(mitoMAE@ExperimentList[["coverage"]])
 
 # Filter blacklist
-mitoSE2 <- filterKnownBlacklist(mitoSE, "hg19_TF1")
-dim(mitoSE)
-
-# Get
+mitoMAE2 <- filterKnownBlacklist(mitoMAE, "hg19_TF1")
+dim(mitoMAE2@ExperimentList[["coverage"]])
 
 }
 \seealso{

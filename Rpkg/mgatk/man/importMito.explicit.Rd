@@ -9,12 +9,12 @@ to the requisite input files and render a RangedSummarized
 Experiment.}
 \usage{
 importMito.explicit(Afile, Cfile, Gfile, Tfile, coverageFile, depthFile,
-  referenceAlleleFile, mitoChr = "chrM", maxFreq = 0.5, minCoverage = 10)
+  referenceAlleleFile, mitoChr = "chrM")
 
 
   \S4method{importMito.explicit}{character,character,character,character,character,character,character}(Afile,
   Cfile, Gfile, Tfile, coverageFile, depthFile, referenceAlleleFile,
-  mitoChr = "chrM", maxFreq = 0.5, minCoverage = 10)
+  mitoChr = "chrM")
 }
 \arguments{
 \item{Afile}{Contains the position, sample, count of A alleles}
@@ -42,24 +42,18 @@ reference allele.}
 
 \item{mitoChr}{Default = "chrM" The `seqname` of the mitochondrial
 genome to be initialized in the RangedSummarizedExperiment object}
-
-\item{maxFreq}{Default = 0.5 The maximum allele frequency for
-a called variant}
-
-\item{minCoverage}{Default = 10 The maximum number of total
-reads for the variant to be carried forward}
 }
 \value{
 An initialized mgatk object that is an S4 class
-RangedSummarizedExperiment that includes variant
-frequency and coverage as assay slots.
+MultiAssayExperiment that includes variant
+count and coverage as assay slots.
 }
 \description{
 \code{importMito.explicit} takes a sparse matrix file of position,
 sample, and count (non-zero) in some order as variant calls
 (one file per allele) as well as
 a separate file of the position and sample coverage and
-produces a RangedSummarizedExperiment object that serves
+produces a MultiAssayExperiment object that serves
 as the backbone of the R interface for mgatk.
 }
 \details{
@@ -73,13 +67,13 @@ mgatk analyses
 
 path <-paste0(system.file('extdata',package='mgatk'),"/glioma/final/")
 
-Afile <-paste0(path, "mgatk.A.txt")
-Cfile <-paste0(path, "mgatk.C.txt")
-Gfile <-paste0(path, "mgatk.G.txt")
-Tfile <-paste0(path, "mgatk.T.txt")
+Afile <-paste0(path, "glio.A.txt")
+Cfile <-paste0(path, "glio.C.txt")
+Gfile <-paste0(path, "glio.G.txt")
+Tfile <-paste0(path, "glio.T.txt")
 
-coverageFile <- paste0(path, "mgatk.coverage.txt")
-depthFile <- paste0(path, "mgatk.depthTable.txt")
+coverageFile <- paste0(path, "glio.coverage.txt")
+depthFile <- paste0(path, "glio.depthTable.txt")
 referenceAlleleFile <- paste0(path, "chrM_refAllele.txt")
 
 mitoSE <- importMito.explicit(Afile, Cfile, Gfile, Tfile,

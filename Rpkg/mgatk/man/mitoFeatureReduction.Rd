@@ -6,13 +6,13 @@
 \alias{mitoFeatureReduction,SummarizedExperiment-method}
 \title{Get a set of reduced features for plotting}
 \usage{
-mitoFeatureReduction(mitoSE, nPC, nTSNE, perplexity)
+mitoFeatureReduction(mitoMAE, nPC = 10, nTSNE = 2, perplexity = 30)
 
-\S4method{mitoFeatureReduction}{SummarizedExperiment}(mitoSE, nPC = 10,
+\S4method{mitoFeatureReduction}{SummarizedExperiment}(mitoMAE, nPC = 10,
   nTSNE = 2, perplexity = 30)
 }
 \arguments{
-\item{mitoSE}{A RangedSummarizedExperiment intialized by mgatk}
+\item{mitoMAE}{A MultiAssayExperiment intialized by mgatk}
 
 \item{nPC}{Default = 10; Number of principal components
 to be returned and}
@@ -28,7 +28,7 @@ colData in the original SummarizedExperiment
 as well as PCs and tSNE coordiantes
 }
 \description{
-\code{mitoFeatureReduction} takes a RangedSummarizedExperiment
+\code{mitoFeatureReduction} takes a MultiAssayExperiment
 used in mgatk and returns a data.frame of reduced features
 that can be used for plotting.
 }
@@ -39,11 +39,11 @@ included in the SummarizedExperiment's colData.
 \examples{
 # Import an object
 folder <-paste0(system.file('extdata',package='mgatk'),"/glioma/final")
-mitoSE <- importMito(folder)
+mitoMAE <- importMito(folder)
 
 # Filter blacklist
-mitoSE2 <- filterKnownBlacklist(mitoSE, "hg19_TF1")
+mitoMAE2 <- filterKnownBlacklist(mitoMAE, "hg19_TF1")
 
-df <- mitoFeatureReduction(mitoSE2, nPC = 3, nTSNE = 2, perplexity = 30)
+#df <- mitoFeatureReduction(mitoMAE2, nPC = 3, nTSNE = 2, perplexity = 30)
 
 }
