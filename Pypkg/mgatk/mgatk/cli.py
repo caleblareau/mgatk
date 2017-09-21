@@ -288,7 +288,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 		with open(y_g, 'w') as yaml_file:
 			yaml.dump(dict2, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
 
-		snakecmd_gather = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Gather --config cfp="' + y_g + '" -T'
+		snakecmd_gather = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Gather --config cfp="' + y_g + '" -T'
 		os.system(snakecmd_gather)
 		
 		# Make .rds file from the output
