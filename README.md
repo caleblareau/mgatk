@@ -4,7 +4,7 @@
 
 [![Build Status](https://travis-ci.com/aryeelab/mgatk.svg?token=snx22Bgp4cRvvH32vAmH&branch=master)](https://travis-ci.com/aryeelab/mgatk)
 [![PyPI version](https://badge.fury.io/py/mgatk.svg)](https://pypi.python.org/pypi/mgatk)
-[![R package](https://img.shields.io/badge/R%20package%20-0.1.0-blue.svg)](https://github.com/aryeelab/mgatk/tree/master/Rpkg/mgatk)
+[![R package](https://img.shields.io/badge/R%20package%20-0.3.1-blue.svg)](https://github.com/aryeelab/mgatk/tree/master/Rpkg/mgatk)
 [![Documentation Status](https://readthedocs.org/projects/mgatk/badge/?version=latest)](http://mgatk.readthedocs.io/en/latest/?badge=latest)
 [![Snakemake](https://img.shields.io/badge/snakemake-≥3.5.2-brightgreen.svg)](https://snakemake.bitbucket.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
