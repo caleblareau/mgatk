@@ -21,7 +21,7 @@ test_that("Explicit and casual imports work the same", {
  expect_equal(dim(mitoMAE1@colData)[2], dim(mitoMAE2@colData)[2])
 })
 
-test_that("Reference alleles and alternate alleles are the same", {
+test_that("Reference alleles and alternate alleles are never the same", {
  x <- mcols(rowRanges(mitoMAE1[["alleles"]]))
  expect_equal(sum(x$refAllele == x$altAllele), 0)
 })
