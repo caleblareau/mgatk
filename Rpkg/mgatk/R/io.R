@@ -98,9 +98,9 @@ setMethod("importMito.explicit", signature("character", "character", "character"
   # of of them
   importDT <- function(file){
     if(tools::file_ext(file) == "gz"){
-      cov <- fread(paste0("zcat < ", file), stringsAsFactors = TRUE)
+      cov <- data.table::fread(paste0("zcat < ", file), stringsAsFactors = TRUE)
     } else if(tools::file_ext(file) %in% c("txt", "csv", "tsv")){
-      cov <- fread(paste0(file), stringsAsFactors = TRUE)
+      cov <- data.table::fread(paste0(file), stringsAsFactors = TRUE)
     } else{
       stop("Provide a valid file format for the  file (.gz, .txt, .csv, or .tsv)")
     }
@@ -124,9 +124,9 @@ setMethod("importMito.explicit", signature("character", "character", "character"
   importSMs <- function(file){
     # fread the individual variant calls in
     if(tools::file_ext(file) == "gz"){
-      dt <- fread(paste0("zcat < ", file), stringsAsFactors = TRUE)
+      dt <-  data.table::fread(paste0("zcat < ", file), stringsAsFactors = TRUE)
     } else if(tools::file_ext(file) %in% c("txt", "csv", "tsv")){
-      dt <- fread(paste0(file), stringsAsFactors = TRUE)
+      dt <-  data.table::fread(paste0(file), stringsAsFactors = TRUE)
     } else{
       stop("Provide a valid file format for the variant call file (.gz, .txt, .csv, or .tsv)")
     }
@@ -171,7 +171,7 @@ setMethod("importMito.explicit", signature("character", "character", "character"
     ACGT[["G"]][["counts"]][whichG,],
     ACGT[["T"]][["counts"]][whichT,]
   )
-
+  letterz <- c(rep("A", length(whichA)), rep("C", length(whichC)), rep("G", length(whichG)), rep("T", length(whichT)))
   remove(ACGT)
 
   # Create colData
@@ -182,24 +182,25 @@ setMethod("importMito.explicit", signature("character", "character", "character"
 
   # Make row Ranges for each object
   row_g_cov <- GenomicRanges::GRanges(seqnames = mitoChr,
-                   IRanges::IRanges(1:maxpos, width = 1),
-                   mcols = DataFrame(refAllele = ref[[2]][1:maxpos]))
+                   IRanges::IRanges(1:maxpos, width = 1))
+  GenomicRanges::mcols(row_g_cov) <- data.frame(refAllele = ref[[2]][1:maxpos])
 
   row_g_allele <- GenomicRanges::GRanges(seqnames = mitoChr,
-                   IRanges::IRanges(1:maxpos, width = 1),
-                   mcols = DataFrame(refAllele = ref[[2]][1:maxpos]))[c(whichA, whichC, whichG, whichT)]
+                   IRanges::IRanges(1:maxpos, width = 1))[c(whichA, whichC, whichG, whichT)]
 
+  GenomicRanges::mcols(row_g_allele) <- data.frame(refAllele = (ref[[2]][1:maxpos])[c(whichA, whichC, whichG, whichT)],
+                                                   altAllele = letterz)
 
   # Make summarized experiments and
   coverage <- SummarizedExperiment::SummarizedExperiment(
     assays = list("coverage" = covmat),
-    colData = DataFrame(sdf),
+    colData = S4Vectors::DataFrame(sdf),
     rowData = row_g_cov
   )
 
   alleles <- SummarizedExperiment::SummarizedExperiment(
     assays = list("BAQ" = longBAQ, "counts" = longCounts),
-    colData = DataFrame(sdf),
+    colData = S4Vectors::DataFrame(sdf),
     rowData = row_g_allele
   )
 
@@ -208,7 +209,7 @@ setMethod("importMito.explicit", signature("character", "character", "character"
 
   MAE <- MultiAssayExperiment::MultiAssayExperiment(
     list("alleles" = alleles, "coverage" = coverage),
-    colData = DataFrame(sdf)
+    colData = S4Vectors::DataFrame(sdf)
   )
   return(MAE)
 })
