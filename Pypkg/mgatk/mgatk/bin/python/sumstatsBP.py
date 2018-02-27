@@ -13,9 +13,10 @@ bamfile = sys.argv[1]
 outpre = sys.argv[2]
 mito_genome = sys.argv[3]
 maxBP = sys.argv[4]
-base_qual = sys.argv[5]
+base_qual = float(sys.argv[5])
 sample = sys.argv[6]
 fasta_file = sys.argv[7]
+alignment_quality = float(sys.argv[8])
 
 # Export Functions
 def writeSparseMatrix(mid, vec):
@@ -48,18 +49,19 @@ bam2 = pysam.AlignmentFile(bamfile, "rb")
 for read in bam2:
 	seq = read.seq
 	quality = read.query_qualities
+	align_qual_read = read.mapping_quality
 	for qpos, refpos in read.get_aligned_pairs(True):
-		if qpos is not None and refpos is not None:
-			if(seq[qpos] == "A"):
+		if qpos is not None and refpos is not None and align_qual_read > alignment_quality:
+			if(seq[qpos] == "A" and quality[qpos] > base_qual):
 				qualA[refpos] += quality[qpos]
 				countsA[refpos] += 1
-			elif(seq[qpos] == "C"):
+			elif(seq[qpos] == "C" and quality[qpos] > base_qual):
 				qualC[refpos] += quality[qpos]
 				countsC[refpos] += 1
-			elif(seq[qpos] == "G"):
+			elif(seq[qpos] == "G" and quality[qpos] > base_qual):
 				qualG[refpos] += quality[qpos]
 				countsG[refpos] += 1
-			elif(seq[qpos] == "T"):
+			elif(seq[qpos] == "T" and quality[qpos] > base_qual):
 				qualT[refpos] += quality[qpos]
 				countsT[refpos] += 1
 			
@@ -68,16 +70,21 @@ meanQualC = [round(x/y,1) for x, y in zip(qualC, countsC)]
 meanQualG = [round(x/y,1) for x, y in zip(qualG, countsG)]
 meanQualT = [round(x/y,1) for x, y in zip(qualT, countsT)]
 
+countsA = [ int(round(elem)) for elem in countsA ]
+countsC = [ int(round(elem)) for elem in countsC ]
+countsG = [ int(round(elem)) for elem in countsG ]
+countsT = [ int(round(elem)) for elem in countsT ]
+
+
 # Allele Counts
 minBP = 0
 bam = pysam.AlignmentFile(bamfile, "rb")
-cc = bam.count_coverage(mito_genome, minBP, int(maxBP),quality_threshold=int(base_qual))
 
-writeSparseMatrix2("A", cc[0], meanQualA)
-writeSparseMatrix2("C", cc[1], meanQualC)
-writeSparseMatrix2("G", cc[2], meanQualG)
-writeSparseMatrix2("T", cc[3], meanQualT)
+writeSparseMatrix2("A", countsA, meanQualA)
+writeSparseMatrix2("C", countsC, meanQualC)
+writeSparseMatrix2("G", countsG, meanQualG)
+writeSparseMatrix2("T", countsT, meanQualT)
 
-zipped_list = zip(list(cc[0]),list(cc[1]),list(cc[2]),list(cc[3]))
+zipped_list = zip(list(countsA),list(countsC),list(countsG),list(countsT))
 sums = [sum(item) for item in zipped_list]
 writeSparseMatrix("coverage", sums)

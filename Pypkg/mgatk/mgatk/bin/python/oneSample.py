@@ -26,10 +26,11 @@ mito_length = str(config["mito_length"])
 fasta_file = config["fasta_file"]
 
 remove_duplicates = config["remove_duplicates"]
+do_baq = config["baq"]
 proper_paired = config["proper_paired"]
 
 base_qual = str(config["base_qual"])
-blacklist_percentile = config["blacklist_percentile"]
+alignment_quality = config["alignment_quality"]
 max_javamem  = config["max_javamem"]
 
 clipL = config["clipl"]
@@ -65,8 +66,16 @@ os.system(pycall)
 pysam.sort("-o", temp_bam1, temp_bam0)
 pysam.index(temp_bam1)
 
+# 2a) BAQ recalibration
+if(do_baq == "True"):
+	baq_bam = outputbam.replace(".qc.bam", ".baq.bam").replace("/temp/ready_bam/", "/temp/temp_bam/")
+	os.system("samtools calmd -bAr " + temp_bam1 + " " + fasta_file + " > " + baq_bam)
+	os.system("mv " + baq_bam + " " + temp_bam1)
+	os.system("rm " + temp_bam1 + ".bai")
+	pysam.index(temp_bam1)
+
 # 3) (Optional) Remove duplicates
-if (remove_duplicates == "true"):
+if (remove_duplicates == "True"):
 	mdc_long = MarkDuplicatesCall + " INPUT="+temp_bam1+" OUTPUT="+outputbam+" METRICS_FILE="+rmlog+" REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT"
 	os.system(mdc_long)
 else: # just move the previous output
@@ -75,7 +84,7 @@ else: # just move the previous output
 pysam.index(outputbam)
 
 # 4) Get allele counts per sample / base pair and per-base quality scores
-alleleCountcall = " ".join([python, sumstatsBP_py, outputbam, prefixSM, mito_genome, mito_length, base_qual, sample, fasta_file])
+alleleCountcall = " ".join([python, sumstatsBP_py, outputbam, prefixSM, mito_genome, mito_length, base_qual, sample, fasta_file, alignment_quality])
 os.system(alleleCountcall)
 
 # 5) Get depth from the coverage sparse matrix

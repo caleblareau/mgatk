@@ -32,12 +32,14 @@ from ruamel.yaml.scalarstring import SingleQuotedScalarString as sqs
 @click.option('--NMmax', default = "4", help='Maximum number of paired mismatches allowed represented by the NM/nM tags.')
 
 @click.option('--remove-duplicates', '-rd', is_flag=True, help='Removed marked (presumably PCR) duplicates from Picard; not recommended for low-coverage RNA-Seq')
+@click.option('--baq', is_flag=True, help='Use BAQ scores instead of BQ scores for everything in terms of base quality.')
+
 @click.option('--max-javamem', '-jm', default = "4000m", help='Maximum memory for java')
 
 @click.option('--proper-pairs', '-pp', is_flag=True, help='Require reads to be properly paired.')
 
-@click.option('--base-qual', '-q', default = "20", help='Minimum base quality for deciding that a variant is real.')
-@click.option('--blacklist-percentile', '-bp', default = "33", help='Samples with percentile depth below this number will be excluded when determining the blacklist.')
+@click.option('--base-qual', '-q', default = "0", help='Minimum base quality for deciding that a variant is real.')
+@click.option('--alignment-quality', '-aq', default = "20", help='Minimum alignment quality.')
 
 @click.option('--clipL', '-cl', default = "0", help='Number of variants to clip from left hand side of read.')
 @click.option('--clipR', '-cr', default = "0", help='Number of variants to clip from right hand side of read.')
@@ -53,8 +55,8 @@ from ruamel.yaml.scalarstring import SingleQuotedScalarString as sqs
 
 
 def main(mode, input, output, name, mito_genome, ncores,
-	cluster, jobs, nhmax, nmmax, remove_duplicates, max_javamem, 
-	proper_pairs, base_qual, blacklist_percentile,
+	cluster, jobs, nhmax, nmmax, remove_duplicates, baq, max_javamem, 
+	proper_pairs, base_qual, alignment_quality,
 	clipl, clipr, keep_samples, ignore_samples,
 	keep_temp_files, detailed_calls, skip_r):
 	
@@ -230,7 +232,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 		# add sqs to get .yaml to play friendly https://stackoverflow.com/questions/39262556/preserve-quotes-and-also-add-data-with-quotes-in-ruamel
 		dict1 = {'input_directory' : sqs(input), 'output_directory' : sqs(output), 'script_dir' : sqs(script_dir),
 			'fasta_file' : sqs(fastaf), 'mito_genome' : sqs(mito_genome), 'mito_length' : sqs(mito_length), 
-			'base_qual' : sqs(base_qual), 'remove_duplicates' : sqs(remove_duplicates), 'blacklist_percentile' : sqs(blacklist_percentile), 
+			'base_qual' : sqs(base_qual), 'remove_duplicates' : sqs(remove_duplicates), 'baq' : sqs(baq), 'alignment_quality' : sqs(alignment_quality), 
 			'clipl' : sqs(clipl), 'clipr' : sqs(clipr), 'proper_paired' : sqs(proper_pairs),
 			'NHmax' : sqs(nhmax), 'NMmax' : sqs(nmmax), 'detailed_calls' : sqs(detailed_calls), 'max_javamem' : sqs(max_javamem)}
 		
