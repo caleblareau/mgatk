@@ -20,5 +20,5 @@ mgatk gather -i oneout -n glioOne
 # Using the clipping feature
 
 ```
-bsub -q big -n 4 mgatk call -i HSC -n HSC_scATAC -o HSC_scATAC -c 4 -cl 3 -cr -3 -m hg19
+bsub -q big -n 4 mgatk call -i HSC -n HSC_scATAC -o HSC_scATAC -c 4 -cl 3 -cr 3 -m hg19
 ```
