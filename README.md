@@ -9,9 +9,8 @@
 [![Snakemake](https://img.shields.io/badge/snakemake-≥3.5.2-brightgreen.svg)](https://snakemake.bitbucket.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-The **mgatk** package was developed by Caleb Lareau and Jacob Ulirsch and is maintained by
-[Caleb](mailto:caleblareau@g.harvard.edu) in the
-[Aryee Lab](https://aryeelab.org) and [Buenrostro Lab](https://buenrostrolab.com).
+The **mgatk** package was developed by Caleb Lareau.
+
 [Source code is made freely available](http://github.com/aryeelab/mgatk)
 and a packaged install version is provided through [PyPi](https://pypi.python.org/pypi/mgatk/).
 <br><br>

@@ -17,16 +17,19 @@ from ruamel.yaml.scalarstring import SingleQuotedScalarString as sqs
 
 @click.command()
 @click.version_option()
-@click.argument('mode', type=click.Choice(['call', 'check', 'one', 'gather', 'support']))
+@click.argument('mode', type=click.Choice(['bcall', 'call', 'check', 'one', 'gather', 'support']))
 @click.option('--input', '-i', default = ".", required=True, help='Input; either directory of singular .bam file; see documentation')
 @click.option('--output', '-o', default="mgatk_out", help='Output directory for analysis required for `call` and `one`; see documentation.')
 @click.option('--name', '-n', default="mgatk",  help='Prefix for project name')
 
-@click.option('--mito-genome', '-m', default = "hg19", required=True, help='mitochondrial genome configuration. Choose hg19, mm10, or a custom .fasta file; see documentation')
+@click.option('--genome', '-g', default = "hg19", required=True, help='mitochondrial genome configuration. Choose hg19, mm10, or a custom .fasta file; see documentation')
 @click.option('--ncores', '-c', default = "detect", help='Number of cores to run the main job in parallel.')
 
 @click.option('--cluster', default = "",  help='Message to send to Snakemake to execute jobs on cluster interface; see documentation.')
 @click.option('--jobs', default = "0",  help='Max number of jobs to be running concurrently on the cluster interface.')
+
+@click.option('--barcode-tag', '-bt', default = "X",  help='Read tag (generally two letters) to separate single cells; valid and required only in `bcall` mode.')
+
 
 @click.option('--NHmax', default = "1", help='Maximum number of read alignments allowed as governed by the NH flag.')
 @click.option('--NMmax', default = "4", help='Maximum number of paired mismatches allowed represented by the NM/nM tags.')
@@ -45,7 +48,7 @@ from ruamel.yaml.scalarstring import SingleQuotedScalarString as sqs
 @click.option('--clipR', '-cr', default = "0", help='Number of variants to clip from right hand side of read.')
 
 @click.option('--keep-samples', '-k', default="ALL", help='Comma separated list of sample names to keep; ALL (special string) by default. Sample refers to basename of .bam file')
-@click.option('--ignore-samples', '-g', default="NONE", help='Comma separated list of sample names to ignore; NONE (special string) by default. Sample refers to basename of .bam file')
+@click.option('--ignore-samples', '-x', default="NONE", help='Comma separated list of sample names to ignore; NONE (special string) by default. Sample refers to basename of .bam file')
 
 @click.option('--keep-temp-files', '-z', is_flag=True, help='Keep all intermediate files.')
 @click.option('--detailed-calls', '-dc', is_flag=True, help='Perform detailed variant calling; may be slow.')
@@ -55,14 +58,15 @@ from ruamel.yaml.scalarstring import SingleQuotedScalarString as sqs
 
 
 def main(mode, input, output, name, mito_genome, ncores,
-	cluster, jobs, nhmax, nmmax, remove_duplicates, baq, max_javamem, 
+	cluster, jobs, barcode_tag
+	nhmax, nmmax, remove_duplicates, baq, max_javamem, 
 	proper_pairs, base_qual, alignment_quality,
 	clipl, clipr, keep_samples, ignore_samples,
 	keep_temp_files, detailed_calls, skip_r):
 	
 	"""
 	mgatk: a mitochondrial genome analysis toolkit. \n
-	MODE = ['call', 'one', 'check', 'gather', 'support'] \n
+	MODE = ['bcall', 'call', 'one', 'check', 'gather', 'support'] \n
 	See https://mgatk.readthedocs.io for more details.
 	"""
 	
@@ -83,6 +87,18 @@ def main(mode, input, output, name, mito_genome, ncores,
 	if(mode == "check"):
 		click.echo(gettime() + "checking dependencies...")
 	
+	if(mode == "bcall"):
+		if(barcode_tag == "X"):
+			sys.exit('ERROR: in `bcall` mode, must specify a valid read tag ID (two letters).')
+			
+		# Input argument is assumed to be a .bam file
+		filename, file_extension = os.path.splitext(input)
+		if(file_extension != ".bam"):
+			sys.exit('ERROR: in `one` mode, the input should be an individual .bam file.')
+		if not os.path.exists(input):
+			sys.exist('ERROR: No file found called "' + input + '"; please specify a valid .bam file')
+			
+		##### NEED TO DO THE SPLITTING ######
 
 	# Verify dependencies	
 	if remove_duplicates:
