@@ -165,8 +165,6 @@ def main(mode, input, output, name, mito_genome, ncores,
 			samples.append(basename)
 			samplebams.append(bam)
 		
-		print(samples)
-		
 		if(keep_samples != "ALL"):
 			keeplist = keep_samples.split(",")
 			click.echo(gettime() + "Intersecting detected samples with user-retained ones: " + keep_samples)
