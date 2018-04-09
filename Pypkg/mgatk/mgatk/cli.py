@@ -30,7 +30,7 @@ from ruamel.yaml.scalarstring import SingleQuotedScalarString as sqs
 
 @click.option('--barcode-tag', '-bt', default = "X",  help='Read tag (generally two letters) to separate single cells; valid and required only in `bcall` mode.')
 @click.option('--barcodes', '-b', default = "",  help='File path to barcodes that will be extracted; useful only in `bcall` mode.')
-@click.option('--min-barcode-reads', '-mb', default = 500,  help='Minimum number of mitochondrial reads for a barcode to be genotyped; useful only in `bcall` mode; will overwrite the `--barcodes` logic.')
+@click.option('--min-barcode-reads', '-mb', default = 1000,  help='Minimum number of mitochondrial reads for a barcode to be genotyped; useful only in `bcall` mode; will overwrite the `--barcodes` logic.')
 
 @click.option('--NHmax', default = "1", help='Maximum number of read alignments allowed as governed by the NH flag.')
 @click.option('--NMmax', default = "4", help='Maximum number of paired mismatches allowed represented by the NM/nM tags.')
@@ -118,11 +118,12 @@ def main(mode, input, output, name, mito_genome, ncores,
 		# Handle fasta requirements
 		fastaf, mito_genome, mito_length = handle_fasta_inference(mito_genome, supported_genomes, script_dir, mode, of)
 		
+		# Actually call the external script based on user input
 		if(barcode_known):
-			# call script 1
-			print("under development!")
+			bc1py = script_dir + "/bin/python/bc1_known.py"
+			pycall = " ".join(['python', bc1py, input, bcbd, barcode_tag, barcodes, mito_genome])
+			os.system(pycall)
 		else:
-			# call script 2
 			barc_quant_file = of + "/final/barcodeQuants.tsv"
 			bc2py = script_dir + "/bin/python/bc2_unknown.py"
 			pycall = " ".join(['python', bc2py, input, bcbd, barcode_tag, str(min_barcode_reads), mito_genome, barc_quant_file])

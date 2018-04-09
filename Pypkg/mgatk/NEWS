@@ -1,11 +1,14 @@
 
+# 0.3.4
+- Full support for `bcall` mode
+
 # 0.3.0
 - Per-base / allele BAQ scores
 
 # 0.2.5
 - Creates .rds for easy i/o into R package
 - Efficient sparse matrices for final text-based output
-- Added additional run modes. 5 total now (call, one, gather, support, check)
+- Added additional run modes. 5 total as of now (call, one, gather, support, check)
 
 # 0.1.0
 - Alpha version uploaded to PyPi
