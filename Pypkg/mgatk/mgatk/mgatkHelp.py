@@ -69,6 +69,44 @@ def parse_fasta(filename):
 	f.close()
 	return sequences
 
+def handle_fasta_inference(mito_genome, supported_genomes, script_dir, mode, of):
+	"""
+	Determines what's going on with the mitochondrial genome
+	based on user input / existing data
+	"""
+	if any(mito_genome in s for s in supported_genomes):
+		fastaf = script_dir + "/bin/anno/fasta/" + mito_genome + ".fasta"
+	else:
+		if os.path.exists(mito_genome):
+			fastaf = mito_genome
+		else:
+			sys.exit('ERROR: Could not find file ' + mito_genome + '; QUITTING')
+	fasta = parse_fasta(fastaf)	
+
+	if(len(fasta.keys()) != 1):
+		sys.exit('ERROR: .fasta file has multiple chromosomes; supply file with only 1; QUITTING')
+	
+	mito_genome, mito_seq = list(fasta.items())[0]
+	mito_length = len(mito_seq)
+	
+	make_folder(of + "/fasta/")
+	make_folder(of + "/final/")
+	
+	newfastaf = of + "/fasta/" + mito_genome + ".fasta"
+	if not os.path.exists(newfastaf):
+		shutil.copyfile(fastaf, newfastaf)
+		fastaf = newfastaf
+		pysam.faidx(fastaf)
+	
+		with open(of + "/final/" + mito_genome + "_refAllele.txt", 'w') as f:
+			b = 1
+			for base in mito_seq:
+				f.write(str(b) + "\t" + base + "\n")
+				b += 1
+			f.close()
+	return(fastaf, mito_genome, mito_length)
+	
+
 def make_folder(folder):
 	"""
 	Function to only make a given folder if it does not already exist
