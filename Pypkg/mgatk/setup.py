@@ -3,15 +3,15 @@ mgatk: a mitochondrial genome analysis toolkit
 """
 from setuptools import find_packages, setup
 
-dependencies = ['click', 'pysam', 'pytest', 'snakemake', 'biopython', 'optparse-pretty', 'regex', 'ruamel.yaml']
+dependencies = ['click', 'pysam', 'pytest', 'snakemake', 'biopython', 'optparse-pretty', 'regex', 'ruamel.yaml', 'itertools']
 
 setup(
     name='mgatk',
-    version='0.3.4',
+    version='0.3.5',
     url='https://github.com/aryeelab/mgatk',
     license='MIT',
-    author='Caleb Lareau and Jacob Ulirsch',
-    author_email='caleblareau@g.harvard.edu',
+    author='Caleb Lareau',
+    author_email='clareau@broadinstitute.org',
     description='Processing and quality control of mitochondrial genome variants.',
     long_description=__doc__,
     packages=find_packages(exclude=['tests']),
