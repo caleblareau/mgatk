@@ -1,3 +1,4 @@
+## Aligning with GMAP/GSNAP
 
 0) Install GMAP/GSNAP
 available at http://research-pub.gene.com/gmap/
@@ -23,7 +24,9 @@ gmap_build -d hg38 hg38.fasta -c chrM -D /data/aryee/pub/genomes/gmap_gsnap
 2) Sample alignment
 
 ```
-gsnap --gunzip -D/data/aryee/pub/genomes/gmap_gsnap -d hg38 miseq/fastq/Bulk1_R1.fastq.gz miseq/fastq/Bulk1_R2.fastq.gz -A sam | samtools view -Sbh - | samtools sort -@ 4 - -o miseq_bulk1.gsnap.bam
+sample=$1
+
+gsnap --nthreads 4 --gunzip -D /data/aryee/pub/genomes/gmap_gsnap -d hg38 "fastq_trimmed/${sample}_1.trim.fastq.gz" "fastq_trimmed/${sample}_2.trim.fastq.gz" -A sam | samtools view -bS - | samtools sort -@ 4 - -o "${sample}.st.bam"
 
 ```
 

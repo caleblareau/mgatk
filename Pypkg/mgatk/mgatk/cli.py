@@ -43,7 +43,7 @@ from ruamel.yaml.scalarstring import SingleQuotedScalarString as sqs
 @click.option('--proper-pairs', '-pp', is_flag=True, help='Require reads to be properly paired.')
 
 @click.option('--base-qual', '-q', default = "0", help='Minimum base quality for deciding that a variant is real.')
-@click.option('--alignment-quality', '-aq', default = "20", help='Minimum alignment quality.')
+@click.option('--alignment-quality', '-aq', default = "0", help='Minimum alignment quality.')
 
 @click.option('--clipL', '-cl', default = "0", help='Number of base pairs to clip from left hand side of read.')
 @click.option('--clipR', '-cr', default = "0", help='Number of base pairs to clip from right hand side of read.')
