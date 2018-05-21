@@ -21,14 +21,14 @@ alignment_quality = float(sys.argv[8])
 # Export Functions
 def writeSparseMatrix(mid, vec):
 	with open(outpre + "."+mid+".txt","w") as V:
-		for i in range(1,int(maxBP)-1):
+		for i in range(0,int(maxBP)):
 			if(vec[i] > 0):
 				V.write(str(i+1)+","+sample+","+str(vec[i])+"\n")
 
 
 def writeSparseMatrix2(mid, vec1, vec2):
 	with open(outpre + "."+mid+".txt","w") as V:
-		for i in range(1,int(maxBP)-1):
+		for i in range(0,int(maxBP)):
 			if(vec1[i] > 0):
 				V.write(str(i+1)+","+sample+","+str(vec1[i])+","+str(vec2[i])+"\n")
 
