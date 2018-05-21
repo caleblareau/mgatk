@@ -117,7 +117,6 @@ def main(mode, input, output, name, mito_genome, ncores,
 		
 		# Handle fasta requirements
 		fastaf, mito_genome, mito_length = handle_fasta_inference(mito_genome, supported_genomes, script_dir, mode, of)
-		
 		# Actually call the external script based on user input
 		if(barcode_known):
 			bc1py = script_dir + "/bin/python/bc1_known.py"
@@ -196,6 +195,9 @@ def main(mode, input, output, name, mito_genome, ncores,
 			sys.exit('ERROR: in `one` mode, the input should be an individual .bam file.')
 		if not os.path.exists(input):
 			sys.exist('ERROR: No file found called "' + input + '"; please specify a valid .bam file')
+		
+		# Define input samples
+		sampleregex = re.compile(r"^[^.]*")
 		samples = [re.search(sampleregex, os.path.basename(input)).group(0)]
 		samplebams = [input]
 	
@@ -239,10 +241,10 @@ def main(mode, input, output, name, mito_genome, ncores,
 		#-------------------
 		# Handle .fasta file
 		#-------------------
-		if(mode == "call" and wasbcall == False):
+		if((mode == "call" and wasbcall == False) or mode == "one"):
 			fastaf, mito_genome, mito_length = handle_fasta_inference(mito_genome, supported_genomes, script_dir, mode, of)
 			click.echo(gettime() + "Found designated mitochondrial chromosome: %s" % mito_genome, logf)
-		
+
 		#----------------		
 		# Determine cores
 		#----------------
@@ -293,6 +295,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 			y_s = of + "/.internal/samples/"+sample+".yaml"
 			with open(y_s, 'w') as yaml_file:
 				yaml.dump(dict1, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
+			
 			
 			# Call the python script
 			oneSample_py = script_dir + "/bin/python/oneSample.py"

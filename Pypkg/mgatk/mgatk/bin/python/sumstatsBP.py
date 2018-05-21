@@ -33,6 +33,7 @@ def writeSparseMatrix2(mid, vec1, vec2):
 				V.write(str(i+1)+","+sample+","+str(vec1[i])+","+str(vec2[i])+"\n")
 
 n = int(maxBP)
+
 # BAQ
 # initialize with a pseudo count to avoid dividing by zero
 countsA = [0.00000001] * n 

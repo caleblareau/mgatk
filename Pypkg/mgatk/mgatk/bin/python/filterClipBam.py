@@ -24,6 +24,7 @@ out = pysam.AlignmentFile("-", "wb", template = bam)
 
 keepCount = 0
 filtCount = 0
+#proper_pair = "False"
 
 def filterReadTags(intags):
     '''
@@ -49,7 +50,6 @@ def pairing(read):
 def processRead(read):
 	global keepCount
 	global filtCount
-	
 	if(filterReadTags(read.tags) and read.reference_name == mtchr and pairing(read)):
 		keepCount += 1
 		out.write(read)
