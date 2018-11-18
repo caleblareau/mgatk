@@ -281,7 +281,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 				yaml.dump(dict1, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
 			
 			# Execute snakemake
-			snakecmd_scatter = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="' + y_s + '" -T'
+			snakecmd_scatter = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="' + y_s + '" '
 			os.system(snakecmd_scatter)
 			click.echo(gettime() + "mgatk successfully processed the supplied .bam files", logf)
 		
@@ -320,7 +320,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 		with open(y_g, 'w') as yaml_file:
 			yaml.dump(dict2, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
 
-		snakecmd_gather = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Gather --config cfp="' + y_g + '" -T'
+		snakecmd_gather = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Gather --config cfp="' + y_g + '"'
 		os.system(snakecmd_gather)
 		
 		# Make .rds file from the output
