@@ -46,6 +46,7 @@ giniRows <- function(x) {
 #' x <- matrix(runif(1000), nrow = 20) # 50 samples
 #' gi <- giniCols(x)
 #'
+#'
 #' @export
 giniCols <- function(x) {
     .Call('_mgatk_giniCols', PACKAGE = 'mgatk', x)

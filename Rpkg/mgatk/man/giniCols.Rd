@@ -22,4 +22,5 @@ sensitive to NAs
 x <- matrix(runif(1000), nrow = 20) # 50 samples
 gi <- giniCols(x)
 
+
 }

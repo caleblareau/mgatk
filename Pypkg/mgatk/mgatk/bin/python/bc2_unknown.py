@@ -30,15 +30,15 @@ def listBarcodes(mtchr):
 	'''
 	Make a giant list of observed barcodes at the mitochondrial chr
 	'''
-	barcodes = ['NA'] 
+	barcodes_all = dict()
 	bam = pysam.AlignmentFile(bamfile,'rb')
 	Itr = bam.fetch(str(mtchr),multiple_iterators=False)
 	
 	for read in Itr:
 		read_barcode = getBarcode(read.tags)
-		barcodes.append(read_barcode)
+		barcodes_all[read_barcode] = barcodes_all.get(read_barcode, 0) + 1
 	bam.close()
-	return(barcodes)
+	return(barcodes_all)
 
 def writePassingReads(bc, mtchr):
 	'''
@@ -56,7 +56,7 @@ def writePassingReads(bc, mtchr):
 			file.write(read)
 
 # Quant barcodes and write it out
-barcodes = Counter(listBarcodes(mtchr))
+barcodes = listBarcodes(mtchr)
 barcodes = {x : barcodes[x] for x in barcodes if barcodes[x] >= min_barcodes and x != "NA"}
 bc = list(barcodes.keys())	
 	
@@ -79,7 +79,7 @@ def multi_file_manager(files, mode='rt'):
 		file.close()
 		
 # Final loop to write out passing reads
-bambcfiles = [outfolder + "/" + basename + "." + bc1 + ".bam" for bc1 in bc]
+bambcfiles = [outfolder + "/" + bc1 + ".bam" for bc1 in bc]
 with multi_file_manager(bambcfiles) as fopen:
 	writePassingReads(bc, mtchr)
 

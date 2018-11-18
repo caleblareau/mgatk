@@ -142,7 +142,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 	if (mode == "call" or mode == "gather"):
 		if not skip_r:	
 			check_software_exists("R")
-			check_R_packages(['mgatk', 'ggplot2', "dtplyr", "dplyr"])
+			check_R_packages(["dplyr"])
 	
 	# -------------------------------
 	# Determine samples for analysis

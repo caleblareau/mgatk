@@ -5,7 +5,7 @@ prune *.DS_Store
 
 
 # Scripts
-recursive-include mgatk/*
+recursive-include mgatk *
 
 # Misc
 include Authors.rst

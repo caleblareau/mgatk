@@ -8,7 +8,8 @@
 \usage{
 filterKnownBlacklist(mitoMAE, filter)
 
-\S4method{filterKnownBlacklist}{MultiAssayExperiment,character}(mitoMAE, filter)
+\S4method{filterKnownBlacklist}{MultiAssayExperiment,character}(mitoMAE,
+  filter)
 }
 \arguments{
 \item{mitoMAE}{A MultiAssayExperiment intialized by mgatk}
