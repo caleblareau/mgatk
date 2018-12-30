@@ -1,4 +1,7 @@
 
+# 0.3.9
+- Handle common reference genome issue for human genomes (hg19 / rCRS) automatically
+
 # 0.3.4
 - Full support for `bcall` mode
 

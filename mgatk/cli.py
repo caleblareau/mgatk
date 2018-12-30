@@ -117,6 +117,25 @@ def main(mode, input, output, name, mito_genome, ncores,
 		
 		# Handle fasta requirements
 		fastaf, mito_genome, mito_length = handle_fasta_inference(mito_genome, supported_genomes, script_dir, mode, of)
+		idxs = pysam.idxstats(input).split("\n")
+		
+		# Handle common mtDNA reference genome errors
+		for i in idxs:
+			if(i.split("\t")[0] == mito_genome):
+				bam_length = int(i.split("\t")[1])
+		
+		if(mito_length == bam_length):
+			click.echo(gettime() + "User specified mitochondrial genome matches .bam file")
+		elif(bam_length == 16569):
+			click.echo(gettime() + "User specified mitochondrial genome does NOT match .bam file; using rCRS instead (length == 16569)")
+			fastaf, mito_genome, mito_length = handle_fasta_inference("rCRS", supported_genomes, script_dir, mode, of)
+		elif(bam_length == 16571):
+			click.echo(gettime() + "User specified mitochondrial genome does NOT match .bam file; using hg19 instead (length == 16571)")
+			fastaf, mito_genome, mito_length = handle_fasta_inference("hg19", supported_genomes, script_dir, mode, of)
+		else:
+			click.echo(gettime() + "User specified mitochondrial genome does NOT match .bam file; correctly specify reference genome or .fasta file")
+			quit()
+		
 		# Actually call the external script based on user input
 		if(barcode_known):
 			bc1py = script_dir + "/bin/python/bc1_known.py"

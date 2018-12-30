@@ -1,1 +1,0 @@
-# R package landing page
