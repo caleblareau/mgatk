@@ -29,7 +29,7 @@ before_install:
   - PATH=`pwd`/htslib-1.5/bin:$PATH
 
 install:
-  - python Pypkg/mgatk/setup.py install
+  - python setup.py install
 
 script: 
-  - cd Pypkg/mgatk/tests && echo $PATH
+  - cd tests && echo $PATH
