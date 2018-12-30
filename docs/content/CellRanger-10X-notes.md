@@ -4,7 +4,7 @@ _Caleb Lareau_
 
 ### Preprocessing with CellRanger
 ```
-/apps/lab/aryee/cellranger-atac-1.0.0/cellranger-atac-cs/1.0.0/bin/count --fastqs fastq --id test1 --sample Mix_Fix_1h --reference /data/aryee/pub/genomes/cellranger/refdata-cellranger-atac-hg19-1.0.0 --localcores 16
+/apps/lab/aryee/cellranger-atac-1.0.0/cellranger-atac count --fastqs fastq --id test1 --sample Mix_Fix_1h --reference /data/aryee/pub/genomes/cellranger/refdata-cellranger-atac-hg19-1.0.0 --localcores 16
 ```
 
 ### Taking output for mgatk

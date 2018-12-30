@@ -4,9 +4,8 @@
 
 [![Build Status](https://travis-ci.com/aryeelab/mgatk.svg?token=snx22Bgp4cRvvH32vAmH&branch=master)](https://travis-ci.com/aryeelab/mgatk)
 [![PyPI version](https://badge.fury.io/py/mgatk.svg)](https://pypi.python.org/pypi/mgatk)
-[![R package](https://img.shields.io/badge/R%20package%20-0.3.1-blue.svg)](https://github.com/aryeelab/mgatk/tree/master/Rpkg/mgatk)
 [![Documentation Status](https://readthedocs.org/projects/mgatk/badge/?version=latest)](http://mgatk.readthedocs.io/en/latest/?badge=latest)
-[![Snakemake](https://img.shields.io/badge/snakemake-≥3.5.2-brightgreen.svg)](https://snakemake.bitbucket.io)
+[![Snakemake](https://img.shields.io/badge/snakemake-≥4.0.0-brightgreen.svg)](https://snakemake.bitbucket.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 The **mgatk** package was developed by Caleb Lareau.
@@ -16,11 +15,11 @@ and a packaged install version is provided through [PyPi](https://pypi.python.or
 <br><br>
 
 ## About
-We provide two interfaces for **mgatk**, including a python-based command line interface for
-processing `.bam` files with mitochondrial reads and generating quality control, blacklist, 
-and variant calls. These can be read into our `R` package that enables quality control, annotation, 
-sample deconvolution, transcriptomic and epigenomic heritability analyses, as well as 
-visualizations and diagnostics. 
+This repository houses the **mgatk** package, a python-based command line interface for
+processing `.bam` files with mitochondrial reads and generating high-quality heteroplasmy 
+estimation from sequencing data. This package places a special emphasis on mitochondrial
+genotypes generated from single-cell genomics data, including scATAC-seq, but is generally
+applicable across other assays. 
 <br><br>
 
 ## Installation
@@ -30,34 +29,15 @@ visualizations and diagnostics.
 pip3 install mgatk
 ```
 
-**R**
-```
-devtools::install_github("aryeelab/mgatk", subdir="Rpkg/mgatk")
-
-**or**
-
-devtools::install_github("aryeelab/mgatk/Rpkg/mgatk")
-```
 
 ## Install via github
 
 **Python**
 ```
 git clone https://github.com/aryeelab/mgatk.git
-cd mgatk/Pypkg/mgatk
+cd mgatk
 pip install -e .
 ````
-
-**R**
-```
-devtools::install_github("aryeelab/mgatk", subdir="Rpkg/mgatk")
-
-**or**
-
-devtools::install_github("aryeelab/mgatk/Rpkg/mgatk")
-```
-
-R package vignette build with [pkgdown](https://github.com/hadley/pkgdown).
 
 ## Workflow Overview
 
