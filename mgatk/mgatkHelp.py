@@ -95,6 +95,8 @@ def handle_fasta_inference(mito_genome, supported_genomes, script_dir, mode, of)
 	
 	newfastaf = of + "/fasta/" + mito_genome + ".fasta"
 	
+	# Need a special logic to potentially over-write the existing 
+	# mito fasta file if they wind up not being the same from guess/checking hg19
 	writeFA = False
 	if os.path.exists(newfastaf):
 		if filecmp.cmp(fastaf, newfastaf,shallow=False):
