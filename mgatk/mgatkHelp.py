@@ -6,6 +6,7 @@ import os
 import sys
 import subprocess
 import pysam
+import filecmp
 
 def string_hamming_distance(str1, str2):
     """
@@ -93,7 +94,18 @@ def handle_fasta_inference(mito_genome, supported_genomes, script_dir, mode, of)
 	make_folder(of + "/final/")
 	
 	newfastaf = of + "/fasta/" + mito_genome + ".fasta"
-	if not os.path.exists(newfastaf):
+	
+	writeFA = False
+	if os.path.exists(newfastaf):
+		if filecmp.cmp(fastaf, newfastaf,shallow=False):
+			pass
+		else:
+			writeFA = True
+	else:
+		writeFA = True
+		
+	if writeFA:
+			
 		shutil.copyfile(fastaf, newfastaf)
 		fastaf = newfastaf
 		pysam.faidx(fastaf)
