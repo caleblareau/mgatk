@@ -28,4 +28,5 @@ def read_pair_generator(bam, region_string=None):
 
 bam = pysam.AlignmentFile(filename, 'rb')
 for read1, read2 in read_pair_generator(bam):
-	print(read1.query_name, read1.reference_start, read2.reference_start, read1.is_reverse, read2.is_reverse)
+	if(read1 != None and read2 != None):
+		print(read1.query_name, read1.reference_start, read2.reference_start, read1.is_reverse, read2.is_reverse)

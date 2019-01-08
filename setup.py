@@ -7,7 +7,7 @@ dependencies = ['click', 'pysam', 'pytest', 'snakemake', 'biopython', 'optparse-
 
 setup(
     name='mgatk',
-    version='0.3.9',
+    version='0.3.99',
     url='https://github.com/aryeelab/mgatk',
     license='MIT',
     author='Caleb Lareau',

@@ -33,12 +33,8 @@ base_qual = str(config["base_qual"])
 alignment_quality = config["alignment_quality"]
 max_javamem  = config["max_javamem"]
 
-clipL = config["clipl"]
-clipR = config["clipr"]
 NHmax = config["NHmax"]
 NMmax = config["NMmax"]
-
-detailed_calls = config["detailed_calls"]
 
 # Software paths
 java = "java"
@@ -59,7 +55,7 @@ prefixSM = outdir + "/temp/sparse_matrices/" + sample
 outputdepth = outdir + "/qc/depth/" + sample + ".depth.txt"
 
 # 1) Filter bam files
-pycall = " ".join([python, filtclip_py, inputbam, filtlog, clipL, "-"+clipR, mito_genome, proper_paired, NHmax, NMmax]) + " > " + temp_bam0
+pycall = " ".join([python, filtclip_py, inputbam, filtlog, mito_genome, proper_paired, NHmax, NMmax]) + " > " + temp_bam0
 os.system(pycall)
 
 # 2) Sort the filtered bam file

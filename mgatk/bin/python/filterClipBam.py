@@ -11,12 +11,10 @@ import pysam
 
 bamfile = sys.argv[1]
 logfile = sys.argv[2]
-clipL = sys.argv[3]
-clipR = sys.argv[4]
-mtchr = sys.argv[5]
-proper_pair = sys.argv[6]
-NHmax = sys.argv[7]
-NMmax = sys.argv[8]
+mtchr = sys.argv[3]
+proper_pair = sys.argv[4]
+NHmax = sys.argv[5]
+NMmax = sys.argv[6]
 
 # https://github.com/pysam-developers/pysam/issues/509
 bam = pysam.AlignmentFile(bamfile, "rb")
@@ -56,34 +54,8 @@ def processRead(read):
 	else:
 		filtCount += 1
 
-# Clip Both
-if(int(clipL) > 0 and int(clipR) < 0):
-	for read in bam:
-		q = read.qual
-		read.seq = "N"*int(clipL) + read.seq[int(clipL):int(clipR )] + "N"*(abs(int(clipR)))
-		read.qual = "!"*int(clipL) + q[int(clipL):int(clipR )] + "!"*(abs(int(clipR)))
-		processRead(read)
-			
-# Clip right
-elif(int(clipR) < 0):
-	for read in bam:
-		q = read.qual
-		read.seq = read.seq[:int(clipR)] + "N"*(abs(int(clipR)))
-		read.qual = q[0:int(clipR)] + "!"*(abs(int(clipR)))
-		processRead(read)
-			
-# Clip left
-elif(int(clipL) > 0):
-	for read in bam:
-		q = read.qual
-		read.seq = "N"*int(clipL) + read.seq[int(clipL):]
-		read.qual = "!"*int(clipL) + q[int(clipL):]
-		processRead(read)
-			
-# No clipping, just filtering
-else:
-	for read in bam:
-		processRead(read)
+for read in bam:
+	processRead(read)
 
 with open(logfile , 'w') as outfile:
 	outfile.write("Kept "+ str(keepCount) + "\n" + "Removed " + str(filtCount)+ "\n")

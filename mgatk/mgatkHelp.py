@@ -7,6 +7,7 @@ import sys
 import subprocess
 import pysam
 import filecmp
+import math
 
 def string_hamming_distance(str1, str2):
     """
@@ -127,6 +128,46 @@ def make_folder(folder):
 	"""
 	if not os.path.exists(folder):
 		os.makedirs(folder)
+
+def file_len(fname):
+    with open(fname) as f:
+        for i, l in enumerate(f):
+            pass
+    return i + 1
+
+def split_barcodes_file(barcode_file, nsamples, output):
+	"""
+	Function to only make a given folder if it does not already exist
+	"""
+	n_samples_observed = file_len(barcode_file)
+	
+	# See if we need to do anything... if user didn't specify or we have relatively few samples, just return the barcode file back
+	if(n_samples_observed < nsamples or nsamples == 0):
+		return([barcode_file])
+	else:
+		# Need to split files into a maximum of n samples
+		total_files = math.ceil(n_samples_observed / nsamples)
+		lines_per_file = nsamples
+		
+		# Set up a temporary output folder to route files to
+		full_output_folder = output + "/temp" + "/barcode_files"
+		make_folder(full_output_folder)
+		smallfile = None
+		counter = 0
+		with open(barcode_file) as bigfile:
+			for lineno, line in enumerate(bigfile):
+				if lineno % lines_per_file == 0:
+					if smallfile:
+						smallfile.close()
+					counter = counter + 1
+					small_filename = full_output_folder + "/barcodes." + str(counter) + ".txt" 
+					smallfile = open(small_filename, "w")
+				smallfile.write(line)
+		if smallfile:
+			smallfile.close()
+		barcodes_files = [full_output_folder + "/barcodes." + str(x) + ".txt" for x in list(range(1, total_files + 1))]
+		return(barcodes_files)
+
 
 
 # https://stackoverflow.com/questions/1006289/how-to-find-out-the-number-of-cpus-using-python	

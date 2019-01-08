@@ -30,10 +30,10 @@ from ruamel.yaml.scalarstring import SingleQuotedScalarString as sqs
 
 @click.option('--barcode-tag', '-bt', default = "X",  help='Read tag (generally two letters) to separate single cells; valid and required only in `bcall` mode.')
 @click.option('--barcodes', '-b', default = "",  help='File path to barcodes that will be extracted; useful only in `bcall` mode.')
-@click.option('--min-barcode-reads', '-mb', default = 1000,  help='Minimum number of mitochondrial reads for a barcode to be genotyped; useful only in `bcall` mode; will overwrite the `--barcodes` logic.')
+@click.option('--min-barcode-reads', '-mb', default = 1000,  help='Minimum number of mitochondrial reads for a barcode to be genotyped; useful only in `bcall` mode; will not overwrite the `--barcodes` logic.')
 
-@click.option('--NHmax', default = "1", help='Maximum number of read alignments allowed as governed by the NH flag.')
-@click.option('--NMmax', default = "4", help='Maximum number of paired mismatches allowed represented by the NM/nM tags.')
+@click.option('--NHmax', default = 1, help='Maximum number of read alignments allowed as governed by the NH flag.')
+@click.option('--NMmax', default = 4, help='Maximum number of paired mismatches allowed represented by the NM/nM tags.')
 
 @click.option('--remove-duplicates', '-rd', is_flag=True, help='Removed marked (presumably PCR) duplicates from Picard; not recommended for low-coverage RNA-Seq')
 @click.option('--baq', is_flag=True, help='Use BAQ scores instead of BQ scores for everything in terms of base quality.')
@@ -42,17 +42,15 @@ from ruamel.yaml.scalarstring import SingleQuotedScalarString as sqs
 
 @click.option('--proper-pairs', '-pp', is_flag=True, help='Require reads to be properly paired.')
 
-@click.option('--base-qual', '-q', default = "0", help='Minimum base quality for deciding that a variant is real.')
-@click.option('--alignment-quality', '-aq', default = "0", help='Minimum alignment quality.')
+@click.option('--base-qual', '-q', default = 0, help='Minimum base quality for deciding that a variant is real.')
+@click.option('--alignment-quality', '-aq', default = 0, help='Minimum alignment quality.')
 
-@click.option('--clipL', '-cl', default = "0", help='Number of base pairs to clip from left hand side of read.')
-@click.option('--clipR', '-cr', default = "0", help='Number of base pairs to clip from right hand side of read.')
+@click.option('--nsamples', '-ns', default = 0, help='The number of samples / cells to be processed per iteration; default is all.')
 
 @click.option('--keep-samples', '-k', default="ALL", help='Comma separated list of sample names to keep; ALL (special string) by default. Sample refers to basename of .bam file')
 @click.option('--ignore-samples', '-x', default="NONE", help='Comma separated list of sample names to ignore; NONE (special string) by default. Sample refers to basename of .bam file')
 
 @click.option('--keep-temp-files', '-z', is_flag=True, help='Keep all intermediate files.')
-@click.option('--detailed-calls', '-dc', is_flag=True, help='Perform detailed variant calling; may be slow.')
 
 @click.option('--skip-R', '-sr', is_flag=True, help='Generate plain-text only output. Otherwise, this generates a .rds obejct that can be immediately read into R for downstream analysis.')
 
@@ -61,8 +59,8 @@ def main(mode, input, output, name, mito_genome, ncores,
 	cluster, jobs, barcode_tag, barcodes, min_barcode_reads,
 	nhmax, nmmax, remove_duplicates, baq, max_javamem, 
 	proper_pairs, base_qual, alignment_quality,
-	clipl, clipr, keep_samples, ignore_samples,
-	keep_temp_files, detailed_calls, skip_r):
+	nsamples, keep_samples, ignore_samples,
+	keep_temp_files, skip_r):
 	
 	"""
 	mgatk: a mitochondrial genome analysis toolkit. \n
@@ -137,17 +135,26 @@ def main(mode, input, output, name, mito_genome, ncores,
 			quit()
 		
 		# Actually call the external script based on user input
-		if(barcode_known):
-			bc1py = script_dir + "/bin/python/bc1_known.py"
-			pycall = " ".join(['python', bc1py, input, bcbd, barcode_tag, barcodes, mito_genome])
-			os.system(pycall)
-		else:
+		if(not barcode_known):
 			barc_quant_file = of + "/final/barcodeQuants.tsv"
-			bc2py = script_dir + "/bin/python/bc2_unknown.py"
-			pycall = " ".join(['python', bc2py, input, bcbd, barcode_tag, str(min_barcode_reads), mito_genome, barc_quant_file])
+			passing_barcode_file = of + "/final/passingBarcodes.tsv"
+			find_barcodes_py = script_dir + "/bin/python/find_barcodes.py"
+			
+			pycall = " ".join(['python', find_barcodes_py, input, bcbd, barcode_tag, str(min_barcode_reads), mito_genome, barc_quant_file, passing_barcode_file])
+			os.system(pycall)
+			barcodes = passing_barcode_file
+
+		# Potentially split the valid barcodes into smaller files if we need to
+		barcode_files = split_barcodes_file(barcodes, nsamples, output)
+		split_barcoded_bam_py = script_dir + "/bin/python/split_barcoded_bam.py"
+		
+		# Loop over the split sample files
+		for i in range(len(barcode_files)):
+			one_barcode_file = barcode_files[i]
+			pycall = " ".join(['python', split_barcoded_bam_py, input, bcbd, barcode_tag, one_barcode_file, mito_genome])
 			os.system(pycall)
 			
-		click.echo(gettime() + "Finished determining barcodes for genotyping.")
+		click.echo(gettime() + "Finished determining/splitting barcodes for genotyping.")
 		
 		# Update everything to appear like we've just set `call` on the set of bams
 		mode = "call"
@@ -228,7 +235,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 		folders = [of + "/logs", of + "/logs/filterlogs", of + "/fasta", of + "/.internal",
 			 of + "/.internal/parseltongue", of + "/.internal/samples", of + "/final", 
 			 tf, tf + "/ready_bam", tf + "/temp_bam", tf + "/sparse_matrices", tf + "/quality",
-			 qc, qc + "/quality", qc + "/depth", qc + "/detailed"]
+			 qc, qc + "/quality", qc + "/depth"]
 
 		mkfolderout = [make_folder(x) for x in folders]
 
@@ -272,17 +279,14 @@ def main(mode, input, output, name, mito_genome, ncores,
 		else:
 			ncores = str(ncores)
 
-		click.echo(gettime() + "Processing .bams with "+ncores+" threads")
-		if(detailed_calls):
-			click.echo(gettime() + "Also performing detailed variant calling.")
-	
+		click.echo(gettime() + "Genotyping samples with "+ncores+" threads")
 		
 		# add sqs to get .yaml to play friendly https://stackoverflow.com/questions/39262556/preserve-quotes-and-also-add-data-with-quotes-in-ruamel
 		dict1 = {'input_directory' : sqs(input), 'output_directory' : sqs(output), 'script_dir' : sqs(script_dir),
 			'fasta_file' : sqs(fastaf), 'mito_genome' : sqs(mito_genome), 'mito_length' : sqs(mito_length), 
 			'base_qual' : sqs(base_qual), 'remove_duplicates' : sqs(remove_duplicates), 'baq' : sqs(baq), 'alignment_quality' : sqs(alignment_quality), 
-			'clipl' : sqs(clipl), 'clipr' : sqs(clipr), 'proper_paired' : sqs(proper_pairs),
-			'NHmax' : sqs(nhmax), 'NMmax' : sqs(nmmax), 'detailed_calls' : sqs(detailed_calls), 'max_javamem' : sqs(max_javamem)}
+			'proper_paired' : sqs(proper_pairs),
+			'NHmax' : sqs(nhmax), 'NMmax' : sqs(nmmax), 'max_javamem' : sqs(max_javamem)}
 		
 		if(mode == "call"):
 			
@@ -363,9 +367,6 @@ def main(mode, input, output, name, mito_genome, ncores,
 			shutil.rmtree(byefolder + "/fasta")
 			shutil.rmtree(byefolder + "/.internal")
 			shutil.rmtree(byefolder + "/temp")
-			if not detailed_calls:
-				if os.path.exists(byefolder + "/qc/detailed"):
-					shutil.rmtree(byefolder + "/qc/detailed")
 			click.echo(gettime() + "Intermediate files successfully removed.", logf)
 		
 		# Suspend logging
