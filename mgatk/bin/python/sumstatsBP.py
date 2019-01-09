@@ -32,60 +32,101 @@ def writeSparseMatrix2(mid, vec1, vec2):
 			if(vec1[i] > 0):
 				V.write(str(i+1)+","+sample+","+str(vec1[i])+","+str(vec2[i])+"\n")
 
+def writeSparseMatrix4(mid, vec1, vec2, vec3, vec4):
+	with open(outpre + "."+mid+".txt","w") as V:
+		for i in range(0,int(maxBP)):
+			if(vec1[i] > 0):
+				V.write(str(i+1)+","+sample+","+str(vec1[i])+","+str(vec2[i])+","+str(vec3[i])+","+str(vec4[i])+"\n")
+
+
 n = int(maxBP)
 
-# BAQ
 # initialize with a pseudo count to avoid dividing by zero
-countsA = [0.00000001] * n 
-countsC = [0.00000001] * n 
-countsG = [0.00000001] * n 
-countsT = [0.00000001] * n 
+countsA_fw = [0.00000001] * n 
+countsC_fw = [0.00000001] * n 
+countsG_fw = [0.00000001] * n 
+countsT_fw = [0.00000001] * n 
 
-qualA = [0.0] * n
-qualC = [0.0] * n
-qualG = [0.0] * n
-qualT = [0.0] * n
+qualA_fw = [0.0] * n
+qualC_fw = [0.0] * n
+qualG_fw = [0.0] * n
+qualT_fw = [0.0] * n
+
+countsA_rev = [0.00000001] * n 
+countsC_rev = [0.00000001] * n 
+countsG_rev = [0.00000001] * n 
+countsT_rev = [0.00000001] * n 
+
+qualA_rev = [0.0] * n
+qualC_rev = [0.0] * n
+qualG_rev = [0.0] * n
+qualT_rev = [0.0] * n
 
 bam2 = pysam.AlignmentFile(bamfile, "rb")
 for read in bam2:
 	seq = read.seq
+	reverse = read.is_reverse
 	quality = read.query_qualities
 	align_qual_read = read.mapping_quality
 	for qpos, refpos in read.get_aligned_pairs(True):
 		if qpos is not None and refpos is not None and align_qual_read > alignment_quality:
 			if(seq[qpos] == "A" and quality[qpos] > base_qual):
-				qualA[refpos] += quality[qpos]
-				countsA[refpos] += 1
+				if(reverse):
+					qualA_fw[refpos] += quality[qpos]
+					countsA_fw[refpos] += 1
+				else:
+					qualA_rev[refpos] += quality[qpos]
+					countsA_rev[refpos] += 1
 			elif(seq[qpos] == "C" and quality[qpos] > base_qual):
-				qualC[refpos] += quality[qpos]
-				countsC[refpos] += 1
+				if(reverse):
+					qualC_fw[refpos] += quality[qpos]
+					countsC_fw[refpos] += 1
+				else:
+					qualC_rev[refpos] += quality[qpos]
+					countsC_rev[refpos] += 1
 			elif(seq[qpos] == "G" and quality[qpos] > base_qual):
-				qualG[refpos] += quality[qpos]
-				countsG[refpos] += 1
+				if(reverse):
+					qualG_fw[refpos] += quality[qpos]
+					countsG_fw[refpos] += 1
+				else:
+					qualG_rev[refpos] += quality[qpos]
+					countsG_rev[refpos] += 1
 			elif(seq[qpos] == "T" and quality[qpos] > base_qual):
-				qualT[refpos] += quality[qpos]
-				countsT[refpos] += 1
+				if(reverse):
+					qualT_fw[refpos] += quality[qpos]
+					countsT_fw[refpos] += 1
+				else:
+					qualT_rev[refpos] += quality[qpos]
+					countsT_rev[refpos] += 1
 			
-meanQualA = [round(x/y,1) for x, y in zip(qualA, countsA)]
-meanQualC = [round(x/y,1) for x, y in zip(qualC, countsC)]
-meanQualG = [round(x/y,1) for x, y in zip(qualG, countsG)]
-meanQualT = [round(x/y,1) for x, y in zip(qualT, countsT)]
+meanQualA_fw = [round(x/y,1) for x, y in zip(qualA_fw, countsA_fw)]
+meanQualC_fw = [round(x/y,1) for x, y in zip(qualC_fw, countsC_fw)]
+meanQualG_fw = [round(x/y,1) for x, y in zip(qualG_fw, countsG_fw)]
+meanQualT_fw = [round(x/y,1) for x, y in zip(qualT_fw, countsT_fw)]
 
-countsA = [ int(round(elem)) for elem in countsA ]
-countsC = [ int(round(elem)) for elem in countsC ]
-countsG = [ int(round(elem)) for elem in countsG ]
-countsT = [ int(round(elem)) for elem in countsT ]
+countsA_fw = [ int(round(elem)) for elem in countsA_fw ]
+countsC_fw = [ int(round(elem)) for elem in countsC_fw ]
+countsG_fw = [ int(round(elem)) for elem in countsG_fw ]
+countsT_fw = [ int(round(elem)) for elem in countsT_fw ]
 
+meanQualA_rev = [round(x/y,1) for x, y in zip(qualA_rev, countsA_rev)]
+meanQualC_rev = [round(x/y,1) for x, y in zip(qualC_rev, countsC_rev)]
+meanQualG_rev = [round(x/y,1) for x, y in zip(qualG_rev, countsG_rev)]
+meanQualT_rev = [round(x/y,1) for x, y in zip(qualT_rev, countsT_rev)]
+
+countsA_rev = [ int(round(elem)) for elem in countsA_rev ]
+countsC_rev = [ int(round(elem)) for elem in countsC_rev ]
+countsG_rev = [ int(round(elem)) for elem in countsG_rev ]
+countsT_rev = [ int(round(elem)) for elem in countsT_rev ]
 
 # Allele Counts
-minBP = 0
 bam = pysam.AlignmentFile(bamfile, "rb")
 
-writeSparseMatrix2("A", countsA, meanQualA)
-writeSparseMatrix2("C", countsC, meanQualC)
-writeSparseMatrix2("G", countsG, meanQualG)
-writeSparseMatrix2("T", countsT, meanQualT)
+writeSparseMatrix4("A", countsA_fw, meanQualA_fw, countsA_rev, meanQualA_rev)
+writeSparseMatrix4("C", countsC_fw, meanQualC_fw, countsC_rev, meanQualC_rev)
+writeSparseMatrix4("G", countsG_fw, meanQualG_fw, countsG_rev, meanQualG_rev)
+writeSparseMatrix4("T", countsT_fw, meanQualT_fw, countsT_rev, meanQualT_rev)
 
-zipped_list = zip(list(countsA),list(countsC),list(countsG),list(countsT))
+zipped_list = zip(list(countsA_fw),list(countsC_fw),list(countsG_fw),list(countsT_fw), list(countsA_rev),list(countsC_rev),list(countsG_rev),list(countsT_rev))
 sums = [sum(item) for item in zipped_list]
 writeSparseMatrix("coverage", sums)

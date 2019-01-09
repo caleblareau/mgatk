@@ -32,10 +32,3 @@ mgatk bcall -i barcode/test_barcode.bam -n bc2 -o bc2d -bt DB -mb 200 -z
 ```
 
 
-## Using the clipping feature
-```
-mgatk call -i HSC -n HSC_scATAC -o HSC_scATAC -c 4 -cl 3 -cr 3 -m hg19
-```
-
-
-

@@ -14,6 +14,7 @@ from subprocess import call, check_call
 from .mgatkHelp import *
 from ruamel import yaml
 from ruamel.yaml.scalarstring import SingleQuotedScalarString as sqs
+from multiprocessing import Pool
 
 @click.command()
 @click.version_option()
@@ -73,6 +74,12 @@ def main(mode, input, output, name, mito_genome, ncores,
 	__version__ = get_distribution('mgatk').version
 	click.echo(gettime() + "mgatk v%s" % __version__)
 	
+	# Determine cores
+	if(ncores == "detect"):
+		ncores = str(available_cpu_count())
+	else:
+		ncores = str(ncores)
+	
 	# Determine which genomes are available
 	rawsg = os.popen('ls ' + script_dir + "/bin/anno/fasta/*.fasta").read().strip().split("\n")
 	supported_genomes = [x.replace(script_dir + "/bin/anno/fasta/", "").replace(".fasta", "") for x in rawsg]  
@@ -114,22 +121,22 @@ def main(mode, input, output, name, mito_genome, ncores,
 		mkfolderout = [make_folder(x) for x in folders]
 		
 		# Handle fasta requirements
-		fastaf, mito_genome, mito_length = handle_fasta_inference(mito_genome, supported_genomes, script_dir, mode, of)
+		fastaf, mito_chr, mito_length = handle_fasta_inference(mito_genome, supported_genomes, script_dir, mode, of)
 		idxs = pysam.idxstats(input).split("\n")
 		
 		# Handle common mtDNA reference genome errors
 		for i in idxs:
-			if(i.split("\t")[0] == mito_genome):
+			if(i.split("\t")[0] == mito_chr):
 				bam_length = int(i.split("\t")[1])
 		
 		if(mito_length == bam_length):
 			click.echo(gettime() + "User specified mitochondrial genome matches .bam file")
 		elif(bam_length == 16569):
 			click.echo(gettime() + "User specified mitochondrial genome does NOT match .bam file; using rCRS instead (length == 16569)")
-			fastaf, mito_genome, mito_length = handle_fasta_inference("rCRS", supported_genomes, script_dir, mode, of)
+			fastaf, mito_chr, mito_length = handle_fasta_inference("rCRS", supported_genomes, script_dir, mode, of)
 		elif(bam_length == 16571):
 			click.echo(gettime() + "User specified mitochondrial genome does NOT match .bam file; using hg19 instead (length == 16571)")
-			fastaf, mito_genome, mito_length = handle_fasta_inference("hg19", supported_genomes, script_dir, mode, of)
+			fastaf, mito_chr, mito_length = handle_fasta_inference("hg19", supported_genomes, script_dir, mode, of)
 		else:
 			click.echo(gettime() + "User specified mitochondrial genome does NOT match .bam file; correctly specify reference genome or .fasta file")
 			quit()
@@ -140,7 +147,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 			passing_barcode_file = of + "/final/passingBarcodes.tsv"
 			find_barcodes_py = script_dir + "/bin/python/find_barcodes.py"
 			
-			pycall = " ".join(['python', find_barcodes_py, input, bcbd, barcode_tag, str(min_barcode_reads), mito_genome, barc_quant_file, passing_barcode_file])
+			pycall = " ".join(['python', find_barcodes_py, input, bcbd, barcode_tag, str(min_barcode_reads), mito_chr, barc_quant_file, passing_barcode_file])
 			os.system(pycall)
 			barcodes = passing_barcode_file
 
@@ -151,7 +158,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 		# Loop over the split sample files
 		for i in range(len(barcode_files)):
 			one_barcode_file = barcode_files[i]
-			pycall = " ".join(['python', split_barcoded_bam_py, input, bcbd, barcode_tag, one_barcode_file, mito_genome])
+			pycall = " ".join(['python', split_barcoded_bam_py, input, bcbd, barcode_tag, one_barcode_file, mito_chr])
 			os.system(pycall)
 			
 		click.echo(gettime() + "Finished determining/splitting barcodes for genotyping.")
@@ -183,13 +190,29 @@ def main(mode, input, output, name, mito_genome, ncores,
 	
 		samples = []
 		samplebams = []
-	
+		
+		fastaf, mito_chr, mito_length = handle_fasta_inference(mito_genome, supported_genomes, script_dir, mode, of, write_files = False)
+		print(mito_length)
+		
+		# Loop over bam files
 		for bam in bams:
 			base=os.path.basename(bam)
 			basename=os.path.splitext(base)[0]
 			samples.append(basename)
 			samplebams.append(bam)
+			
+		# parallel process to ensure we have .bai files for each bam
+		pool = Pool(processes=int(ncores))
+		pm = pool.map(verify_bai, samplebams)
+		pool.close()
 		
+		samples_fail = []
+		for i in range(len(samples)):
+			sample = samples[i]
+			bam = samplebams[i]
+			if( not verify_sample_mitobam(bam, mito_chr, mito_length)):
+				samples_fail.append(sample)
+				
 		if(keep_samples != "ALL"):
 			keeplist = keep_samples.split(",")
 			click.echo(gettime() + "Intersecting detected samples with user-retained ones: " + keep_samples)
@@ -199,14 +222,23 @@ def main(mode, input, output, name, mito_genome, ncores,
 		
 		if(ignore_samples != "NONE"):
 			iglist = ignore_samples.split(",")
-			click.echo(gettime() + "Attempting to remove samples from processing:" + ignore_samples)
+			click.echo(gettime() + "Will remove samples from processing:" + ignore_samples)
 			rmidx = findIdx(samples, iglist)
 			for index in sorted(rmidx, reverse=True):
 				del samples[index]
 				del samplebams[index]
+				
+		if(len(samples_fail) > 0):
+			click.echo(gettime() + "NOTE: the samples below either have 0 mtDNA reads at the specified chromosome or are mapped to an incorrectly specified reference mitochondrial genome")
+			click.echo(gettime() + "Will remove samples from processing:" )
+			rmidx = findIdx(samples, samples_fail)
+			for index in sorted(rmidx, reverse=True):
+				print("REMOVED: ", samples[index])
+				del samples[index]
+				del samplebams[index]
 			
 		if not len(samples) > 0:
-			sys.exit('ERROR: Could not import any samples from the user specification; check flags, logs and input configuration; QUITTING')
+			sys.exit('ERROR: Could not import any samples from the user specification. \nERROR: check flags, logs, and input configuration (including reference mitochondrial genome); \nQUITTING')
 	
 		nsamplesNote = "mgatk will process " + str(len(samples)) + " samples"
 		
@@ -238,7 +270,14 @@ def main(mode, input, output, name, mito_genome, ncores,
 			 qc, qc + "/quality", qc + "/depth"]
 
 		mkfolderout = [make_folder(x) for x in folders]
-
+		
+		#-------------------
+		# Handle .fasta file
+		#-------------------
+		if((mode == "call" and wasbcall == False) or mode == "one"):
+			fastaf, mito_genmito_chrome, mito_length = handle_fasta_inference(mito_genome, supported_genomes, script_dir, mode, of)
+			click.echo(gettime() + "Found designated mitochondrial chromosome: %s" % mito_chr, logf)
+			
 		if(mode == "call"):
 			# Logging		
 			logf = open(output + "/logs" + "/base.mgatk.log", 'a')
@@ -263,27 +302,12 @@ def main(mode, input, output, name, mito_genome, ncores,
 		for i in range(len(samples)):
 			with open(of + "/.internal/samples/" + samples[i] + ".bam.txt" , 'w') as outfile:
 				outfile.write(samplebams[i])
-	
-		#-------------------
-		# Handle .fasta file
-		#-------------------
-		if((mode == "call" and wasbcall == False) or mode == "one"):
-			fastaf, mito_genome, mito_length = handle_fasta_inference(mito_genome, supported_genomes, script_dir, mode, of)
-			click.echo(gettime() + "Found designated mitochondrial chromosome: %s" % mito_genome, logf)
-
-		#----------------		
-		# Determine cores
-		#----------------
-		if(ncores == "detect"):
-			ncores = str(available_cpu_count())
-		else:
-			ncores = str(ncores)
-
+		
 		click.echo(gettime() + "Genotyping samples with "+ncores+" threads")
 		
 		# add sqs to get .yaml to play friendly https://stackoverflow.com/questions/39262556/preserve-quotes-and-also-add-data-with-quotes-in-ruamel
 		dict1 = {'input_directory' : sqs(input), 'output_directory' : sqs(output), 'script_dir' : sqs(script_dir),
-			'fasta_file' : sqs(fastaf), 'mito_genome' : sqs(mito_genome), 'mito_length' : sqs(mito_length), 
+			'fasta_file' : sqs(fastaf), 'mito_chr' : sqs(mito_chr), 'mito_length' : sqs(mito_length), 
 			'base_qual' : sqs(base_qual), 'remove_duplicates' : sqs(remove_duplicates), 'baq' : sqs(baq), 'alignment_quality' : sqs(alignment_quality), 
 			'proper_paired' : sqs(proper_pairs),
 			'NHmax' : sqs(nhmax), 'NMmax' : sqs(nmmax), 'max_javamem' : sqs(max_javamem)}
@@ -297,7 +321,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 				snakeclust = " --jobs " + jobs + " --cluster '" + cluster + "' "
 				click.echo(gettime() + "Recognized flags to process jobs on a computing cluster.", logf)
 				
-			click.echo(gettime() + "Processing .bams with "+ncores+" threads", logf)
+			click.echo(gettime() + "Processing samples with "+ncores+" threads", logf)
 			
 			y_s = of + "/.internal/parseltongue/snake.scatter.yaml"
 			with open(y_s, 'w') as yaml_file:

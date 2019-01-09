@@ -8,6 +8,7 @@ import subprocess
 import pysam
 import filecmp
 import math
+import pysam
 
 def string_hamming_distance(str1, str2):
     """
@@ -71,7 +72,26 @@ def parse_fasta(filename):
 	f.close()
 	return sequences
 
-def handle_fasta_inference(mito_genome, supported_genomes, script_dir, mode, of):
+def verify_bai(bamfile):
+	'''
+	Function that indexes bam file from input if missing
+	'''
+	bai_file = bamfile + ".bai"
+	if(not os.path.exists(bai_file)):
+		pysam.index(bamfile)
+
+def verify_sample_mitobam(bam, mito_chr, mito_length):
+	idxs = pysam.idxstats(bam).split("\n")
+	
+	# Pull out essentials from idxstats
+	for i in idxs:
+		if(i.split("\t")[0] == mito_chr):
+			bam_length = int(i.split("\t")[1])
+			nReads = int(i.split("\t")[2])
+	return(bam_length == mito_length and nReads > 0)
+
+
+def handle_fasta_inference(mito_genome, supported_genomes, script_dir, mode, of, write_files = True):
 	"""
 	Determines what's going on with the mitochondrial genome
 	based on user input / existing data
@@ -91,8 +111,9 @@ def handle_fasta_inference(mito_genome, supported_genomes, script_dir, mode, of)
 	mito_genome, mito_seq = list(fasta.items())[0]
 	mito_length = len(mito_seq)
 	
-	make_folder(of + "/fasta/")
-	make_folder(of + "/final/")
+	if(write_files):
+		make_folder(of + "/fasta/")
+		make_folder(of + "/final/")
 	
 	newfastaf = of + "/fasta/" + mito_genome + ".fasta"
 	
@@ -107,7 +128,7 @@ def handle_fasta_inference(mito_genome, supported_genomes, script_dir, mode, of)
 	else:
 		writeFA = True
 		
-	if writeFA:
+	if writeFA and write_files:
 			
 		shutil.copyfile(fastaf, newfastaf)
 		fastaf = newfastaf

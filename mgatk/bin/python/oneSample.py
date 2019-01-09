@@ -21,7 +21,7 @@ indir = config["input_directory"]
 outdir = config["output_directory"]
 script_dir = config["script_dir"]
 
-mito_genome = config["mito_genome"]
+mito_genome = config["mito_chr"]
 mito_length = str(config["mito_length"])
 fasta_file = config["fasta_file"]
 
