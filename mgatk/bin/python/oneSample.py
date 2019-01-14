@@ -80,8 +80,9 @@ else:
 
 # 3) (Optional) Remove duplicates
 if (remove_duplicates == "True"):
-	mdc_long = picardCall + " I="+temp_bam1+" O="+outputbam+" M="+rmlog+" REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT" + umi_extra
-	os.system(mdc_long)
+	mdc_long = picardCall + " I="+temp_bam1+" O="+outputbam+" M="+rmlog+" REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT QUIET=true VERBOSITY=ERROR" + umi_extra 
+	proc = subprocess.Popen(mdc_long, stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+	out, err = proc.communicate()  # Read data from stdout and stderr
 else: # just move the previous output
 	os.system("mv " + temp_bam1 + " " + outputbam)
 	os.system("rm " + temp_bam1 + ".bai")

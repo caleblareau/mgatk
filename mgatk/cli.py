@@ -23,7 +23,7 @@ from multiprocessing import Pool
 @click.option('--output', '-o', default="mgatk_out", help='Output directory for analysis required for `call` and `one`; see documentation.')
 @click.option('--name', '-n', default="mgatk",  help='Prefix for project name')
 
-@click.option('--mito-genome', '-g', default = "hg19", required=True, help='mitochondrial genome configuration. Choose hg19, mm10, or a custom .fasta file; see documentation')
+@click.option('--mito-genome', '-g', default = "hg19", required=True, help='mitochondrial genome configuration. Choose hg19, hg38, mm10, (etc.) or a custom .fasta file; see documentation')
 @click.option('--ncores', '-c', default = "detect", help='Number of cores to run the main job in parallel.')
 
 @click.option('--cluster', default = "",  help='Message to send to Snakemake to execute jobs on cluster interface; see documentation.')
@@ -36,7 +36,7 @@ from multiprocessing import Pool
 @click.option('--NHmax', default = 1, help='Maximum number of read alignments allowed as governed by the NH flag.')
 @click.option('--NMmax', default = 4, help='Maximum number of paired mismatches allowed represented by the NM/nM tags.')
 
-@click.option('--remove-duplicates', '-rd', is_flag=True, help='Removed marked (presumably PCR) duplicates from Picard; not recommended for low-coverage RNA-Seq')
+@click.option('--keep-duplicates', '-kd', is_flag=True, help='Retained dupliate (presumably PCR) reads')
 @click.option('--umi-barcode', '-ub', default = "",  help='Read tag (generally two letters) to specify the UMI tag when removing duplicates for genotyping.')
 @click.option('--baq', is_flag=True, help='Use BAQ scores instead of BQ scores for everything in terms of base quality.')
 
@@ -59,7 +59,7 @@ from multiprocessing import Pool
 
 def main(mode, input, output, name, mito_genome, ncores,
 	cluster, jobs, barcode_tag, barcodes, min_barcode_reads,
-	nhmax, nmmax, remove_duplicates, umi_barcode, baq, max_javamem, 
+	nhmax, nmmax, keep_duplicates, umi_barcode, baq, max_javamem, 
 	proper_pairs, base_qual, alignment_quality,
 	nsamples, keep_samples, ignore_samples,
 	keep_temp_files, skip_r):
@@ -80,6 +80,12 @@ def main(mode, input, output, name, mito_genome, ncores,
 		ncores = str(available_cpu_count())
 	else:
 		ncores = str(ncores)
+	
+	# Now removing duplicates is the default, so recode variable names
+	if(keep_duplicates):
+		remove_duplicate = False
+	else:
+		remove_duplicates = True
 	
 	# Determine which genomes are available
 	rawsg = os.popen('ls ' + script_dir + "/bin/anno/fasta/*.fasta").read().strip().split("\n")
@@ -333,7 +339,13 @@ def main(mode, input, output, name, mito_genome, ncores,
 			
 			# Execute snakemake
 			snakecmd_scatter = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="' + y_s + '" '
-			os.system(snakecmd_scatter)
+			shell_log = False
+			if(shell_log):
+				proc_ss = subprocess.Popen(snakecmd_scatter, stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+				out, err = proc_ss.communicate()
+				# TO DO: write this to log file
+			else:
+				os.system(snakecmd_scatter)
 			click.echo(gettime() + "mgatk successfully processed the supplied .bam files", logf)
 		
 		if(mode == "one"):

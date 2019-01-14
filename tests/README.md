@@ -34,7 +34,7 @@ mgatk bcall -i barcode/test_barcode.bam -n bc2 -o bc2d -bt DB -mb 200 -z
 ## Filtering out UMI barcodes
 
 ```
-mgatk bcall -i barcode/test_2.umi.bam -bt CB -z -g GRCh37 -ub UB -rd -n test2-umi -o test2_umi
+mgatk bcall -i barcode/test_2.umi.bam -bt CB -z -g GRCh37 -ub UB -n test2-umi -o test2_umi
 ```
 
 
