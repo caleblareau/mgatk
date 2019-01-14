@@ -1,0 +1,1 @@
+test2_umi/temp/barcoded_bams/CTTGGCTGTATATGAG-1.bam

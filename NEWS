@@ -1,4 +1,9 @@
 
+# 0.4.0
+- Fully separated by strand for counts / qualities
+- UMI-based duplicate read removal available
+- Default to remove PCR duplicates
+
 # 0.3.9
 - Handle common reference genome issue for human genomes (hg19 / rCRS) automatically
 
@@ -6,7 +11,7 @@
 - Full support for `bcall` mode
 
 # 0.3.0
-- Per-base / allele BAQ scores
+- Per-base / allele quality scores
 
 # 0.2.5
 - Creates .rds for easy i/o into R package
