@@ -37,6 +37,7 @@ from multiprocessing import Pool
 @click.option('--NMmax', default = 4, help='Maximum number of paired mismatches allowed represented by the NM/nM tags.')
 
 @click.option('--remove-duplicates', '-rd', is_flag=True, help='Removed marked (presumably PCR) duplicates from Picard; not recommended for low-coverage RNA-Seq')
+@click.option('--umi-barcode', '-ub', default = "",  help='Read tag (generally two letters) to specify the UMI tag when removing duplicates for genotyping.')
 @click.option('--baq', is_flag=True, help='Use BAQ scores instead of BQ scores for everything in terms of base quality.')
 
 @click.option('--max-javamem', '-jm', default = "4000m", help='Maximum memory for java')
@@ -58,7 +59,7 @@ from multiprocessing import Pool
 
 def main(mode, input, output, name, mito_genome, ncores,
 	cluster, jobs, barcode_tag, barcodes, min_barcode_reads,
-	nhmax, nmmax, remove_duplicates, baq, max_javamem, 
+	nhmax, nmmax, remove_duplicates, umi_barcode, baq, max_javamem, 
 	proper_pairs, base_qual, alignment_quality,
 	nsamples, keep_samples, ignore_samples,
 	keep_temp_files, skip_r):
@@ -103,9 +104,9 @@ def main(mode, input, output, name, mito_genome, ncores,
 		if(file_extension != ".bam"):
 			sys.exit('ERROR: in `bcall` mode, the input should be an individual .bam file.')
 		if not os.path.exists(input):
-			sys.exist('ERROR: No file found called "' + input + '"; please specify a valid .bam file.')
+			sys.exit('ERROR: No file found called "' + input + '"; please specify a valid .bam file.')
 		if not os.path.exists(input + ".bai"):
-			sys.exist('ERROR: index your input .bam file for `bcall` mode.')
+			sys.exit('ERROR: index your input .bam file for `bcall` mode.')
 		
 		# Determine whether or not we have been supplied barcodes
 		barcode_known = False
@@ -125,6 +126,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 		idxs = pysam.idxstats(input).split("\n")
 		
 		# Handle common mtDNA reference genome errors
+		bam_length = 0
 		for i in idxs:
 			if(i.split("\t")[0] == mito_chr):
 				bam_length = int(i.split("\t")[1])
@@ -192,7 +194,6 @@ def main(mode, input, output, name, mito_genome, ncores,
 		samplebams = []
 		
 		fastaf, mito_chr, mito_length = handle_fasta_inference(mito_genome, supported_genomes, script_dir, mode, of, write_files = False)
-		print(mito_length)
 		
 		# Loop over bam files
 		for bam in bams:
@@ -308,7 +309,8 @@ def main(mode, input, output, name, mito_genome, ncores,
 		# add sqs to get .yaml to play friendly https://stackoverflow.com/questions/39262556/preserve-quotes-and-also-add-data-with-quotes-in-ruamel
 		dict1 = {'input_directory' : sqs(input), 'output_directory' : sqs(output), 'script_dir' : sqs(script_dir),
 			'fasta_file' : sqs(fastaf), 'mito_chr' : sqs(mito_chr), 'mito_length' : sqs(mito_length), 
-			'base_qual' : sqs(base_qual), 'remove_duplicates' : sqs(remove_duplicates), 'baq' : sqs(baq), 'alignment_quality' : sqs(alignment_quality), 
+			'base_qual' : sqs(base_qual), 'remove_duplicates' : sqs(remove_duplicates), 'umi_barcode' : sqs(umi_barcode),
+			'baq' : sqs(baq), 'alignment_quality' : sqs(alignment_quality), 
 			'proper_paired' : sqs(proper_pairs),
 			'NHmax' : sqs(nhmax), 'NMmax' : sqs(nmmax), 'max_javamem' : sqs(max_javamem)}
 		
@@ -326,6 +328,8 @@ def main(mode, input, output, name, mito_genome, ncores,
 			y_s = of + "/.internal/parseltongue/snake.scatter.yaml"
 			with open(y_s, 'w') as yaml_file:
 				yaml.dump(dict1, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
+			
+			print(yaml_file)
 			
 			# Execute snakemake
 			snakecmd_scatter = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="' + y_s + '" '

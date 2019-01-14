@@ -26,6 +26,8 @@ mito_length = str(config["mito_length"])
 fasta_file = config["fasta_file"]
 
 remove_duplicates = config["remove_duplicates"]
+umi_barcode = config["umi_barcode"]
+
 do_baq = config["baq"]
 proper_paired = config["proper_paired"]
 
@@ -44,7 +46,7 @@ python = "python"
 filtclip_py = script_dir + "/bin/python/filterClipBam.py"
 detailedcall_py = script_dir + "/bin/python/detailedCalls.py"
 sumstatsBP_py = script_dir + "/bin/python/sumstatsBP.py"
-MarkDuplicatesCall = java + " -Xmx"+max_javamem+"  -jar " + script_dir + "/bin/MarkDuplicates.jar"
+picardCall = java + " -Xmx"+max_javamem+"  -jar " + script_dir + "/bin/picard.jar MarkDuplicates"
 
 # Prepare filepath locations
 rmlog = outputbam.replace(".qc.bam", ".rmdups.log").replace("/temp/ready_bam/", "/logs/rmdupslogs/")
@@ -70,9 +72,15 @@ if(do_baq == "True"):
 	os.system("rm " + temp_bam1 + ".bai")
 	pysam.index(temp_bam1)
 
+# See if we have UMIs
+if(umi_barcode != "" and len(umi_barcode) == 2):
+	umi_extra = " BARCODE_TAG=" + umi_barcode
+else:
+	umi_extra = "" 
+
 # 3) (Optional) Remove duplicates
 if (remove_duplicates == "True"):
-	mdc_long = MarkDuplicatesCall + " INPUT="+temp_bam1+" OUTPUT="+outputbam+" METRICS_FILE="+rmlog+" REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT"
+	mdc_long = picardCall + " I="+temp_bam1+" O="+outputbam+" M="+rmlog+" REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT" + umi_extra
 	os.system(mdc_long)
 else: # just move the previous output
 	os.system("mv " + temp_bam1 + " " + outputbam)
