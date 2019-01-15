@@ -283,7 +283,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 		#-------------------
 		if((mode == "call" and wasbcall == False) or mode == "one"):
 			fastaf, mito_genmito_chrome, mito_length = handle_fasta_inference(mito_genome, supported_genomes, script_dir, mode, of)
-			click.echo(gettime() + "Found designated mitochondrial chromosome: %s" % mito_chr, logf)
+			print(gettime() + "Found designated mitochondrial chromosome: %s" % mito_chr)
 			
 		if(mode == "call"):
 			# Logging		
