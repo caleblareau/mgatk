@@ -199,7 +199,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 		samples = []
 		samplebams = []
 		
-		fastaf, mito_chr, mito_length = handle_fasta_inference(mito_genome, supported_genomes, script_dir, mode, of, write_files = False)
+		fastaf, mito_chr, mito_length = handle_fasta_inference(mito_genome, supported_genomes, script_dir, mode, output, write_files = False)
 		
 		# Loop over bam files
 		for bam in bams:
