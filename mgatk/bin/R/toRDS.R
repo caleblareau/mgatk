@@ -39,15 +39,18 @@ importMito.explicit <- function(Afile, Cfile, Gfile, Tfile,
   
   cov <- importDT(coverageFile)
   
+  # Make a long matrix of BAQ and Counts for non-reference alleles
+  ref <- importDT(referenceAlleleFile)
+  maxpos <- max(ref[[1]])
+  
   samplesOrder <- levels(cov[[2]])
-  maxpos <- max(cov[[1]])
   maxsamples <- length(samplesOrder)
   
   # make coverage a sparse matrix
   covmat <- Matrix::sparseMatrix(
-    i = cov[[1]],
-    j = as.numeric(cov[[2]]),
-    x = cov[[3]]
+    i = c(cov[[1]], maxpos), 
+    j = c(as.numeric(cov[[2]]), maxsamples), 
+    x = c(cov[[3]], 0)
   )
   remove(cov)
   
@@ -94,17 +97,6 @@ importMito.explicit <- function(Afile, Cfile, Gfile, Tfile,
   
   ACGT <- lapply(variantFiles, importSMs)
   names(ACGT) <- c("A", "C", "G", "T")
-  
-  # Make a long matrix of BAQ and Counts for non-reference alleles
-  ref <- importDT(referenceAlleleFile)
-  
-  qual_fw <- cbind(
-    ACGT[["A"]][["BAQ"]],
-    ACGT[["C"]][["BAQ"]],
-    ACGT[["G"]][["BAQ"]],
-    ACGT[["T"]][["BAQ"]]
-  )
-  
   
   # Create colData
   depth <- data.frame(importDT(depthFile))
