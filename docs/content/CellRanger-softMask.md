@@ -43,6 +43,10 @@ samtools faidx genome.fa
 # Put the flat files back; these won't be soft-masked, but they aren't being used by the aligner
 mv old_genome.fa.flat genome.fa.flat
 mv old_genome.fa.gdx genome.fa.gdx
+
+# Update the timestamp to pass the CellRanger preflight checks
+touch -d "now" genome.fa.flat
+touch -d "now" genome.fa.gdx
 ```
 
 <br><br>
