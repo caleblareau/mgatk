@@ -1,79 +1,36 @@
-# Mouse TCR Analysis Workflow 
+# Common errors running mgatk
 
-This page contains an end-to-end workflow `(.fastq.gz -> mgatk)` for the 
-analysis of scRNA-Seq data with `mgatk`. In brief, we show to download data
-from EBI, align with `STAR` using recommended settings, and finally process
-the mitochondrial genome data with `mgatk`.
+## No samples for genotyping
 
-### Download .fastq.gz data
-
+#### Error message:
 ```
-wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR114/006/ERR1146416/ERR1146416_1.fastq.gz
-wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR114/006/ERR1146416/ERR1146416_2.fastq.gz
-wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR114/007/ERR1146417/ERR1146417_1.fastq.gz
-wget ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR114/007/ERR1146417/ERR1146417_2.fastq.gz
-...
+ERROR: Could not import any samples from the user specification
+ERROR: check flags, logs, and input configuration (including reference mitochondrial genome)
 ```
 
-[Full download file](wget_mouseTCR.txt)
 
-We then created a temporary file called `ERRs.txt`
 
+## Too many open files
+
+For certain operations, particularly in `bcall` mode, *mgatk* will attempt to have many 
+file open. This can cause errors like the following:
+
+#### Error message:
 ```
-ERR1146416
-ERR1146417
-...
-```
-
-### Alignment
-
-
-```
-sh runner_mouseTCR.sh ERRs.txt
+OSError: [Errno 24] could not open alignment file `xxxxxxxxx.bam`: Too many open files.
 ```
 
-where the contents of `runner_mouseTCR.sh` are as follows:
-
-```
-$ cat runner_mouseTCR.sh
-
-#!/bin/bash
-
-SRR_IDS=$(cat $1 |tr "\n" " ")
-
-for SRR in $SRR_IDS
-do
-echo $SRR
-
-STAR --genomeDir /data/aryee/pub/genomes/mm10/STAR --readFilesIn "../fastq/${SRR}_1.fastq.gz" "../fastq/${SRR}_2.fastq.gz" --readFilesCommand zcat --outFileNamePrefix ${SRR}
-samtools view -H "${SRR}Aligned.out.sam" > "${SRR}.sam"
-awk '$3 == "chrM" {print $0}' "${SRR}Aligned.out.sam" >> "${SRR}.sam"
-samtools view -Sb "${SRR}.sam" | samtools sort > "${SRR}.mito.bam" && samtools index "${SRR}.mito.bam"
-samtools view  "${SRR}.mito.bam" | wc -l > "${SRR}.mitoreads.txt"
-
-rm "${SRR}Aligned.out.sam"
-rm "${SRR}.sam"
-rm "${SRR}Log.out"
-rm "${SRR}SJ.out.tab"
-rm "${SRR}Log.progress.out"
-
-done
-
-```
-
-[Full alignment/processing file](runner_mouseTCR.sh)
-
-**Note:** one will want to place the correct location of the `mm10` STAR genome build. Moreover,
-one will want to verify that "chrM" is the correct mitochondrial chromosome (other builds
-may have 'MT' or a similar chromosome). 
-
-### Running mgatk
-
-In OSX El Capitan and some other unix-based operating systems, the max number of file descriptors
-that you can have open is fixed (for my Mac, it was 256), which can mess up processes like
-`samtools mpileup`, which is called in *mgatk*. To change this, add `ulimit -n 1024` or some
+In OSX and most unix-based operating systems, the max number of file descriptors
+that you can have open is fixed (for my Mac, it was 256), which can mess up the parallel 
+processing performed in *mgatk*. To change this, add `ulimit -n 1024` or some
 other large number to your `~/.bash_profile` as this is an environment variable that 
-needs to be set in each shell session. Attempting to process the mouse tcr data with *mgatk*
-without this parameter will fail.
+needs to be set in each shell session. This number should be greater than the number
+of samples nominated. 
+
+In very large data settings, it may not be possible to open as many files as there
+are cells/samples (some file systems have hard upper bounds. In the `bcall` mode, 
+we can get around this using the `--nsamples X` flag, where `X` is the number of
+samples to be porcessed in a given setting. As long as `X` is less than the max
+allowed by your OS, things should work without error. 
 
 <br><br>
