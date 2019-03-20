@@ -107,7 +107,7 @@ importMito.explicit <- function(Afile, Cfile, Gfile, Tfile,
   # Make row Ranges for each object
   row_g_cov <- GenomicRanges::GRanges(seqnames = mitoChr,
                                       IRanges::IRanges(1:maxpos, width = 1))
-  GenomicRanges::mcols(row_g_cov) <- data.frame(refAllele = ref[[2]][1:maxpos])
+  GenomicRanges::mcols(row_g_cov) <- data.frame(refAllele = toupper(ref[[2]][1:maxpos]))
   
   # Make summarized experiments and
   SE <- SummarizedExperiment::SummarizedExperiment(

@@ -113,6 +113,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 			sys.exit('ERROR: No file found called "' + input + '"; please specify a valid .bam file.')
 		if not os.path.exists(input + ".bai"):
 			sys.exit('ERROR: index your input .bam file for `bcall` mode.')
+		click.echo(gettime() + "Found bam file: " + input + " for genotyping.")
 		
 		# Determine whether or not we have been supplied barcodes
 		barcode_known = False
@@ -199,7 +200,8 @@ def main(mode, input, output, name, mito_genome, ncores,
 		samples = []
 		samplebams = []
 		
-		fastaf, mito_chr, mito_length = handle_fasta_inference(mito_genome, supported_genomes, script_dir, mode, output, write_files = False)
+		if(not wasbcall):
+			fastaf, mito_chr, mito_length = handle_fasta_inference(mito_genome, supported_genomes, script_dir, mode, output, write_files = False)
 		
 		# Loop over bam files
 		for bam in bams:
@@ -270,8 +272,8 @@ def main(mode, input, output, name, mito_genome, ncores,
 	if(mode == "call" or mode == "one"):
 	
 		# Make all of the output folders if necessary
-		of = output; tf = of + "/temp"; qc = of + "/qc"
-		folders = [of + "/logs", of + "/logs/filterlogs", of + "/fasta", of + "/.internal",
+		of = output; tf = of + "/temp"; qc = of + "/qc"; logs = of + "/logs"
+		folders = [logs, of + "/logs/filterlogs", of + "/fasta", of + "/.internal",
 			 of + "/.internal/parseltongue", of + "/.internal/samples", of + "/final", 
 			 tf, tf + "/ready_bam", tf + "/temp_bam", tf + "/sparse_matrices", tf + "/quality",
 			 qc, qc + "/quality", qc + "/depth"]
@@ -335,17 +337,14 @@ def main(mode, input, output, name, mito_genome, ncores,
 			with open(y_s, 'w') as yaml_file:
 				yaml.dump(dict1, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
 			
-			print(yaml_file)
+			cp_call = "cp " + y_s +  " " + logs + "/" + name + ".parameters.txt"
+			os.system(cp_call)
 			
 			# Execute snakemake
-			snakecmd_scatter = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="' + y_s + '" '
-			shell_log = False
-			if(shell_log):
-				proc_ss = subprocess.Popen(snakecmd_scatter, stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-				out, err = proc_ss.communicate()
-				# TO DO: write this to log file
-			else:
-				os.system(snakecmd_scatter)
+			snake_stats = logs + "/" + name + ".snakemake_scatter.stats"
+			snake_log = logs + "/" + name + ".snakemake_scatter.log"
+			snakecmd_scatter = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="'  + y_s + '" --stats '+snake_stats+' &>' + snake_log
+			os.system(snakecmd_scatter)
 			click.echo(gettime() + "mgatk successfully processed the supplied .bam files", logf)
 		
 		if(mode == "one"):
@@ -382,8 +381,11 @@ def main(mode, input, output, name, mito_genome, ncores,
 		y_g = mgatk_directory + "/.internal/parseltongue/snake.gather.yaml"
 		with open(y_g, 'w') as yaml_file:
 			yaml.dump(dict2, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
-
-		snakecmd_gather = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Gather --config cfp="' + y_g + '"'
+		
+		# Snakemake gather
+		snake_stats = logs + "/" + name + ".snakemake_gather.stats"
+		snake_log = logs + "/" + name + ".snakemake_gather.log"
+		snakecmd_gather = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Gather --config cfp="' + y_g + '" --stats '+snake_stats+' &>' + snake_log
 		os.system(snakecmd_gather)
 		
 		# Make .rds file from the output
