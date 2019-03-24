@@ -62,14 +62,6 @@ os.system(pycall)
 pysam.sort("-o", temp_bam1, temp_bam0)
 pysam.index(temp_bam1)
 
-# 2a) BAQ recalibration
-if(do_baq == "True"):
-	baq_bam = outputbam.replace(".qc.bam", ".baq.bam").replace("/temp/ready_bam/", "/temp/temp_bam/")
-	os.system("samtools calmd -bAr " + temp_bam1 + " " + fasta_file + " > " + baq_bam)
-	os.system("mv " + baq_bam + " " + temp_bam1)
-	os.system("rm " + temp_bam1 + ".bai")
-	pysam.index(temp_bam1)
-
 # See if we have UMIs
 if(umi_barcode != "" and len(umi_barcode) == 2):
 	umi_extra = " BARCODE_TAG=" + umi_barcode
