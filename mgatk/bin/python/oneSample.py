@@ -28,15 +28,13 @@ fasta_file = config["fasta_file"]
 remove_duplicates = config["remove_duplicates"]
 umi_barcode = config["umi_barcode"]
 
-do_baq = config["baq"]
 proper_paired = config["proper_paired"]
-
 base_qual = str(config["base_qual"])
 alignment_quality = config["alignment_quality"]
-max_javamem  = config["max_javamem"]
-
 NHmax = config["NHmax"]
 NMmax = config["NMmax"]
+
+max_javamem  = config["max_javamem"]
 
 # Software paths
 java = "java"
