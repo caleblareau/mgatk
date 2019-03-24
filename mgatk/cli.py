@@ -38,7 +38,6 @@ from multiprocessing import Pool
 
 @click.option('--keep-duplicates', '-kd', is_flag=True, help='Retained dupliate (presumably PCR) reads')
 @click.option('--umi-barcode', '-ub', default = "",  help='Read tag (generally two letters) to specify the UMI tag when removing duplicates for genotyping.')
-@click.option('--baq', is_flag=True, help='Use BAQ scores instead of BQ scores for everything in terms of base quality.')
 
 @click.option('--max-javamem', '-jm', default = "4000m", help='Maximum memory for java')
 
@@ -55,14 +54,14 @@ from multiprocessing import Pool
 @click.option('--keep-temp-files', '-z', is_flag=True, help='Keep all intermediate files.')
 
 @click.option('--skip-R', '-sr', is_flag=True, help='Generate plain-text only output. Otherwise, this generates a .rds obejct that can be immediately read into R for downstream analysis.')
-
+@click.option('--snake-stdout', '-so', is_flag=True, help='Write snakemake log to sdout rather than a file.')
 
 def main(mode, input, output, name, mito_genome, ncores,
 	cluster, jobs, barcode_tag, barcodes, min_barcode_reads,
-	nhmax, nmmax, keep_duplicates, umi_barcode, baq, max_javamem, 
+	nhmax, nmmax, keep_duplicates, umi_barcode, max_javamem, 
 	proper_pairs, base_qual, alignment_quality,
 	nsamples, keep_samples, ignore_samples,
-	keep_temp_files, skip_r):
+	keep_temp_files, skip_r, snake_stdout):
 	
 	"""
 	mgatk: a mitochondrial genome analysis toolkit. \n
@@ -83,7 +82,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 	
 	# Now removing duplicates is the default, so recode variable names
 	if(keep_duplicates):
-		remove_duplicate = False
+		remove_duplicates = False
 	else:
 		remove_duplicates = True
 	
@@ -318,7 +317,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 		dict1 = {'input_directory' : sqs(input), 'output_directory' : sqs(output), 'script_dir' : sqs(script_dir),
 			'fasta_file' : sqs(fastaf), 'mito_chr' : sqs(mito_chr), 'mito_length' : sqs(mito_length), 
 			'base_qual' : sqs(base_qual), 'remove_duplicates' : sqs(remove_duplicates), 'umi_barcode' : sqs(umi_barcode),
-			'baq' : sqs(baq), 'alignment_quality' : sqs(alignment_quality), 
+			'alignment_quality' : sqs(alignment_quality), 
 			'proper_paired' : sqs(proper_pairs),
 			'NHmax' : sqs(nhmax), 'NMmax' : sqs(nmmax), 'max_javamem' : sqs(max_javamem)}
 		
@@ -343,7 +342,12 @@ def main(mode, input, output, name, mito_genome, ncores,
 			# Execute snakemake
 			snake_stats = logs + "/" + name + ".snakemake_scatter.stats"
 			snake_log = logs + "/" + name + ".snakemake_scatter.log"
-			snakecmd_scatter = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="'  + y_s + '" --stats '+snake_stats+' &>' + snake_log
+			
+			snake_log_out = ""
+			if not snake_stdout:
+				snake_log_out = ' &>' + snake_log
+				
+			snakecmd_scatter = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="'  + y_s + '" --stats '+snake_stats + snake_log_out
 			os.system(snakecmd_scatter)
 			click.echo(gettime() + "mgatk successfully processed the supplied .bam files", logf)
 		
@@ -385,7 +389,12 @@ def main(mode, input, output, name, mito_genome, ncores,
 		# Snakemake gather
 		snake_stats = logs + "/" + name + ".snakemake_gather.stats"
 		snake_log = logs + "/" + name + ".snakemake_gather.log"
-		snakecmd_gather = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Gather --config cfp="' + y_g + '" --stats '+snake_stats+' &>' + snake_log
+		
+		snake_log_out = ""
+		if not snake_stdout:
+			snake_log_out = ' &>' + snake_log 
+			
+		snakecmd_gather = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Gather --config cfp="' + y_g + '" --stats '+snake_stats + snake_log_out
 		os.system(snakecmd_gather)
 		
 		# Make .rds file from the output
