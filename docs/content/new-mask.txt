@@ -1,0 +1,45 @@
+
+# Download and extract the 10X reference genome
+curl -O http://cf.10xgenomics.com/supp/cell-atac/refdata-cellranger-atac-hg19-1.1.0.tar.gz
+tar -xzvf refdata-cellranger-atac-hg19-1.1.0.tar.gz 
+
+# hard mask the mitochondria for alignment to nuclear only
+bedtools maskfasta -fi genome.fa -bed mito_bed.bed -fo mitochromosomeismasked_hg19.fa
+bwa index mitochromosomeismasked_hg19.fa
+
+# Simulate reads based on 10X motivated data
+wgsim rCRS.fasta chrm-sim_1.fastq chrm-sim_2.fastq -d 100 -s 50 -1 62 -2 62 -r 0 -R 0 -S 100 -N 5000000
+gzip chrm-sim_1.fastq
+gzip chrm-sim_2.fastq
+
+# Align to masked genome
+fasta="/data/aryee/pub/genomes/cellranger/refdata-cellranger-atac-hg19-1.1.0/fasta/mitochromosomeismasked_hg19.fa"
+bwa mem -t 4 $fasta chrm-sim_1.fastq.gz chrm-sim_2.fastq.gz   2> sim.bwa.log | samtools view -bS - |  samtools sort -@ 4 - -o chrm-sim.st.bam
+samtools index chrm-sim.st.bam
+
+# Move old files to save for later
+mv genome.fa old_genome.fa
+mv genome.fa.flat old_genome.fa.flat
+mv genome.fa.gdx old_genome.fa.gdx
+
+# Mask anything that is covered at 100 or more
+awk '$4 >= 100 {print $0}' simulated_nuclear_coverage.bed > mito_blacklist.bed
+bedtools maskfasta -fi old_genome.fa -bed mito_blacklist.bed  -fo genome.fa
+
+# Cleanup old files
+rm old_genome.fa 
+rm genome.fa.*
+
+# Put the flat files back; these won't be hard-masked, but they aren't being used by the aligner
+mv old_genome.fa.flat genome.fa.flat
+mv old_genome.fa.gdx genome.fa.gdx
+
+
+# Make new reference indices
+bsub -q big bwa index genome.fa
+bsub -q big samtools faidx genome.fa
+
+
+# Update the timestamp to pass the CellRanger preflight checks
+touch -d "now" genome.fa.flat
+touch -d "now" genome.fa.gdx
