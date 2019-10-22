@@ -33,18 +33,18 @@ from multiprocessing import Pool
 @click.option('--barcodes', '-b', default = "",  help='File path to barcodes that will be extracted; useful only in `bcall` mode.')
 @click.option('--min-barcode-reads', '-mb', default = 1000,  help='Minimum number of mitochondrial reads for a barcode to be genotyped; useful only in `bcall` mode; will not overwrite the `--barcodes` logic.')
 
-@click.option('--NHmax', default = 1, help='Maximum number of read alignments allowed as governed by the NH flag.')
-@click.option('--NMmax', default = 4, help='Maximum number of paired mismatches allowed represented by the NM/nM tags.')
+@click.option('--NHmax', default = 1, help='Maximum number of read alignments allowed as governed by the NH flag. Default = 1.')
+@click.option('--NMmax', default = 4, help='Maximum number of paired mismatches allowed represented by the NM/nM tags. Default = 4.')
 
 @click.option('--keep-duplicates', '-kd', is_flag=True, help='Retained dupliate (presumably PCR) reads')
 @click.option('--umi-barcode', '-ub', default = "",  help='Read tag (generally two letters) to specify the UMI tag when removing duplicates for genotyping.')
 
-@click.option('--max-javamem', '-jm', default = "4000m", help='Maximum memory for java')
+@click.option('--max-javamem', '-jm', default = "4000m", help='Maximum memory for java for running duplicate removal. Default = 4000m.')
 
 @click.option('--proper-pairs', '-pp', is_flag=True, help='Require reads to be properly paired.')
 
-@click.option('--base-qual', '-q', default = 0, help='Minimum base quality for deciding that a variant is real.')
-@click.option('--alignment-quality', '-aq', default = 0, help='Minimum alignment quality.')
+@click.option('--base-qual', '-q', default = 0, help='Minimum base quality for inclusion in the genotype count. Default = 0.')
+@click.option('--alignment-quality', '-aq', default = 0, help='Minimum alignment quality to include read in genotype. Default = 0.')
 
 @click.option('--nsamples', '-ns', default = 0, help='The number of samples / cells to be processed per iteration; default is all.')
 

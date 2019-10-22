@@ -108,6 +108,8 @@ importMito.explicit <- function(Afile, Cfile, Gfile, Tfile,
   row_g_cov <- GenomicRanges::GRanges(seqnames = mitoChr,
                                       IRanges::IRanges(1:maxpos, width = 1))
   GenomicRanges::mcols(row_g_cov) <- data.frame(refAllele = toupper(ref[[2]][1:maxpos]))
+  covmat2 <- ACGT[["A"]][["counts_fw"]] + ACGT[["C"]][["counts_fw"]] + ACGT[["G"]][["counts_fw"]] + ACGT[["T"]][["counts_fw"]] +
+    ACGT[["A"]][["counts_rev"]] + ACGT[["C"]][["counts_rev"]] + ACGT[["G"]][["counts_rev"]] + ACGT[["T"]][["counts_rev"]]
   
   # Make summarized experiments and
   SE <- SummarizedExperiment::SummarizedExperiment(
@@ -116,7 +118,7 @@ importMito.explicit <- function(Afile, Cfile, Gfile, Tfile,
       "C_counts_fw" = ACGT[["C"]][["counts_fw"]], "C_counts_rev" = ACGT[["C"]][["counts_rev"]], "C_qual_fw" = ACGT[["C"]][["qual_fw"]], "C_qual_rev" = ACGT[["C"]][["qual_rev"]],
       "G_counts_fw" = ACGT[["G"]][["counts_fw"]], "G_counts_rev" = ACGT[["G"]][["counts_rev"]], "G_qual_fw" = ACGT[["G"]][["qual_fw"]], "G_qual_rev" = ACGT[["G"]][["qual_rev"]],
       "T_counts_fw" = ACGT[["T"]][["counts_fw"]], "T_counts_rev" = ACGT[["T"]][["counts_rev"]], "T_qual_fw" = ACGT[["T"]][["qual_fw"]], "T_qual_rev" = ACGT[["T"]][["qual_rev"]],
-      "coverage" = covmat
+      "coverage" = covmat2, "coverage_old" = covmat
     ),
     colData = S4Vectors::DataFrame(sdf),
     rowData = row_g_cov
