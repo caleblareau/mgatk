@@ -29,13 +29,13 @@ def writeSparseMatrix(mid, vec):
 def writeSparseMatrix2(mid, vec1, vec2):
 	with open(outpre + "."+mid+".txt","w") as V:
 		for i in range(0,int(maxBP)):
-			if(vec1[i] > 0):
+			if(vec1[i] > 0 or vec2[i] > 0):
 				V.write(str(i+1)+","+sample+","+str(vec1[i])+","+str(vec2[i])+"\n")
 
 def writeSparseMatrix4(mid, vec1, vec2, vec3, vec4):
 	with open(outpre + "."+mid+".txt","w") as V:
 		for i in range(0,int(maxBP)):
-			if(vec1[i] > 0):
+			if(vec1[i] > 0 or vec3[i] > 0):
 				V.write(str(i+1)+","+sample+","+str(vec1[i])+","+str(vec2[i])+","+str(vec3[i])+","+str(vec4[i])+"\n")
 
 

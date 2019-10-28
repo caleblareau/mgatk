@@ -4,7 +4,6 @@
 
 [![Build Status](https://travis-ci.com/aryeelab/mgatk.svg?token=snx22Bgp4cRvvH32vAmH&branch=master)](https://travis-ci.com/aryeelab/mgatk)
 [![PyPI version](https://badge.fury.io/py/mgatk.svg)](https://pypi.python.org/pypi/mgatk)
-[![Documentation Status](https://readthedocs.org/projects/mgatk/badge/?version=latest)](http://mgatk.readthedocs.io/en/latest/?badge=latest)
 [![Snakemake](https://img.shields.io/badge/snakemake-≥4.0.0-brightgreen.svg)](https://snakemake.bitbucket.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
@@ -49,7 +48,7 @@ Below is a brief overview of our workflow
 
 ## Installation/Documentation/FAQ/.etc
 
-Check out the [**mgatk** documentation](http://mgatk.readthedocs.io) for detailed
+Check out the [**mgatk** documentation](https://github.com/aryeelab/mgatk/wiki) for detailed
 installation instructions, dependency configuration, and other information.
 <br><br>
 
