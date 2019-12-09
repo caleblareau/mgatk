@@ -3,11 +3,11 @@ mgatk: a mitochondrial genome analysis toolkit
 """
 from setuptools import find_packages, setup
 
-dependencies = ['click', 'pysam', 'pytest', 'snakemake', 'biopython', 'optparse-pretty', 'regex', 'ruamel.yaml']
+dependencies = ['click', 'pysam', 'pytest', 'snakemake', 'biopython', 'numpy', 'optparse-pretty', 'regex', 'ruamel.yaml']
 
 setup(
     name='mgatk',
-    version='0.4.4',
+    version='0.4.5',
     url='https://github.com/aryeelab/mgatk',
     license='MIT',
     author='Caleb Lareau',
@@ -22,6 +22,7 @@ setup(
     entry_points={
         'console_scripts': [
             'mgatk = mgatk.cli:main',
+            'mgatk-del = mgatkdel.cli:main',
         ],
     },
     classifiers=[
