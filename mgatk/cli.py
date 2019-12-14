@@ -52,6 +52,7 @@ from multiprocessing import Pool
 @click.option('--ignore-samples', '-x', default="NONE", help='Comma separated list of sample names to ignore; NONE (special string) by default. Sample refers to basename of .bam file')
 
 @click.option('--keep-temp-files', '-z', is_flag=True, help='Keep all intermediate files.')
+@click.option('--keep-qc-bams', '-qc', is_flag=True, help='Keep the quality-controlled bams after processing.')
 
 @click.option('--skip-R', '-sr', is_flag=True, help='Generate plain-text only output. Otherwise, this generates a .rds obejct that can be immediately read into R for downstream analysis.')
 @click.option('--snake-stdout', '-so', is_flag=True, help='Write snakemake log to sdout rather than a file.')
@@ -61,7 +62,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 	nhmax, nmmax, keep_duplicates, umi_barcode, max_javamem, 
 	proper_pairs, base_qual, alignment_quality,
 	nsamples, keep_samples, ignore_samples,
-	keep_temp_files, skip_r, snake_stdout):
+	keep_temp_files, keep_qc_bams, skip_r, snake_stdout):
 	
 	"""
 	mgatk: a mitochondrial genome analysis toolkit. \n
@@ -407,6 +408,10 @@ def main(mode, input, output, name, mito_genome, ncores,
 	# Cleanup
 	#--------
 	if(mode == "call" or mode == "gather"):
+		if keep_qc_bams:
+			click.echo(gettime() + "Final bams retained since --keep-qc-bams was specified.", logf)
+			dest = shutil.move(of + "/temp/ready_bam", of + "/qc_bam")  
+
 		if keep_temp_files:
 			click.echo(gettime() + "Temporary files not deleted since --keep-temp-files was specified.", logf)
 		else:

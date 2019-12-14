@@ -23,8 +23,8 @@ from pkg_resources import get_distribution
 def main(input, mito_chromosome):
 	
 	"""
-	mgatk-del: detect possible deletion junctions from bam files. \n
-	See: `mgatk-del --help`
+	mgatk-del-find: detect possible deletion junctions from bam files. \n
+	See: `mgatk-del-fin --help`
 	"""
 	
 	
@@ -39,7 +39,7 @@ def main(input, mito_chromosome):
 	script_dir = os.path.dirname(os.path.realpath(__file__))
 	cwd = os.getcwd()
 	__version__ = get_distribution('mgatk').version
-	click.echo(gettime() + "mgatk v%s" % __version__)
+	click.echo(gettime() + "mgatk-del-find v%s" % __version__)
 	print(script_dir)
 	
 	bam_in = pysam.AlignmentFile(input, "rb")
