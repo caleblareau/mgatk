@@ -45,6 +45,7 @@ from multiprocessing import Pool
 
 @click.option('--base-qual', '-q', default = 0, help='Minimum base quality for inclusion in the genotype count. Default = 0.')
 @click.option('--alignment-quality', '-aq', default = 0, help='Minimum alignment quality to include read in genotype. Default = 0.')
+@click.option('--emit-base-qualities', '-eb', is_flag=True, help='Output mean base quality per alt allele as part of the final output.')
 
 @click.option('--nsamples', '-ns', default = 0, help='The number of samples / cells to be processed per iteration; default is all.')
 
@@ -60,7 +61,7 @@ from multiprocessing import Pool
 def main(mode, input, output, name, mito_genome, ncores,
 	cluster, jobs, barcode_tag, barcodes, min_barcode_reads,
 	nhmax, nmmax, keep_duplicates, umi_barcode, max_javamem, 
-	proper_pairs, base_qual, alignment_quality,
+	proper_pairs, base_qual, alignment_quality, emit_base_qualities,
 	nsamples, keep_samples, ignore_samples,
 	keep_temp_files, keep_qc_bams, skip_r, snake_stdout):
 	
@@ -318,7 +319,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 		dict1 = {'input_directory' : sqs(input), 'output_directory' : sqs(output), 'script_dir' : sqs(script_dir),
 			'fasta_file' : sqs(fastaf), 'mito_chr' : sqs(mito_chr), 'mito_length' : sqs(mito_length), 
 			'base_qual' : sqs(base_qual), 'remove_duplicates' : sqs(remove_duplicates), 'umi_barcode' : sqs(umi_barcode),
-			'alignment_quality' : sqs(alignment_quality), 
+			'alignment_quality' : sqs(alignment_quality), 'emit_base_qualities' : sqs(emit_base_qualities),
 			'proper_paired' : sqs(proper_pairs),
 			'NHmax' : sqs(nhmax), 'NMmax' : sqs(nmmax), 'max_javamem' : sqs(max_javamem)}
 		
@@ -382,7 +383,8 @@ def main(mode, input, output, name, mito_genome, ncores,
 			click.echo(gettime() + "Gathering samples that were pre-called with `one`.", logf)
 			mgatk_directory = input
 			
-		dict2 = {'mgatk_directory' : sqs(mgatk_directory), 'name' : sqs(name), 'script_dir' : sqs(script_dir)}
+		dict2 = {'mgatk_directory' : sqs(mgatk_directory), 'name' : sqs(name),
+			'script_dir' : sqs(script_dir)}
 		y_g = mgatk_directory + "/.internal/parseltongue/snake.gather.yaml"
 		with open(y_g, 'w') as yaml_file:
 			yaml.dump(dict2, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)

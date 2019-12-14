@@ -27,6 +27,7 @@ fasta_file = config["fasta_file"]
 
 remove_duplicates = config["remove_duplicates"]
 umi_barcode = config["umi_barcode"]
+emit_base_qualities = config["emit_base_qualities"]
 
 proper_paired = config["proper_paired"]
 base_qual = str(config["base_qual"])
@@ -79,7 +80,7 @@ else: # just move the previous output
 pysam.index(outputbam)
 
 # 4) Get allele counts per sample / base pair and per-base quality scores
-alleleCountcall = " ".join([python, sumstatsBP_py, outputbam, prefixSM, mito_genome, mito_length, base_qual, sample, fasta_file, alignment_quality])
+alleleCountcall = " ".join([python, sumstatsBP_py, outputbam, prefixSM, mito_genome, mito_length, base_qual, sample, fasta_file, alignment_quality, emit_base_qualities])
 os.system(alleleCountcall)
 
 # 5) Get depth from the coverage sparse matrix

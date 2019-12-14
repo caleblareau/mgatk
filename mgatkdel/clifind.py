@@ -40,10 +40,11 @@ def main(input, mito_chromosome):
 	cwd = os.getcwd()
 	__version__ = get_distribution('mgatk').version
 	click.echo(gettime() + "mgatk-del-find v%s" % __version__)
-	print(script_dir)
+	R_plot_script = script_dir + "/del_plot_breaks.R"
 	
 	bam_in = pysam.AlignmentFile(input, "rb")
-
+	click.echo(gettime() + "Processing .bam file.")
+	
 	def process_cigar_for_clip_position(cigar, tuple):
 
 		pos = None
@@ -75,17 +76,25 @@ def main(input, mito_chromosome):
 			clip_pos = process_cigar_for_clip_position(cigar_string, tuple)
 			if clip_pos is not None:
 				clip_pos_count[clip_pos] += 1
-
+				
+	clip_pos_count = np.array(clip_pos_count)
+	click.echo(gettime() + "Finished processing bam file.")
+	
 	# get per base coverage; collapse to N bases not ber nucleotide
 	# and convert to list
 
 	cov =  bam_in.count_coverage('chrM', quality_threshold = 0, read_callback = "nofilter")
-	cov_out = np.add(np.add(cov[0],cov[1]), np.add(cov[2],cov[3])).tolist()
+	cov_out =  np.array(np.add(np.add(cov[0],cov[1]), np.add(cov[2],cov[3])).tolist())
 
 	outfile_clip = re.sub(".bam$", ".clip.tsv", input)
 	with open(outfile_clip, 'w') as f:
 		writer = csv.writer(f, delimiter='\t')
+		idx = np.argsort(-clip_pos_count)
 		writer.writerow(["position", "coverage", "clip_count"])
-		writer.writerows(zip(list(range(1,16570)),cov_out,clip_pos_count))
-		
+		writer.writerows(zip(np.array(range(1,16570))[idx],cov_out[idx],clip_pos_count[idx]))
+	
+	# Make the R call
+	click.echo(gettime() + "Visualizing results.")
+	Rcall = "Rscript " + R_plot_script + " " + outfile_clip
+	os.system(Rcall)
 		

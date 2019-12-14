@@ -13,5 +13,7 @@ Supervisors
 
 Contributors
 ------------
+* Jeffrey Verboon
 * Leif Ludwig
 * Jacob Ulirsch
+

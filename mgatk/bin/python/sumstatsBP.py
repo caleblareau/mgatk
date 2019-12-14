@@ -17,6 +17,7 @@ base_qual = float(sys.argv[5])
 sample = sys.argv[6]
 fasta_file = sys.argv[7]
 alignment_quality = float(sys.argv[8])
+emit_base_qualities = sys.argv[9]
 
 # Export Functions
 def writeSparseMatrix(mid, vec):
@@ -122,10 +123,16 @@ countsT_rev = [ int(round(elem)) for elem in countsT_rev ]
 # Allele Counts
 bam = pysam.AlignmentFile(bamfile, "rb")
 
-writeSparseMatrix4("A", countsA_fw, meanQualA_fw, countsA_rev, meanQualA_rev)
-writeSparseMatrix4("C", countsC_fw, meanQualC_fw, countsC_rev, meanQualC_rev)
-writeSparseMatrix4("G", countsG_fw, meanQualG_fw, countsG_rev, meanQualG_rev)
-writeSparseMatrix4("T", countsT_fw, meanQualT_fw, countsT_rev, meanQualT_rev)
+if(emit_base_qualities == "True"):
+	writeSparseMatrix4("A", countsA_fw, meanQualA_fw, countsA_rev, meanQualA_rev)
+	writeSparseMatrix4("C", countsC_fw, meanQualC_fw, countsC_rev, meanQualC_rev)
+	writeSparseMatrix4("G", countsG_fw, meanQualG_fw, countsG_rev, meanQualG_rev)
+	writeSparseMatrix4("T", countsT_fw, meanQualT_fw, countsT_rev, meanQualT_rev)
+else:
+	writeSparseMatrix2("A", countsA_fw, countsA_rev)
+	writeSparseMatrix2("C", countsC_fw, countsC_rev)
+	writeSparseMatrix2("G", countsG_fw, countsG_rev)
+	writeSparseMatrix2("T", countsT_fw, countsT_rev)
 
 zipped_list = zip(list(countsA_fw),list(countsC_fw),list(countsG_fw),list(countsT_fw), list(countsA_rev),list(countsC_rev),list(countsG_rev),list(countsT_rev))
 sums = [sum(item) for item in zipped_list]

@@ -36,7 +36,7 @@ rule process_one_sample:
 		with open(input.txtin) as f:
 			inputbam = f.read()
 		
-		# Process one samle
+		# Process one sample
 		pycall = " ".join(['python', oneSample_py, config["cfp"], inputbam, output.bam, sample])
 		os.system(pycall)
 
