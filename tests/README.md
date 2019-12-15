@@ -41,7 +41,7 @@ mgatk bcall -i barcode/test_2.umi.bam -bt CB -z -g GRCh37 -ub UB -n test2-umi -o
 
 Find them
 ```
-mgatk-del-find -i humanbam/pearson_bci_del6073-13095.bam
+mgatk-del-find -i barcode/pearson_bci.bam
 ```
 
 count them
