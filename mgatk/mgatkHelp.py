@@ -88,6 +88,10 @@ def verify_sample_mitobam(bam, mito_chr, mito_length):
 		if(i.split("\t")[0] == mito_chr):
 			bam_length = int(i.split("\t")[1])
 			nReads = int(i.split("\t")[2])
+			
+	# If missing for some reason and don't want to check
+	if(mito_length == -9):
+		mito_length = bam_length
 	return(bam_length == mito_length and nReads > 0)
 
 

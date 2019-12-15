@@ -17,7 +17,7 @@ from pkg_resources import get_distribution
 @click.command()
 @click.version_option()
 @click.option('--input', '-i', default = ".", required=True, help='Input; a single .bam file of reads to be processed.')
-@click.option('--mito-chromosome', '-c', default = "chrM", required=True, help='Name of mtDNA chromosome in bam file (e.g. chrM or MT)')
+@click.option('--mito-chromosome', '-mc', default = "chrM", required=True, help='Name of mtDNA chromosome in bam file (e.g. chrM or MT)')
 
 
 def main(input, mito_chromosome):
@@ -40,7 +40,7 @@ def main(input, mito_chromosome):
 	cwd = os.getcwd()
 	__version__ = get_distribution('mgatk').version
 	click.echo(gettime() + "mgatk-del-find v%s" % __version__)
-	R_plot_script = script_dir + "/del_plot_breaks.R"
+	R_plot_script = script_dir + "/bulk/plot_deletion_breaks_bulk.R"
 	
 	bam_in = pysam.AlignmentFile(input, "rb")
 	click.echo(gettime() + "Processing .bam file.")

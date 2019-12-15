@@ -7,13 +7,16 @@ from optparse import OptionParser
 
 # Parse out data
 opts = OptionParser()
-usage = "usage: %prog [options] [inputs] Software to process aligned bam files and split based on some attribute"
+usage = "usage: %prog [options] [inputs] Software to process 1 bam file with specific parameters defined"
 opts = OptionParser(usage=usage)
 opts.add_option("-i", "--input", help="input single cell bam file")
+opts.add_option("-o", "--output", help="output filepath")
 
 options, arguments = opts.parse_args()
 
 inbam = options.input
+output_file = options.output
+
 bam_in = pysam.AlignmentFile(inbam, "rb")
 
     
@@ -51,10 +54,9 @@ def right_clip(cigar):
 # Based on where the matching value originates
 
 clip_pos_count = Counter()
-outfile = re.sub(".bam$", ".stats.tsv", inbam)
-outfile_handle = open(outfile, 'w')
+outfile_handle = open(output_file, 'w')
 
-for read in bam_in.fetch('chrM'):
+for read in bam_in:
 	seq = read.seq
 	reverse = read.is_reverse
 	cigar_string = read.cigarstring
@@ -70,5 +72,5 @@ for read in bam_in.fetch('chrM'):
 		read_name = str(read.query_name)
 		list_of_outs = [start, end, lc, rc, clip_pos, read_name]
 		outfile_handle.write("\t".join(list_of_outs) + "\n")
-
+bam_in.close()
 

@@ -44,4 +44,7 @@ Find them
 mgatk-del-find -i humanbam/pearson_bci_del6073-13095.bam
 ```
 
-
+count them
+```
+mgatk-del -i pearsonbam -z -lc 6073,5000 -rc 13095,5000
+```

@@ -23,6 +23,7 @@ setup(
         'console_scripts': [
             'mgatk = mgatk.cli:main',
             'mgatk-del-find = mgatkdel.clifind:main',
+            'mgatk-del = mgatkdel.clidel:main'
         ],
     },
     classifiers=[

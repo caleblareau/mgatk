@@ -1,0 +1,60 @@
+import os
+import subprocess
+import shutil
+import pysam
+from os.path import join
+
+configfile: config["cfp"]     
+outdir = config["output_directory"]
+script_dir = config["script_dir"]          
+name = config["name"]          
+
+param1 = config["param1"]
+param2 = config["param2"]
+left_coordinates = config["left_coordinates"]
+right_coordinates = config["right_coordinates"]
+
+# A Snakemake regular expression matching the bam file paths
+SAMPLES, = glob_wildcards(join(outdir, ".internal/samples/{sample}.bam.txt"))
+bamtxtin = '{sample}.bam.txt'
+
+oneSample_py = script_dir + "/singles_del/01_process_cell_reads.py"
+oneSample_R = script_dir + "/singles_del/02_heteroplasmy_del_singles.R"
+
+rule all:
+	input:
+		outdir + "/final/"+name+".deletion_heteroplasmy.tsv"
+
+rule process_one_sample:
+	input:
+		txtin = join(outdir + "/.internal/samples", bamtxtin)
+	output:
+		pyout = outdir + "/temp/del/{sample}.readStats.tsv",
+		Rout = outdir + "/temp/del/{sample}.delStats.tsv"
+	run:
+		# Pull reads and clips from bam files
+		with open(input.txtin) as f:
+			inputbam = f.read()
+		pycall = " ".join(['python', oneSample_py, "-i", inputbam, "-o", output.pyout])
+		print(pycall)
+		os.system(pycall)
+		print("snek")
+		
+		# Aggregate statistics at the per-cell level for each deletion
+		Rcall = " ".join(['Rscript', oneSample_R, output.pyout, output.Rout, param1, param2, left_coordinates, right_coordinates])
+		print(Rcall)
+		os.system(Rcall)
+		
+
+# Collate everything
+rule make_combined_heteroplasmy:
+	input:
+		Routs = expand(outdir + "/temp/del/{sample}.delStats.tsv", sample=SAMPLES)
+	output:
+		allDelHetFile = outdir + "/final/"+name+".deletion_heteroplasmy.tsv"
+	run: 	
+		out_file = open(output.allDelHetFile, 'w')
+		out_file.write("cell_id" + "\t" + "heteroplasmy" + "\t" + "reads_del" + "\t" + "reads_wt" + "\t" + "reads_all" + "\t" + "deletion" + "\n")
+		out_file.close()
+		for file in input.Routs:
+			os.system("cat " + file + " >> " + output.allDelHetFile)
