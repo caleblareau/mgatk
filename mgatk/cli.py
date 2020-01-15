@@ -113,7 +113,11 @@ def main(mode, input, output, name, mito_genome, ncores,
 		if not os.path.exists(input):
 			sys.exit('ERROR: No file found called "' + input + '"; please specify a valid .bam file.')
 		if not os.path.exists(input + ".bai"):
-			sys.exit('ERROR: index your input .bam file for `bcall` mode.')
+			click.echo(gettime() + "Attempting to index: " + input)
+			pysam.index(input)
+			
+			if not os.path.exists(input + ".bai"):
+				sys.exit('ERROR: index your input .bam file for `bcall` mode.')
 		click.echo(gettime() + "Found bam file: " + input + " for genotyping.")
 		
 		# Determine whether or not we have been supplied barcodes
