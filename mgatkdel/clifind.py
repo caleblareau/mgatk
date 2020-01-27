@@ -24,7 +24,7 @@ def main(input, mito_chromosome):
 	
 	"""
 	mgatk-del-find: detect possible deletion junctions from bam files. \n
-	See: `mgatk-del-fin --help`
+	See: `mgatk-del-find --help`
 	"""
 	
 	

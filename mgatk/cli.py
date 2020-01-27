@@ -18,20 +18,20 @@ from multiprocessing import Pool
 
 @click.command()
 @click.version_option()
-@click.argument('mode', type=click.Choice(['bcall', 'call', 'check', 'one', 'gather', 'support']))
-@click.option('--input', '-i', default = ".", required=True, help='Input; either directory of singular .bam file; see documentation')
-@click.option('--output', '-o', default="mgatk_out", help='Output directory for analysis required for `call` and `one`; see documentation.')
-@click.option('--name', '-n', default="mgatk",  help='Prefix for project name')
+@click.argument('mode', type=click.Choice(['bcall', 'call', 'check','support']))
+@click.option('--input', '-i', default = ".", required=True, help='Input; either directory of singular .bam file; see documentation. REQUIRED.')
+@click.option('--output', '-o', default="mgatk_out", help='Output directory for analysis required for `call` and `bcall`. Default = mgatk_out')
+@click.option('--name', '-n', default="mgatk",  help='Prefix for project name. Default = mgatk')
 
-@click.option('--mito-genome', '-g', default = "hg19", required=True, help='mitochondrial genome configuration. Choose hg19, hg38, mm10, (etc.) or a custom .fasta file; see documentation')
+@click.option('--mito-genome', '-g', default = "rCRS", required=True, help='mitochondrial genome configuration. Choose hg19, hg38, mm10, (etc.) or a custom .fasta file; see documentation. Default = rCRS.')
 @click.option('--ncores', '-c', default = "detect", help='Number of cores to run the main job in parallel.')
 
 @click.option('--cluster', default = "",  help='Message to send to Snakemake to execute jobs on cluster interface; see documentation.')
 @click.option('--jobs', default = "0",  help='Max number of jobs to be running concurrently on the cluster interface.')
 
 @click.option('--barcode-tag', '-bt', default = "X",  help='Read tag (generally two letters) to separate single cells; valid and required only in `bcall` mode.')
-@click.option('--barcodes', '-b', default = "",  help='File path to barcodes that will be extracted; useful only in `bcall` mode.')
-@click.option('--min-barcode-reads', '-mb', default = 1000,  help='Minimum number of mitochondrial reads for a barcode to be genotyped; useful only in `bcall` mode; will not overwrite the `--barcodes` logic.')
+@click.option('--barcodes', '-b', default = "",  help='File path to barcodes that will be extracted; useful only in `bcall` mode. If none supplied, mgatk will learn abundant barcodes from the bam file (threshold defined by the -mb tag).')
+@click.option('--min-barcode-reads', '-mb', default = 1000,  help='Minimum number of mitochondrial reads for a barcode to be genotyped; useful only in `bcall` mode; will not overwrite the `--barcodes` logic. Default = 1000.')
 
 @click.option('--NHmax', default = 1, help='Maximum number of read alignments allowed as governed by the NH flag. Default = 1.')
 @click.option('--NMmax', default = 4, help='Maximum number of paired mismatches allowed represented by the NM/nM tags. Default = 4.')
@@ -47,16 +47,16 @@ from multiprocessing import Pool
 @click.option('--alignment-quality', '-aq', default = 0, help='Minimum alignment quality to include read in genotype. Default = 0.')
 @click.option('--emit-base-qualities', '-eb', is_flag=True, help='Output mean base quality per alt allele as part of the final output.')
 
-@click.option('--nsamples', '-ns', default = 0, help='The number of samples / cells to be processed per iteration; default is all.')
+@click.option('--nsamples', '-ns', default = 7000, help='The number of samples / cells to be processed per iteration; Default = 7000. Supply 0 to try all.')
 
 @click.option('--keep-samples', '-k', default="ALL", help='Comma separated list of sample names to keep; ALL (special string) by default. Sample refers to basename of .bam file')
 @click.option('--ignore-samples', '-x', default="NONE", help='Comma separated list of sample names to ignore; NONE (special string) by default. Sample refers to basename of .bam file')
 
-@click.option('--keep-temp-files', '-z', is_flag=True, help='Keep all intermediate files.')
-@click.option('--keep-qc-bams', '-qc', is_flag=True, help='Keep the quality-controlled bams after processing.')
+@click.option('--keep-temp-files', '-z', is_flag=True, help='Add this flag to keep all intermediate files.')
+@click.option('--keep-qc-bams', '-qc', is_flag=True, help='Add this flag to keep the quality-controlled bams after processing.')
 
 @click.option('--skip-R', '-sr', is_flag=True, help='Generate plain-text only output. Otherwise, this generates a .rds obejct that can be immediately read into R for downstream analysis.')
-@click.option('--snake-stdout', '-so', is_flag=True, help='Write snakemake log to sdout rather than a file.')
+@click.option('--snake-stdout', '-so', is_flag=True, help='Write snakemake log to sdout rather than a file. May be necessary for certain HPC environments.')
 
 def main(mode, input, output, name, mito_genome, ncores,
 	cluster, jobs, barcode_tag, barcodes, min_barcode_reads,
@@ -68,7 +68,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 	"""
 	mgatk: a mitochondrial genome analysis toolkit. \n
 	MODE = ['bcall', 'call', 'one', 'check', 'gather', 'support'] \n
-	See https://mgatk.readthedocs.io for more details.
+	See https://github.com/caleblareau/mgatk/wiki for more details.
 	"""
 	
 	script_dir = os.path.dirname(os.path.realpath(__file__))

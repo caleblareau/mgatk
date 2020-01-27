@@ -1,4 +1,7 @@
 
+# 0.5.0
+- Beta version distributed via PyPi
+
 # 0.4.0
 - Fully separated by strand for counts / qualities
 - UMI-based duplicate read removal available

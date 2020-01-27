@@ -33,7 +33,7 @@ def writePassingReads(bc, mtchr):
 	bam = pysam.AlignmentFile(bamfile,'rb')
 	Itr = bam.fetch(str(mtchr),multiple_iterators=False)
 	for read in Itr:
-		read_barcode = getBarcode(read.tags).replace(",", "_")
+		read_barcode = getBarcode(read.tags)
 		
 		# If read barcode is in whitelist, then write it out
 		if read_barcode in bc:
@@ -44,7 +44,7 @@ def writePassingReads(bc, mtchr):
 # Read in the barcodes
 with open(bcfile) as barcode_file_handle:
     content = barcode_file_handle.readlines()
-bc = [x.strip().replace(",", "_") for x in content] 
+bc = [x.strip() for x in content] 
 
 # Open up a bunch of files and write out reads for valid barcodes
 @contextmanager
