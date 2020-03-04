@@ -40,7 +40,7 @@ def main(input, mito_chromosome):
 	cwd = os.getcwd()
 	__version__ = get_distribution('mgatk').version
 	click.echo(gettime() + "mgatk-del-find v%s" % __version__)
-	R_plot_script = script_dir + "/bulk/plot_deletion_breaks_bulk.R"
+	R_plot_script = script_dir + "/bulk_del/plot_deletion_breaks_bulk.R"
 	
 	bam_in = pysam.AlignmentFile(input, "rb")
 	click.echo(gettime() + "Processing .bam file.")
