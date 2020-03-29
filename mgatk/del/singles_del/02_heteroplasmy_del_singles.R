@@ -6,17 +6,19 @@ args <- commandArgs(trailingOnly = TRUE)
 
 in_file = args[1]
 out_file = args[2]
-param1 = args[3]
-param2 = args[4]
-left_coordinates = args[5]
-right_coordinates = args[6]
+read_length = args[3]
+window_far = args[4]
+window_near = args[5]
+left_coordinates = args[6]
+right_coordinates = args[7]
 
 
 if(FALSE){
   in_file = "/Users/clareau/dat/Research/AryeeResearch/lareau_dev/mgatk/tests/mgatk_out/temp/del/CACCACTAGGAGGCGA-1.qc.readStats.tsv"
   out_file = "/Users/clareau/dat/Research/AryeeResearch/lareau_dev/mgatk/tests/mgatk_out/temp/del/CACCACTAGGAGGCGA-1.qc.readStats.tsv"
-  param1 = 66
-  param2 = 28
+  read_length = 72
+  window_far = 6
+  window_near = 28
   left_coordinates = "6073"
   right_coordinates = "13095"
   left_coordinates = "6073,4000"
@@ -27,16 +29,17 @@ if(FALSE){
 process_coordinate <- function(string){
   as.numeric(strsplit(string, ",")[[1]])
 }
-param1 <- as.numeric(param1)
-param2 <- as.numeric(param2)
+read_length <- as.numeric(read_length)
+window_far <- as.numeric(window_far)
+window_near <- as.numeric(window_near)
 left <- process_coordinate(left_coordinates)
 right <- process_coordinate(right_coordinates)
 
 compute_heteroplasmy_deletion <- function(file, breakpoint_l, breakpoint_r){
   
   # Define windows based on breakpoints
-  left_window <- (breakpoint_l-(param1)):(breakpoint_l-param2)
-  right_window <- (breakpoint_r+param2):(breakpoint_r+(param1))
+  left_window <- (breakpoint_l-(read_length-window_far)):(breakpoint_l-window_near)
+  right_window <- (breakpoint_r+window_near):(breakpoint_r+(read_length-window_far))
   
   # make cell name variable
   cell_id <- gsub(".readStats.tsv", "", basename(file))

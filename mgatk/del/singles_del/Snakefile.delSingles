@@ -9,8 +9,10 @@ outdir = config["output_directory"]
 script_dir = config["script_dir"]          
 name = config["name"]          
 
-param1 = config["param1"]
-param2 = config["param2"]
+read_length = config["read_length"]
+window_far = config["window_far"]
+window_near = config["window_near"]
+
 left_coordinates = config["left_coordinates"]
 right_coordinates = config["right_coordinates"]
 
@@ -38,10 +40,9 @@ rule process_one_sample:
 		pycall = " ".join(['python', oneSample_py, "-i", inputbam, "-o", output.pyout])
 		print(pycall)
 		os.system(pycall)
-		print("snek")
 		
 		# Aggregate statistics at the per-cell level for each deletion
-		Rcall = " ".join(['Rscript', oneSample_R, output.pyout, output.Rout, param1, param2, left_coordinates, right_coordinates])
+		Rcall = " ".join(['Rscript', oneSample_R, output.pyout, output.Rout, read_length, window_far, window_near, left_coordinates, right_coordinates])
 		print(Rcall)
 		os.system(Rcall)
 		

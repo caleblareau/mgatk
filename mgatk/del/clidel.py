@@ -31,15 +31,17 @@ from multiprocessing import Pool
 @click.option('--left-coordinates', '-lc', default = "1", help='Comma separated values for right coordinate of deletions; see wiki')
 @click.option('--right-coordinates', '-rc', default = "1000", help='Comma separated values for right coordinate of deletions; see wiki')
 
-@click.option('--param1', '-pa', default = "28", help='TTJ.')
-@click.option('--param2', '-pb', default = "66", help='TTJ.')
+@click.option('--read-length', '-rl', default = "72", help='Expected length of a single read from the .bam file')
+@click.option('--window-far', '-wf', default = "6", help='TTJ.')
+@click.option('--window-near', '-wn', default = "28", help='TTJ.')
 
 @click.option('--keep-temp-files', '-z', is_flag=True, help='Keep all intermediate files.')
 @click.option('--snake-stdout', '-so', is_flag=True, help='Write snakemake log to sdout rather than a file.')
 
 def main(input, output, name, mito_chromosome, ncores,
 	cluster, jobs, 
-	left_coordinates, right_coordinates, param1, param2,
+	left_coordinates, right_coordinates,
+	read_length, window_far, window_near,
 	keep_temp_files, snake_stdout):
 	
 	"""
@@ -139,7 +141,8 @@ def main(input, output, name, mito_chromosome, ncores,
 	dict1 = {'input_directory' : sqs(input), 'output_directory' : sqs(output), 'script_dir' : sqs(script_dir),
 		'name' : sqs(name),
 		'left_coordinates' : sqs(left_coordinates), 'right_coordinates' : sqs(right_coordinates),
-		'param1' : sqs(param1), 'param2' : sqs(param2)}
+		'read_length' : sqs(read_length),
+		'window_far' : sqs(window_far), 'window_near' : sqs(window_near)}
 	
 	# Potentially submit jobs to cluster
 	snakeclust = ""

@@ -18,9 +18,9 @@ from pkg_resources import get_distribution
 @click.version_option()
 @click.option('--input', '-i', default = ".", required=True, help='Input; a single .bam file of reads to be processed.')
 @click.option('--mito-chromosome', '-mc', default = "chrM", required=True, help='Name of mtDNA chromosome in bam file (e.g. chrM or MT)')
+@click.option('--output', '-o', default = "mgatkdel_find", required=True, help='Name of output files prefix')
 
-
-def main(input, mito_chromosome):
+def main(input, mito_chromosome, output):
 	
 	"""
 	mgatk-del-find: detect possible deletion junctions from bam files. \n
@@ -86,7 +86,7 @@ def main(input, mito_chromosome):
 	cov =  bam_in.count_coverage('chrM', quality_threshold = 0, read_callback = "nofilter")
 	cov_out =  np.array(np.add(np.add(cov[0],cov[1]), np.add(cov[2],cov[3])).tolist())
 
-	outfile_clip = re.sub(".bam$", ".clip.tsv", input)
+	outfile_clip = output + ".clip.tsv"
 	with open(outfile_clip, 'w') as f:
 		writer = csv.writer(f, delimiter='\t')
 		idx = np.argsort(-clip_pos_count)
