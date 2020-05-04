@@ -187,9 +187,9 @@ def main(mode, input, output, name, mito_genome, ncores,
 		check_software_exists("java")
 	
 	if (mode == "call" or mode == "gather"):
-		if not skip_r:	
+		if not skip_r:
 			check_software_exists("R")
-			check_R_packages(["dplyr"])
+			check_R_packages(["data.table", "SummarizedExperiment", "GenomicRanges", "Matrix"])
 	
 	# -------------------------------
 	# Determine samples for analysis

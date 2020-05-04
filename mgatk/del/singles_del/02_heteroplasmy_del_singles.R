@@ -62,9 +62,24 @@ compute_heteroplasmy_deletion <- function(file, breakpoint_l, breakpoint_r){
     mutate(total = ifelse(total > 0, 1, 0)) %>%
     summarise(cell = cell_id, heteroplasmy = round(sum(100*total)/n(),2),
               reads_del = sum(total), reads_wt = n() - sum(total), reads_all = n()) %>%
-    mutate(deletion = paste0("del", as.character(breakpoint_l), "-", as.character(breakpoint_r)))
+    mutate(deletion = paste0("del", as.character(breakpoint_l), "-", as.character(breakpoint_r)), what = "current")
   
-  data.frame(out)
+  # calculate heteroplasmy; ifelse so each sequenced molecule only counts once
+  out_test <- read_stats %>%
+    group_by(read_name) %>%
+    mutate(count = n(),
+           total = sum(lc) + sum(rc)) %>%
+    ungroup() %>%
+    filter((count == total | total == 0)) %>%
+    dplyr::select(-count, -total) %>%
+    group_by(read_name) %>%
+    summarise(total = sum(lc) + sum(rc)) %>%
+    mutate(total = ifelse(total > 0, 1, 0)) %>%
+    summarise(cell = cell_id, heteroplasmy = round(sum(100*total)/n(),2),
+              reads_del = sum(total), reads_wt = n() - sum(total), reads_all = n()) %>%
+    mutate(deletion = paste0("del", as.character(breakpoint_l), "-", as.character(breakpoint_r)), what = "test")
+  
+  data.frame(rbind(out_test, out))
 }
 
 heteroplasmy_multiple <- function(in_file, bps1, bps2){
