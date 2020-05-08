@@ -35,37 +35,37 @@ window_near <- as.numeric(window_near)
 left <- process_coordinate(left_coordinates)
 right <- process_coordinate(right_coordinates)
 
+
 compute_heteroplasmy_deletion <- function(file, breakpoint_l, breakpoint_r){
-  
   # Define windows based on breakpoints
   left_window <- (breakpoint_l-(read_length-window_far)):(breakpoint_l-window_near)
   right_window <- (breakpoint_r+window_near):(breakpoint_r+(read_length-window_far))
-  
   # make cell name variable
   cell_id <- gsub(".readStats.tsv", "", basename(file))
   cell_id <- gsub(".qc$", "", cell_id)
-  
   # read in stats data and rename variables
-  renames <- c("start", "end", "lc", "rc", "clip_pos", "read_name")
+  renames <- c("start", "end", "lc", "rc", "clip_pos", "read_name", "barcode", "n_clipped")
   read_stats <- fread(input = file) %>% rename_all(~renames)
   read_stats[is.na(read_stats)] <- 0
-  
   # clipped reads
   read_stats <- read_stats %>%
     filter(start %in% left_window | end %in% right_window) %>%
     filter(clip_pos %in% c((breakpoint_l), (breakpoint_r), 0))
-  
   # calculate heteroplasmy; ifelse so each sequenced molecule only counts once
   out <- read_stats %>%
     group_by(read_name) %>%
     summarise(total = sum(lc) + sum(rc)) %>%
     mutate(total = ifelse(total > 0, 1, 0)) %>%
     summarise(cell = cell_id, heteroplasmy = round(sum(100*total)/n(),2),
-              reads_del = sum(total), reads_wt = n() - sum(total), reads_all = n()) %>%
+              reads_del = sum(total), reads_wt = n() - sum(total), reads_all = n(),
+              total_clipped_bases = NA) %>%
     mutate(deletion = paste0("del", as.character(breakpoint_l), "-", as.character(breakpoint_r)), what = "current")
-  
+  # reads with barcode
+  bar_reads <- read_stats %>% filter(barcode) %>%
+    pull(read_name)
   # calculate heteroplasmy; ifelse so each sequenced molecule only counts once
   out_test <- read_stats %>%
+    filter(!(read_name %in% bar_reads)) %>%
     group_by(read_name) %>%
     mutate(count = n(),
            total = sum(lc) + sum(rc)) %>%
@@ -73,12 +73,14 @@ compute_heteroplasmy_deletion <- function(file, breakpoint_l, breakpoint_r){
     filter((count == total | total == 0)) %>%
     dplyr::select(-count, -total) %>%
     group_by(read_name) %>%
-    summarise(total = sum(lc) + sum(rc)) %>%
+    summarise(total = sum(lc) + sum(rc),
+              n_clipped = max(n_clipped)) %>%
     mutate(total = ifelse(total > 0, 1, 0)) %>%
     summarise(cell = cell_id, heteroplasmy = round(sum(100*total)/n(),2),
-              reads_del = sum(total), reads_wt = n() - sum(total), reads_all = n()) %>%
-    mutate(deletion = paste0("del", as.character(breakpoint_l), "-", as.character(breakpoint_r)), what = "test")
-  
+              reads_del = sum(total), reads_wt = n() - sum(total), reads_all = n(), 
+              total_clipped_bases = sum(n_clipped)) %>%
+    mutate(heteroplasmy = ifelse(total_clipped_bases <= 5, 0.00, heteroplasmy),
+           deletion = paste0("del", as.character(breakpoint_l), "-", as.character(breakpoint_r)), what = "test")
   data.frame(rbind(out_test, out))
 }
 
