@@ -401,7 +401,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 		if not snake_stdout:
 			snake_log_out = ' &>' + snake_log 
 			
-		snakecmd_gather = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Gather --config cfp="' + y_g + '" --stats '+snake_stats + snake_log_out
+		snakecmd_gather = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Gather --cores 1 --config cfp="' + y_g + '" --stats '+snake_stats + snake_log_out
 		os.system(snakecmd_gather)
 		
 		# Make .rds file from the output
