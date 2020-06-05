@@ -7,11 +7,11 @@ dependencies = ['click', 'pysam', 'pytest', 'snakemake', 'biopython', 'numpy', '
 
 setup(
     name='mgatk',
-    version='0.5.4a',
+    version='0.5.4b',
     url='https://github.com/caleblareau/mgatk',
     license='MIT',
     author='Caleb Lareau',
-    author_email='clareau@broadinstitute.org',
+    author_email='clareau@stanford.edu',
     description='Processing and quality control of mitochondrial genome variants.',
     long_description=__doc__,
     packages=find_packages(exclude=['tests']),
