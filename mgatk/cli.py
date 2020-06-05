@@ -41,7 +41,7 @@ from multiprocessing import Pool
 @click.option('--keep-duplicates', '-kd', is_flag=True, help='Retained dupliate (presumably PCR) reads')
 @click.option('--umi-barcode', '-ub', default = "",  help='Read tag (generally two letters) to specify the UMI tag when removing duplicates for genotyping.')
 
-@click.option('--max-javamem', '-jm', default = "4000m", help='Maximum memory for java for running duplicate removal. Default = 4000m.')
+@click.option('--max-javamem', '-jm', default = "16000m", help='Maximum memory for java for running duplicate removal. Default = 16000m.')
 
 @click.option('--proper-pairs', '-pp', is_flag=True, help='Require reads to be properly paired.')
 
@@ -197,15 +197,15 @@ def main(mode, input, output, name, mito_genome, ncores,
 			
 		if(mode == "mem"):
 			barcode_files = split_barcodes_file(barcodes, math.ceil(file_len(barcodes)/int(ncores)), output)
-
+			samples = [os.path.basename(os.path.splitext(sample)[0]) for sample in barcode_files] 
+			samplebams = [of + "/temp/barcoded_bams/" + sample + ".bam" for sample in samples]
+			
 			# Enact the split in a parallel manner
 			pool = Pool(processes=int(ncores))
 			pmblah = pool.starmap(split_chunk_file, zip(barcode_files, repeat(script_dir), repeat(input), repeat(bcbd), repeat(barcode_tag), repeat(mito_chr)))
 			pool.close()
-			sys.exit('At stopping point for mem')
 		
-
-			
+	
 		click.echo(gettime() + "Finished determining/splitting barcodes for genotyping.")
 		
 	# -------------------------------
@@ -296,11 +296,13 @@ def main(mode, input, output, name, mito_genome, ncores,
 			fastaf, mito_genmito_chrome, mito_length = handle_fasta_inference(mito_genome, supported_genomes, script_dir, mode, of)
 			print(gettime() + "Found designated mitochondrial chromosome: %s" % mito_chr)
 			
-		if(mode == "call"):
+		if(mode == "call" or mode == "mem"):
 			# Logging		
 			logf = open(output + "/logs" + "/base.mgatk.log", 'a')
 			click.echo(gettime() + "Starting analysis with mgatk", logf)
-			click.echo(gettime() + nsamplesNote, logf)
+			
+			if(mode == "call"):
+				click.echo(gettime() + nsamplesNote, logf)
 
 		if (remove_duplicates):
 				make_folder(of + "/logs/rmdupslogs")
@@ -325,29 +327,30 @@ def main(mode, input, output, name, mito_genome, ncores,
 		
 		# add sqs to get .yaml to play friendly https://stackoverflow.com/questions/39262556/preserve-quotes-and-also-add-data-with-quotes-in-ruamel
 		dict1 = {'input_directory' : sqs(input), 'output_directory' : sqs(output), 'script_dir' : sqs(script_dir),
-			'fasta_file' : sqs(fastaf), 'mito_chr' : sqs(mito_chr), 'mito_length' : sqs(mito_length), 
-			'base_qual' : sqs(base_qual), 'remove_duplicates' : sqs(remove_duplicates), 'umi_barcode' : sqs(umi_barcode),
+			'fasta_file' : sqs(fastaf), 'mito_chr' : sqs(mito_chr), 'mito_length' : sqs(mito_length), 'name' : sqs(name),
+			'base_qual' : sqs(base_qual), 'remove_duplicates' : sqs(remove_duplicates),
+			'barcode_tag' : sqs(barcode_tag), 'umi_barcode' : sqs(umi_barcode),
 			'alignment_quality' : sqs(alignment_quality), 'emit_base_qualities' : sqs(emit_base_qualities),
 			'proper_paired' : sqs(proper_pairs),
 			'NHmax' : sqs(nhmax), 'NMmax' : sqs(nmmax), 'max_javamem' : sqs(max_javamem)}
 		
+		# Potentially submit jobs to cluster
+		snakeclust = ""
+		njobs = int(jobs)
+		if(njobs > 0 and cluster != ""):
+			snakeclust = " --jobs " + jobs + " --cluster '" + cluster + "' "
+			click.echo(gettime() + "Recognized flags to process jobs on a computing cluster.", logf)
+			
+		click.echo(gettime() + "Processing samples with "+ncores+" threads", logf)
+		
+		y_s = of + "/.internal/parseltongue/snake.scatter.yaml"
+		with open(y_s, 'w') as yaml_file:
+			yaml.dump(dict1, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
+		
+		cp_call = "cp " + y_s +  " " + logs + "/" + name + ".parameters.txt"
+		os.system(cp_call)
+	
 		if(mode == "call"):
-			
-			# Potentially submit jobs to cluster
-			snakeclust = ""
-			njobs = int(jobs)
-			if(njobs > 0 and cluster != ""):
-				snakeclust = " --jobs " + jobs + " --cluster '" + cluster + "' "
-				click.echo(gettime() + "Recognized flags to process jobs on a computing cluster.", logf)
-				
-			click.echo(gettime() + "Processing samples with "+ncores+" threads", logf)
-			
-			y_s = of + "/.internal/parseltongue/snake.scatter.yaml"
-			with open(y_s, 'w') as yaml_file:
-				yaml.dump(dict1, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
-			
-			cp_call = "cp " + y_s +  " " + logs + "/" + name + ".parameters.txt"
-			os.system(cp_call)
 			
 			# Execute snakemake
 			snake_stats = logs + "/" + name + ".snakemake_scatter.stats"
@@ -359,7 +362,21 @@ def main(mode, input, output, name, mito_genome, ncores,
 				
 			snakecmd_scatter = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="'  + y_s + '" --stats '+snake_stats + snake_log_out
 			os.system(snakecmd_scatter)
-			click.echo(gettime() + "mgatk successfully processed the supplied .bam files", logf)
+			
+		elif(mode == "mem"):
+			
+			# Execute snakemake
+			snake_stats = logs + "/" + name + ".snakemake_mem.stats"
+			snake_log = logs + "/" + name + ".snakemake_mem.log"
+			
+			snake_log_out = ""
+			if not snake_stdout:
+				snake_log_out = ' &>' + snake_log
+				
+			snakecmd_mem= 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.mem --cores '+ncores+' --config cfp="'  + y_s + '" --stats '+snake_stats + snake_log_out
+			os.system(snakecmd_mem)
+		
+		click.echo(gettime() + "mgatk successfully processed the supplied .bam files", logf)
 
 	
 	#-------
@@ -367,10 +384,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 	#-------
 	if(mode == "call"):
 		
-		if(mode == "call"):
-			mgatk_directory = output
-			
-			
+		mgatk_directory = output
 		dict2 = {'mgatk_directory' : sqs(mgatk_directory), 'name' : sqs(name),
 			'script_dir' : sqs(script_dir)}
 		y_g = mgatk_directory + "/.internal/parseltongue/snake.gather.yaml"
@@ -387,17 +401,18 @@ def main(mode, input, output, name, mito_genome, ncores,
 			
 		snakecmd_gather = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Gather --cores 1 --config cfp="' + y_g + '" --stats '+snake_stats + snake_log_out
 		os.system(snakecmd_gather)
-		
+	
+	if(mode == "call" or mode == "mem"):
+	
 		# Make .rds file from the output
-		Rcall = "Rscript " + script_dir + "/bin/R/toRDS.R " + mgatk_directory + "/final " + name
+		Rcall = "Rscript " + script_dir + "/bin/R/toRDS.R " + output + "/final " + name
 		os.system(Rcall)
-		
 		click.echo(gettime() + "Successfully created final output files", logf)
 	
 	#--------
 	# Cleanup
 	#--------
-	if(mode == "call" ):
+	if(mode == "call" or mode == "mem"):
 		if keep_qc_bams:
 			click.echo(gettime() + "Final bams retained since --keep-qc-bams was specified.", logf)
 			dest = shutil.move(of + "/temp/ready_bam", of + "/qc_bam")  
@@ -405,12 +420,9 @@ def main(mode, input, output, name, mito_genome, ncores,
 		if keep_temp_files:
 			click.echo(gettime() + "Temporary files not deleted since --keep-temp-files was specified.", logf)
 		else:
-			if(mode == "call"):
-				byefolder = of
-			
-			shutil.rmtree(byefolder + "/fasta")
-			shutil.rmtree(byefolder + "/.internal")
-			shutil.rmtree(byefolder + "/temp")
+			shutil.rmtree(of+ "/fasta")
+			shutil.rmtree(of + "/.internal")
+			shutil.rmtree(of + "/temp")
 			click.echo(gettime() + "Intermediate files successfully removed.", logf)
 		
 		# Suspend logging
