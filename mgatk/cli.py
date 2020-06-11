@@ -20,7 +20,7 @@ from multiprocessing import Pool
 
 @click.command()
 @click.version_option()
-@click.argument('mode', type=click.Choice(['bcall', 'call', 'mem', 'check','support']))
+@click.argument('mode', type=click.Choice(['bcall', 'call', 'mtscatac', 'check','support']))
 @click.option('--input', '-i', default = ".", required=True, help='Input; either directory of singular .bam file; see documentation. REQUIRED.')
 @click.option('--output', '-o', default="mgatk_out", help='Output directory for analysis required for `call` and `bcall`. Default = mgatk_out')
 @click.option('--name', '-n', default="mgatk",  help='Prefix for project name. Default = mgatk')
@@ -41,7 +41,7 @@ from multiprocessing import Pool
 @click.option('--keep-duplicates', '-kd', is_flag=True, help='Retained dupliate (presumably PCR) reads')
 @click.option('--umi-barcode', '-ub', default = "",  help='Read tag (generally two letters) to specify the UMI tag when removing duplicates for genotyping.')
 
-@click.option('--max-javamem', '-jm', default = "16000m", help='Maximum memory for java for running duplicate removal. Default = 16000m.')
+@click.option('--max-javamem', '-jm', default = "8000m", help='Maximum memory for java for running duplicate removal per core. Default = 8000m.')
 
 @click.option('--proper-pairs', '-pp', is_flag=True, help='Require reads to be properly paired.')
 
@@ -69,7 +69,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 	
 	"""
 	mgatk: a mitochondrial genome analysis toolkit. \n
-	MODE = ['bcall', 'call', 'mem', 'check', 'support'] \n
+	MODE = ['bcall', 'call', 'mtscatac', 'check', 'support'] \n
 	See https://github.com/caleblareau/mgatk/wiki for more details.
 	"""
 	
@@ -94,7 +94,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 	if remove_duplicates:
 		check_software_exists("java")
 	
-	if (mode == "call" or mode == "mem" or mode == "bcall"):
+	if (mode == "call" or mode == "mtscatac" or mode == "bcall"):
 		if not skip_r:
 			check_software_exists("R")
 			check_R_packages(["data.table", "SummarizedExperiment", "GenomicRanges", "Matrix"])
@@ -114,7 +114,13 @@ def main(mode, input, output, name, mito_genome, ncores,
 	
 	# Remember that I started off as bcall as this will become overwritten
 	wasbcall = False
-	if(mode == "bcall" or mode == "mem"):
+	if(mode == "bcall" or mode == "mtscatac"):
+	
+		if(mode == "mtscatac"):
+			umi_barcode = "CR"
+			barcode_tag = "CB"
+			click.echo(gettime() + "User specified mtscATAC-seq mode; automatically updating barcode and UMI (per cell) tag values)")
+			
 		if(barcode_tag == "X"):
 			sys.exit('ERROR: in `'+mode+'` mode, must specify a valid read tag ID (generally two letters).')
 			
@@ -138,8 +144,8 @@ def main(mode, input, output, name, mito_genome, ncores,
 			click.echo(gettime() + "Found file of barcodes to be parsed: " + barcodes)
 			barcode_known = True
 		else:
-			if(mode == "mem"):
-				sys.exit(gettime() + 'Must specify a known barcode list with `mem` mode')
+			if(mode == "mtscatac"):
+				sys.exit(gettime() + 'Must specify a known barcode list with `mtscatac` mode')
 			click.echo(gettime() + "Will determine barcodes with at least: " + str(min_barcode_reads) + " mitochondrial reads.")
 			
 		# Make temporary directory of inputs
@@ -195,7 +201,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 			input = bcbd 
 			wasbcall = True
 			
-		if(mode == "mem"):
+		if(mode == "mtscatac"):
 			barcode_files = split_barcodes_file(barcodes, math.ceil(file_len(barcodes)/int(ncores)), output)
 			samples = [os.path.basename(os.path.splitext(sample)[0]) for sample in barcode_files] 
 			samplebams = [of + "/temp/barcoded_bams/" + sample + ".bam" for sample in samples]
@@ -278,7 +284,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 		sys.exit(gettime() + "mgatk check passed! "+nsamplesNote+" if same parameters are run in `call` mode")
 			
 
-	if(mode == "call" or mode == "mem"):
+	if(mode == "call" or mode == "mtscatac"):
 	
 		# Make all of the output folders if necessary
 		of = output; tf = of + "/temp"; qc = of + "/qc"; logs = of + "/logs"
@@ -296,7 +302,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 			fastaf, mito_genmito_chrome, mito_length = handle_fasta_inference(mito_genome, supported_genomes, script_dir, mode, of)
 			print(gettime() + "Found designated mitochondrial chromosome: %s" % mito_chr)
 			
-		if(mode == "call" or mode == "mem"):
+		if(mode == "call" or mode == "mtscatac"):
 			# Logging		
 			logf = open(output + "/logs" + "/base.mgatk.log", 'a')
 			click.echo(gettime() + "Starting analysis with mgatk", logf)
@@ -363,11 +369,11 @@ def main(mode, input, output, name, mito_genome, ncores,
 			snakecmd_scatter = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="'  + y_s + '" --stats '+snake_stats + snake_log_out
 			os.system(snakecmd_scatter)
 			
-		elif(mode == "mem"):
+		elif(mode == "mtscatac"):
 			
 			# Execute snakemake
-			snake_stats = logs + "/" + name + ".snakemake_mem.stats"
-			snake_log = logs + "/" + name + ".snakemake_mem.log"
+			snake_stats = logs + "/" + name + ".snakemake_mtscatac.stats"
+			snake_log = logs + "/" + name + ".snakemake_mtscatac.log"
 			
 			snake_log_out = ""
 			if not snake_stdout:
@@ -402,7 +408,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 		snakecmd_gather = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Gather --cores 1 --config cfp="' + y_g + '" --stats '+snake_stats + snake_log_out
 		os.system(snakecmd_gather)
 	
-	if(mode == "call" or mode == "mem"):
+	if(mode == "call" or mode == "mtscatac"):
 	
 		# Make .rds file from the output
 		Rcall = "Rscript " + script_dir + "/bin/R/toRDS.R " + output + "/final " + name
@@ -412,7 +418,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 	#--------
 	# Cleanup
 	#--------
-	if(mode == "call" or mode == "mem"):
+	if(mode == "call" or mode == "mtscatac"):
 		if keep_qc_bams:
 			click.echo(gettime() + "Final bams retained since --keep-qc-bams was specified.", logf)
 			dest = shutil.move(of + "/temp/ready_bam", of + "/qc_bam")  

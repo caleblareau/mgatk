@@ -39,7 +39,6 @@ detailedcall_py = script_dir + "/bin/python/detailedCalls.py"
 sumstatsBP_py = script_dir + "/bin/python/sumstatsBP.py"
 picardCall = java + " -Xmx"+max_javamem+" -jar " + script_dir + "/bin/picard.jar MarkDuplicates"
 
-
 # A Snakemake regular expression matching the bam file paths
 SAMPLES, = glob_wildcards(join(outdir, ".internal/samples/{sample}.bam.txt"))
 bamtxtin = ''
@@ -73,11 +72,48 @@ rule process_one_slice:
 		
 		with open(input.txtin) as f:
 			input_bam = f.read()
-		print(input_bam)
 		
 		# Process one sample
+		# Software paths
+
+		# Prepare filepath locations
+		output_bam = outdir + "/temp/ready_bam/" + sample + ".qc.bam"
+		rmlog = output_bam.replace(".qc.bam", ".rmdups.log").replace("/temp/ready_bam/", "/logs/rmdupslogs/")
+		filtlog = output_bam.replace(".qc.bam", ".filter.log").replace("/temp/ready_bam/", "/logs/filterlogs/")
+		temp_bam0 = output_bam.replace(".qc.bam", ".temp0.bam").replace("/temp/ready_bam/", "/temp/temp_bam/")
+		temp_bam1 = output_bam.replace(".qc.bam", ".temp1.bam").replace("/temp/ready_bam/", "/temp/temp_bam/")
+		prefixSM = outdir + "/temp/sparse_matrices/" + sample
+		outputdepth = outdir + "/qc/depth/" + sample + ".depth.txt"
+
+		# 1) Filter bam files
+		pycall = " ".join([python, filtclip_py, input_bam, filtlog, mito_genome, proper_paired, NHmax, NMmax]) + " > " + temp_bam0
+		os.system(pycall)
+
+		# 2) Sort the filtered bam file
+		pysam.sort("-o", temp_bam1, temp_bam0)
+		pysam.index(temp_bam1)
+
+		# See if we have a different UMI barcode specified
+		if(umi_barcode != "" and len(umi_barcode) == 2):
+			umi_extra = " BARCODE_TAG=" + umi_barcode
+		else:
+			umi_extra = " BARCODE_TAG=" + barcode_tag
+
+		# 3) (Optional) Remove duplicates
+		if (remove_duplicates == "True"):
+			mdc_long = picardCall + " I="+temp_bam1+" O="+output_bam+" M="+rmlog+" REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT QUIET=true VERBOSITY=ERROR USE_JDK_DEFLATER=true USE_JDK_INFLATER=true" + umi_extra 
+			proc = subprocess.Popen(mdc_long, stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+			out, err = proc.communicate()  # Read data from stdout and stderr
+			print(err)
+			
+		else: # just move the previous output
+			os.system("mv " + temp_bam1 + " " + output_bam)
+			os.system("rm " + temp_bam1 + ".bai")
+		pysam.index(output_bam)
+		
+		# Now collect the genotype counts
 		sumstats_mem_py = script_dir + "/bin/python/sumstatsBPmem.py"
-		pycall = " ".join(['python', sumstats_mem_py, input_bam, barcodes_file, out_pre, mito_length, base_qual, fasta_file, alignment_quality, barcode_tag])
+		pycall = " ".join(['python', sumstats_mem_py, output_bam, barcodes_file, out_pre, mito_length, base_qual, fasta_file, alignment_quality, barcode_tag])
 		os.system(pycall)
 		
 rule make_depth_table:
