@@ -55,7 +55,7 @@ rule make_combined_heteroplasmy:
 		allDelHetFile = outdir + "/final/"+name+".deletion_heteroplasmy.tsv"
 	run: 	
 		out_file = open(output.allDelHetFile, 'w')
-		out_file.write("cell_id" + "\t" + "heteroplasmy" + "\t" + "reads_del" + "\t" + "reads_wt" + "\t" + "reads_all" + "\t" + "deletion" + "\n")
+		out_file.write("cell_id" + "\t" + "heteroplasmy" + "\t" + "reads_del" + "\t" + "reads_wt" + "\t" + "reads_all" + "\t" + "total_clipped_bases" + "\t" + "deletion" + "\t" + "version" +"\n")
 		out_file.close()
 		for file in input.Routs:
 			os.system("cat " + file + " >> " + output.allDelHetFile)
