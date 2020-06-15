@@ -23,7 +23,9 @@ There are two options: 1) known barcodes to parse 2) unknown barcodes (discover 
 
 **Option 1**
 ```
-mgatk bcall -i barcode/test_barcode.bam -n bc1 -o bc1d -bt DB -b barcode/test_barcodes.txt -z
+mgatk bcall -i barcode/test_barcode.bam -n bc1 -o bc1d -bt CB -b barcode/test_barcodes.txt -z
+mgatk mem -i barcode/test_barcode.bam -n bc1 -o bc1dmem -bt CB -b barcode/test_barcodes.txt -c 2
+
 ```
 
 **Option 2**

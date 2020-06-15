@@ -80,6 +80,12 @@ def verify_bai(bamfile):
 	if(not os.path.exists(bai_file)):
 		pysam.index(bamfile)
 
+# Helper function for chunking the bam
+def split_chunk_file(one_barcode_file, script_dir, input, bcbd, barcode_tag, mito_chr):
+	chunk_bam_py = script_dir + "/bin/python/chunk_barcoded_bam.py"
+	pycall = " ".join(['python', chunk_bam_py, input, bcbd, barcode_tag, one_barcode_file, mito_chr])
+	os.system(pycall)
+
 def verify_sample_mitobam(bam, mito_chr, mito_length):
 	idxs = pysam.idxstats(bam).split("\n")
 	nReads = 0

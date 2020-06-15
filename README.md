@@ -6,8 +6,6 @@
 [![Snakemake](https://img.shields.io/badge/snakemake-≥4.0.0-brightgreen.svg)](https://snakemake.bitbucket.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-The **mgatk** package was developed by Caleb Lareau.
-
 [Source code is made freely available](http://github.com/caleblareau/mgatk)
 and a packaged install version is provided through [PyPi](https://pypi.python.org/pypi/mgatk/).
 <br>
@@ -22,6 +20,10 @@ applicable across other assays.
 
 Check out the [**mgatk** documentation](https://github.com/caleblareau/mgatk/wiki) for more 
 information and user guides. 
+
+## Contact
+
+The **mgatk** package was developed and is maintained by [Caleb Lareau](mailto:caleb.lareau@gmail.com).
 
 <br><br>
 

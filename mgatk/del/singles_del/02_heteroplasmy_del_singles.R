@@ -64,8 +64,8 @@ compute_heteroplasmy_deletion <- function(file, breakpoint_l, breakpoint_r){
     summarise(cell = cell_id, heteroplasmy = round(sum(100*total)/n(),2),
               reads_del = sum(total), reads_wt = n() - sum(total), reads_all = n(),
               total_clipped_bases = NA) %>%
-    mutate(deletion = paste0("del", as.character(breakpoint_l), "-", as.character(breakpoint_r)), what = "naive")
-  
+    mutate(deletion = paste0("del", as.character(breakpoint_l), "-", as.character(breakpoint_r)), what = "naive")  
+
   # reads with barcode
   bar_reads <- read_stats %>% filter(barcode) %>%
     pull(read_name)
@@ -81,6 +81,7 @@ compute_heteroplasmy_deletion <- function(file, breakpoint_l, breakpoint_r){
     dplyr::select(-count, -total) %>%
     group_by(read_name) %>%
     summarise(total = sum(lc) + sum(rc),
+              sum_lc = sum(lc), sum_rc = sum(rc),
               n_clipped = max(n_clipped)) %>%
     mutate(total = ifelse(total > 0, 1, 0)) %>%
     summarise(cell = cell_id, heteroplasmy = round(sum(100*total)/n(),2),
@@ -89,7 +90,7 @@ compute_heteroplasmy_deletion <- function(file, breakpoint_l, breakpoint_r){
     mutate(deletion = paste0("del", as.character(breakpoint_l), "-", as.character(breakpoint_r)),  what = "improved")
   
   data.frame(rbind(out_quant, out))
-  
+
 }
 
 heteroplasmy_multiple <- function(in_file, bps1, bps2){

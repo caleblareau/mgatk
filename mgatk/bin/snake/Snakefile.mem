@@ -1,0 +1,156 @@
+import os
+import subprocess
+import shutil
+import pysam
+from os.path import join
+
+# Parse the configuration variables
+configfile : config["cfp"]
+outdir = config["output_directory"]
+mgatk_directory = outdir
+name = config["name"]
+script_dir = config["script_dir"]          
+indir = config["input_directory"]
+
+mito_genome = config["mito_chr"]
+mito_length = str(config["mito_length"])
+fasta_file = config["fasta_file"]
+
+remove_duplicates = config["remove_duplicates"]
+barcode_tag = config["barcode_tag"]
+umi_barcode = config["umi_barcode"]
+emit_base_qualities = config["emit_base_qualities"]
+
+proper_paired = config["proper_paired"]
+base_qual = str(config["base_qual"])
+alignment_quality = config["alignment_quality"]
+NHmax = config["NHmax"]
+NMmax = config["NMmax"]
+
+max_javamem  = config["max_javamem"]
+
+# Software paths
+java = "java"
+python = "python"
+
+# Script locations
+filtclip_py = script_dir + "/bin/python/filterClipBam.py"
+detailedcall_py = script_dir + "/bin/python/detailedCalls.py"
+sumstatsBP_py = script_dir + "/bin/python/sumstatsBP.py"
+picardCall = java + " -Xmx"+max_javamem+" -jar " + script_dir + "/bin/picard.jar MarkDuplicates"
+
+# A Snakemake regular expression matching the bam file paths
+SAMPLES, = glob_wildcards(join(outdir, ".internal/samples/{sample}.bam.txt"))
+bamtxtin = ''
+
+rule all:
+	input:
+		mgatk_directory + "/final/" + name + ".depthTable.txt",
+		mgatk_directory + "/final/" + name + ".A.txt.gz",
+		mgatk_directory + "/final/" + name + ".C.txt.gz",
+		mgatk_directory + "/final/" + name + ".G.txt.gz",
+		mgatk_directory + "/final/" + name + ".T.txt.gz",	
+		mgatk_directory + "/final/" + name + ".coverage.txt.gz"
+
+
+rule process_one_slice:
+	input:
+		txtin = join(outdir + "/.internal/samples/{sample}.bam.txt")
+	output:
+		depth = outdir + "/qc/depth/{sample}.depth.txt", 
+		A = outdir + "/temp/sparse_matrices/{sample}.A.txt",
+		C = outdir + "/temp/sparse_matrices/{sample}.C.txt",
+		G = outdir + "/temp/sparse_matrices/{sample}.G.txt",
+		T = outdir + "/temp/sparse_matrices/{sample}.T.txt",
+		cov = outdir + "/temp/sparse_matrices/{sample}.coverage.txt"
+		
+	run:
+		# Get sample information
+		sample = wildcards.sample
+		barcodes_file = outdir + "/temp/barcode_files/"+sample+".txt"
+		out_pre = outdir + "/temp/sparse_matrices/" + sample
+		
+		with open(input.txtin) as f:
+			input_bam = f.read()
+		
+		# Process one sample
+		# Software paths
+
+		# Prepare filepath locations
+		output_bam = outdir + "/temp/ready_bam/" + sample + ".qc.bam"
+		rmlog = output_bam.replace(".qc.bam", ".rmdups.log").replace("/temp/ready_bam/", "/logs/rmdupslogs/")
+		filtlog = output_bam.replace(".qc.bam", ".filter.log").replace("/temp/ready_bam/", "/logs/filterlogs/")
+		temp_bam0 = output_bam.replace(".qc.bam", ".temp0.bam").replace("/temp/ready_bam/", "/temp/temp_bam/")
+		temp_bam1 = output_bam.replace(".qc.bam", ".temp1.bam").replace("/temp/ready_bam/", "/temp/temp_bam/")
+		prefixSM = outdir + "/temp/sparse_matrices/" + sample
+		outputdepth = outdir + "/qc/depth/" + sample + ".depth.txt"
+
+		# 1) Filter bam files
+		pycall = " ".join([python, filtclip_py, input_bam, filtlog, mito_genome, proper_paired, NHmax, NMmax]) + " > " + temp_bam0
+		os.system(pycall)
+
+		# 2) Sort the filtered bam file
+		pysam.sort("-o", temp_bam1, temp_bam0)
+		pysam.index(temp_bam1)
+
+		# See if we have a different UMI barcode specified
+		if(umi_barcode != "" and len(umi_barcode) == 2):
+			umi_extra = " BARCODE_TAG=" + umi_barcode
+		else:
+			umi_extra = " BARCODE_TAG=" + barcode_tag
+
+		# 3) (Optional) Remove duplicates
+		if (remove_duplicates == "True"):
+			mdc_long = picardCall + " I="+temp_bam1+" O="+output_bam+" M="+rmlog+" REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=SILENT QUIET=true VERBOSITY=ERROR USE_JDK_DEFLATER=true USE_JDK_INFLATER=true" + umi_extra 
+			proc = subprocess.Popen(mdc_long, stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+			out, err = proc.communicate()  # Read data from stdout and stderr
+			print(err)
+			
+		else: # just move the previous output
+			os.system("mv " + temp_bam1 + " " + output_bam)
+			os.system("rm " + temp_bam1 + ".bai")
+		pysam.index(output_bam)
+		
+		# Now collect the genotype counts
+		sumstats_mem_py = script_dir + "/bin/python/sumstatsBPmem.py"
+		pycall = " ".join(['python', sumstats_mem_py, output_bam, barcodes_file, out_pre, mito_length, base_qual, fasta_file, alignment_quality, barcode_tag])
+		os.system(pycall)
+		
+rule make_depth_table:
+	input:
+		depths = expand(mgatk_directory + "/qc/depth/{sample}.depth.txt", sample=SAMPLES)
+	output:
+		depthtable = mgatk_directory + "/final/" + name + ".depthTable.txt"
+	run: 
+		with open(output.depthtable, 'w') as f:
+			for file in input.depths:
+				os.system("cat " + file + " >> " + output.depthtable)
+
+rule make_final_sparse_matrices:
+	input:
+		As = expand(mgatk_directory + "/temp/sparse_matrices/{sample}.A.txt", sample=SAMPLES),
+		Cs = expand(mgatk_directory + "/temp/sparse_matrices/{sample}.C.txt", sample=SAMPLES),
+		Gs = expand(mgatk_directory + "/temp/sparse_matrices/{sample}.G.txt", sample=SAMPLES),
+		Ts = expand(mgatk_directory + "/temp/sparse_matrices/{sample}.T.txt", sample=SAMPLES),
+		Covs = expand(mgatk_directory + "/temp/sparse_matrices/{sample}.coverage.txt", sample=SAMPLES)
+		
+	output:
+		A = mgatk_directory + "/final/" + name + ".A.txt.gz",
+		C = mgatk_directory + "/final/" + name + ".C.txt.gz",
+		G = mgatk_directory + "/final/" + name + ".G.txt.gz",
+		T = mgatk_directory + "/final/" + name + ".T.txt.gz",
+		Cov = mgatk_directory + "/final/" + name + ".coverage.txt.gz"
+		
+	run: 
+		def makeSM(iterableThing, l):
+			for i in iterableThing:
+				os.system("cat " + i + " >> " + mgatk_directory + "/final/" + name + "."+l+".txt")
+			os.system("gzip " + mgatk_directory + "/final/" + name + "."+l+".txt")
+			
+		makeSM(input.As, "A")
+		makeSM(input.Cs, "C")
+		makeSM(input.Gs, "G")
+		makeSM(input.Ts, "T")
+		makeSM(input.Covs, "coverage")
+		
+		

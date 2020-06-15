@@ -8,17 +8,19 @@ import string
 import itertools
 import time
 import pysam
+import math
 
 from pkg_resources import get_distribution
 from subprocess import call, check_call
 from .mgatkHelp import *
 from ruamel import yaml
+from itertools import repeat
 from ruamel.yaml.scalarstring import SingleQuotedScalarString as sqs
 from multiprocessing import Pool
 
 @click.command()
 @click.version_option()
-@click.argument('mode', type=click.Choice(['bcall', 'call', 'check','support']))
+@click.argument('mode', type=click.Choice(['bcall', 'call', 'mtscatac', 'check','support']))
 @click.option('--input', '-i', default = ".", required=True, help='Input; either directory of singular .bam file; see documentation. REQUIRED.')
 @click.option('--output', '-o', default="mgatk_out", help='Output directory for analysis required for `call` and `bcall`. Default = mgatk_out')
 @click.option('--name', '-n', default="mgatk",  help='Prefix for project name. Default = mgatk')
@@ -39,7 +41,7 @@ from multiprocessing import Pool
 @click.option('--keep-duplicates', '-kd', is_flag=True, help='Retained dupliate (presumably PCR) reads')
 @click.option('--umi-barcode', '-ub', default = "",  help='Read tag (generally two letters) to specify the UMI tag when removing duplicates for genotyping.')
 
-@click.option('--max-javamem', '-jm', default = "4000m", help='Maximum memory for java for running duplicate removal. Default = 4000m.')
+@click.option('--max-javamem', '-jm', default = "8000m", help='Maximum memory for java for running duplicate removal per core. Default = 8000m.')
 
 @click.option('--proper-pairs', '-pp', is_flag=True, help='Require reads to be properly paired.')
 
@@ -67,7 +69,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 	
 	"""
 	mgatk: a mitochondrial genome analysis toolkit. \n
-	MODE = ['bcall', 'call', 'one', 'check', 'gather', 'support'] \n
+	MODE = ['bcall', 'call', 'mtscatac', 'check', 'support'] \n
 	See https://github.com/caleblareau/mgatk/wiki for more details.
 	"""
 	
@@ -88,6 +90,16 @@ def main(mode, input, output, name, mito_genome, ncores,
 	else:
 		remove_duplicates = True
 	
+	# Verify dependencies	
+	if remove_duplicates:
+		check_software_exists("java")
+	
+	if (mode == "call" or mode == "mtscatac" or mode == "bcall"):
+		if not skip_r:
+			check_software_exists("R")
+			check_R_packages(["data.table", "SummarizedExperiment", "GenomicRanges", "Matrix"])
+	
+	
 	# Determine which genomes are available
 	rawsg = os.popen('ls ' + script_dir + "/bin/anno/fasta/*.fasta").read().strip().split("\n")
 	supported_genomes = [x.replace(script_dir + "/bin/anno/fasta/", "").replace(".fasta", "") for x in rawsg]  
@@ -102,14 +114,20 @@ def main(mode, input, output, name, mito_genome, ncores,
 	
 	# Remember that I started off as bcall as this will become overwritten
 	wasbcall = False
-	if(mode == "bcall"):
+	if(mode == "bcall" or mode == "mtscatac"):
+	
+		if(mode == "mtscatac"):
+			umi_barcode = "CR"
+			barcode_tag = "CB"
+			click.echo(gettime() + "User specified mtscATAC-seq mode; automatically updating barcode and UMI (per cell) tag values)")
+			
 		if(barcode_tag == "X"):
-			sys.exit('ERROR: in `bcall` mode, must specify a valid read tag ID (generally two letters).')
+			sys.exit('ERROR: in `'+mode+'` mode, must specify a valid read tag ID (generally two letters).')
 			
 		# Input argument is assumed to be a .bam file
 		filename, file_extension = os.path.splitext(input)
 		if(file_extension != ".bam"):
-			sys.exit('ERROR: in `bcall` mode, the input should be an individual .bam file.')
+			sys.exit('ERROR: in `'+mode+'` mode, the input should be an individual .bam file.')
 		if not os.path.exists(input):
 			sys.exit('ERROR: No file found called "' + input + '"; please specify a valid .bam file.')
 		if not os.path.exists(input + ".bai"):
@@ -126,6 +144,8 @@ def main(mode, input, output, name, mito_genome, ncores,
 			click.echo(gettime() + "Found file of barcodes to be parsed: " + barcodes)
 			barcode_known = True
 		else:
+			if(mode == "mtscatac"):
+				sys.exit(gettime() + 'Must specify a known barcode list with `mtscatac` mode')
 			click.echo(gettime() + "Will determine barcodes with at least: " + str(min_barcode_reads) + " mitochondrial reads.")
 			
 		# Make temporary directory of inputs
@@ -166,31 +186,34 @@ def main(mode, input, output, name, mito_genome, ncores,
 			barcodes = passing_barcode_file
 
 		# Potentially split the valid barcodes into smaller files if we need to
-		barcode_files = split_barcodes_file(barcodes, nsamples, output)
-		split_barcoded_bam_py = script_dir + "/bin/python/split_barcoded_bam.py"
-		
-		# Loop over the split sample files
-		for i in range(len(barcode_files)):
-			one_barcode_file = barcode_files[i]
-			pycall = " ".join(['python', split_barcoded_bam_py, input, bcbd, barcode_tag, one_barcode_file, mito_chr])
-			os.system(pycall)
+		if(mode == "bcall"):
+			barcode_files = split_barcodes_file(barcodes, nsamples, output)
+			split_barcoded_bam_py = script_dir + "/bin/python/split_barcoded_bam.py"
 			
+			# Loop over the split sample files
+			for i in range(len(barcode_files)):
+				one_barcode_file = barcode_files[i]
+				pycall = " ".join(['python', split_barcoded_bam_py, input, bcbd, barcode_tag, one_barcode_file, mito_chr])
+				os.system(pycall)
+				
+			# Update everything to appear like we've just set `call` on the set of bams
+			mode = "call"
+			input = bcbd 
+			wasbcall = True
+			
+		if(mode == "mtscatac"):
+			barcode_files = split_barcodes_file(barcodes, math.ceil(file_len(barcodes)/int(ncores)), output)
+			samples = [os.path.basename(os.path.splitext(sample)[0]) for sample in barcode_files] 
+			samplebams = [of + "/temp/barcoded_bams/" + sample + ".bam" for sample in samples]
+			
+			# Enact the split in a parallel manner
+			pool = Pool(processes=int(ncores))
+			pmblah = pool.starmap(split_chunk_file, zip(barcode_files, repeat(script_dir), repeat(input), repeat(bcbd), repeat(barcode_tag), repeat(mito_chr)))
+			pool.close()
+		
+	
 		click.echo(gettime() + "Finished determining/splitting barcodes for genotyping.")
 		
-		# Update everything to appear like we've just set `call` on the set of bams
-		mode = "call"
-		input = bcbd 
-		wasbcall = True
-
-	# Verify dependencies	
-	if remove_duplicates:
-		check_software_exists("java")
-	
-	if (mode == "call" or mode == "gather"):
-		if not skip_r:
-			check_software_exists("R")
-			check_R_packages(["data.table", "SummarizedExperiment", "GenomicRanges", "Matrix"])
-	
 	# -------------------------------
 	# Determine samples for analysis
 	# -------------------------------
@@ -258,23 +281,10 @@ def main(mode, input, output, name, mito_genome, ncores,
 		
 	if(mode == "check"):
 		# Exit gracefully
-		sys.exit(gettime() + "mgatk check passed! "+nsamplesNote+" if same parameters are run in `call` mode")	
+		sys.exit(gettime() + "mgatk check passed! "+nsamplesNote+" if same parameters are run in `call` mode")
 			
-	elif(mode == "one"):
-		# Input argument is assumed to be a .bam file
-		filename, file_extension = os.path.splitext(input)
-		if(file_extension != ".bam"):
-			sys.exit('ERROR: in `one` mode, the input should be an individual .bam file.')
-		if not os.path.exists(input):
-			sys.exist('ERROR: No file found called "' + input + '"; please specify a valid .bam file')
-		
-		# Define input samples
-		sampleregex = re.compile(r"^[^.]*")
-		samples = [re.search(sampleregex, os.path.basename(input)).group(0)]
-		samplebams = [input]
-	
 
-	if(mode == "call" or mode == "one"):
+	if(mode == "call" or mode == "mtscatac"):
 	
 		# Make all of the output folders if necessary
 		of = output; tf = of + "/temp"; qc = of + "/qc"; logs = of + "/logs"
@@ -288,15 +298,17 @@ def main(mode, input, output, name, mito_genome, ncores,
 		#-------------------
 		# Handle .fasta file
 		#-------------------
-		if((mode == "call" and wasbcall == False) or mode == "one"):
+		if((mode == "call" and wasbcall == False)):
 			fastaf, mito_genmito_chrome, mito_length = handle_fasta_inference(mito_genome, supported_genomes, script_dir, mode, of)
 			print(gettime() + "Found designated mitochondrial chromosome: %s" % mito_chr)
 			
-		if(mode == "call"):
+		if(mode == "call" or mode == "mtscatac"):
 			# Logging		
 			logf = open(output + "/logs" + "/base.mgatk.log", 'a')
 			click.echo(gettime() + "Starting analysis with mgatk", logf)
-			click.echo(gettime() + nsamplesNote, logf)
+			
+			if(mode == "call"):
+				click.echo(gettime() + nsamplesNote, logf)
 
 		if (remove_duplicates):
 				make_folder(of + "/logs/rmdupslogs")
@@ -321,29 +333,30 @@ def main(mode, input, output, name, mito_genome, ncores,
 		
 		# add sqs to get .yaml to play friendly https://stackoverflow.com/questions/39262556/preserve-quotes-and-also-add-data-with-quotes-in-ruamel
 		dict1 = {'input_directory' : sqs(input), 'output_directory' : sqs(output), 'script_dir' : sqs(script_dir),
-			'fasta_file' : sqs(fastaf), 'mito_chr' : sqs(mito_chr), 'mito_length' : sqs(mito_length), 
-			'base_qual' : sqs(base_qual), 'remove_duplicates' : sqs(remove_duplicates), 'umi_barcode' : sqs(umi_barcode),
+			'fasta_file' : sqs(fastaf), 'mito_chr' : sqs(mito_chr), 'mito_length' : sqs(mito_length), 'name' : sqs(name),
+			'base_qual' : sqs(base_qual), 'remove_duplicates' : sqs(remove_duplicates),
+			'barcode_tag' : sqs(barcode_tag), 'umi_barcode' : sqs(umi_barcode),
 			'alignment_quality' : sqs(alignment_quality), 'emit_base_qualities' : sqs(emit_base_qualities),
 			'proper_paired' : sqs(proper_pairs),
 			'NHmax' : sqs(nhmax), 'NMmax' : sqs(nmmax), 'max_javamem' : sqs(max_javamem)}
 		
+		# Potentially submit jobs to cluster
+		snakeclust = ""
+		njobs = int(jobs)
+		if(njobs > 0 and cluster != ""):
+			snakeclust = " --jobs " + jobs + " --cluster '" + cluster + "' "
+			click.echo(gettime() + "Recognized flags to process jobs on a computing cluster.", logf)
+			
+		click.echo(gettime() + "Processing samples with "+ncores+" threads", logf)
+		
+		y_s = of + "/.internal/parseltongue/snake.scatter.yaml"
+		with open(y_s, 'w') as yaml_file:
+			yaml.dump(dict1, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
+		
+		cp_call = "cp " + y_s +  " " + logs + "/" + name + ".parameters.txt"
+		os.system(cp_call)
+	
 		if(mode == "call"):
-			
-			# Potentially submit jobs to cluster
-			snakeclust = ""
-			njobs = int(jobs)
-			if(njobs > 0 and cluster != ""):
-				snakeclust = " --jobs " + jobs + " --cluster '" + cluster + "' "
-				click.echo(gettime() + "Recognized flags to process jobs on a computing cluster.", logf)
-				
-			click.echo(gettime() + "Processing samples with "+ncores+" threads", logf)
-			
-			y_s = of + "/.internal/parseltongue/snake.scatter.yaml"
-			with open(y_s, 'w') as yaml_file:
-				yaml.dump(dict1, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
-			
-			cp_call = "cp " + y_s +  " " + logs + "/" + name + ".parameters.txt"
-			os.system(cp_call)
 			
 			# Execute snakemake
 			snake_stats = logs + "/" + name + ".snakemake_scatter.stats"
@@ -355,38 +368,29 @@ def main(mode, input, output, name, mito_genome, ncores,
 				
 			snakecmd_scatter = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="'  + y_s + '" --stats '+snake_stats + snake_log_out
 			os.system(snakecmd_scatter)
-			click.echo(gettime() + "mgatk successfully processed the supplied .bam files", logf)
+			
+		elif(mode == "mtscatac"):
+			
+			# Execute snakemake
+			snake_stats = logs + "/" + name + ".snakemake_mtscatac.stats"
+			snake_log = logs + "/" + name + ".snakemake_mtscatac.log"
+			
+			snake_log_out = ""
+			if not snake_stdout:
+				snake_log_out = ' &>' + snake_log
+				
+			snakecmd_mem= 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.mem --cores '+ncores+' --config cfp="'  + y_s + '" --stats '+snake_stats + snake_log_out
+			os.system(snakecmd_mem)
 		
-		if(mode == "one"):
-		
-			# Don't run this through snakemake as we may be trying to handle multiple at the same time
-			sample = samples[0]
-			inputbam = samplebams[0]
-			outputbam = output + "/temp/ready_bam/"+sample+".qc.bam"
-			
-			y_s = of + "/.internal/samples/"+sample+".yaml"
-			with open(y_s, 'w') as yaml_file:
-				yaml.dump(dict1, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
-			
-			
-			# Call the python script
-			oneSample_py = script_dir + "/bin/python/oneSample.py"
-			pycall = " ".join(['python', oneSample_py, y_s, inputbam, outputbam, sample])
-			os.system(pycall)
+		click.echo(gettime() + "mgatk successfully processed the supplied .bam files", logf)
+
 	
 	#-------
 	# Gather
 	#-------
-	if(mode == "gather" or mode == "call"):
+	if(mode == "call"):
 		
-		if(mode == "call"):
-			mgatk_directory = output
-			
-		elif(mode == "gather"): # in gather, the input argument specifies where things are
-			logf = open(input + "/logs" + "/base.mgatk.log", 'a')
-			click.echo(gettime() + "Gathering samples that were pre-called with `one`.", logf)
-			mgatk_directory = input
-			
+		mgatk_directory = output
 		dict2 = {'mgatk_directory' : sqs(mgatk_directory), 'name' : sqs(name),
 			'script_dir' : sqs(script_dir)}
 		y_g = mgatk_directory + "/.internal/parseltongue/snake.gather.yaml"
@@ -401,19 +405,20 @@ def main(mode, input, output, name, mito_genome, ncores,
 		if not snake_stdout:
 			snake_log_out = ' &>' + snake_log 
 			
-		snakecmd_gather = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Gather --config cfp="' + y_g + '" --stats '+snake_stats + snake_log_out
+		snakecmd_gather = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Gather --cores 1 --config cfp="' + y_g + '" --stats '+snake_stats + snake_log_out
 		os.system(snakecmd_gather)
-		
+	
+	if(mode == "call" or mode == "mtscatac"):
+	
 		# Make .rds file from the output
-		Rcall = "Rscript " + script_dir + "/bin/R/toRDS.R " + mgatk_directory + "/final " + name
+		Rcall = "Rscript " + script_dir + "/bin/R/toRDS.R " + output + "/final " + name
 		os.system(Rcall)
-		
 		click.echo(gettime() + "Successfully created final output files", logf)
 	
 	#--------
 	# Cleanup
 	#--------
-	if(mode == "call" or mode == "gather"):
+	if(mode == "call" or mode == "mtscatac"):
 		if keep_qc_bams:
 			click.echo(gettime() + "Final bams retained since --keep-qc-bams was specified.", logf)
 			dest = shutil.move(of + "/temp/ready_bam", of + "/qc_bam")  
@@ -421,14 +426,9 @@ def main(mode, input, output, name, mito_genome, ncores,
 		if keep_temp_files:
 			click.echo(gettime() + "Temporary files not deleted since --keep-temp-files was specified.", logf)
 		else:
-			if(mode == "call"):
-				byefolder = of
-			if(mode == "gather"):
-				byefolder = input
-			
-			shutil.rmtree(byefolder + "/fasta")
-			shutil.rmtree(byefolder + "/.internal")
-			shutil.rmtree(byefolder + "/temp")
+			shutil.rmtree(of+ "/fasta")
+			shutil.rmtree(of + "/.internal")
+			shutil.rmtree(of + "/temp")
 			click.echo(gettime() + "Intermediate files successfully removed.", logf)
 		
 		# Suspend logging
