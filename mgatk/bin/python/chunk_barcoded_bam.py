@@ -35,7 +35,8 @@ out = pysam.AlignmentFile(outname, "wb", template = bam)
 
 # Filter for reads that match the set of possible barcodes for this sample
 try:
-	for read in bam:
+	Itr = bam.fetch(str(mtchr),multiple_iterators=False)
+	for read in Itr:
 		barcode_id = getBarcode(read.tags)
 		
 		if(barcode_id in bc):
