@@ -94,7 +94,6 @@ with open(out_file_coverage,"w") as file_handle_cov:
 			# Pull out the summed counts per cell per position
 			cov_vec = np.sum(ca[cell_idx,:,:,:], axis = (1,2)).tolist()
 			depth = round(sum(cov_vec)/len(cov_vec),2)
-			print(depth)
 			# Write each position
 			for i in range(0,int(max_bp)):
 				if(cov_vec[i] > 0):
