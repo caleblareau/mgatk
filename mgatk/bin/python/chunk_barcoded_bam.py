@@ -40,7 +40,8 @@ fauxdon = [a + b + c + d for a in bases for b in bases for c in bases for d in b
 
 # Filter for reads that match the set of possible barcodes for this sample
 try:
-	for read in bam:
+	Itr = bam.fetch(str(mtchr),multiple_iterators=False)
+	for read in Itr:
 		barcode_id = getBarcode(read.tags, barcodeTag)
 		
 		if(barcode_id in bc):
