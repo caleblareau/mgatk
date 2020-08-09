@@ -22,7 +22,6 @@ out = pysam.AlignmentFile("-", "wb", template = bam)
 
 keepCount = 0
 filtCount = 0
-#proper_pair = "False"
 
 def filterReadTags(intags):
     '''
@@ -43,7 +42,7 @@ def pairing(read):
 	if(proper_pair != "True"): # then user doesn't care to filter it
 		return(True)
 	else:
-		return(read.is_proper_pair())
+		return(read.is_proper_pair)
 
 def processRead(read):
 	global keepCount
