@@ -3,7 +3,6 @@
 </p>
 
 [![PyPI version](https://badge.fury.io/py/mgatk.svg)](https://pypi.python.org/pypi/mgatk)
-[![Snakemake](https://img.shields.io/badge/snakemake-≥4.0.0-brightgreen.svg)](https://snakemake.bitbucket.io)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 [Source code is made freely available](http://github.com/caleblareau/mgatk)
@@ -23,7 +22,7 @@ information and user guides.
 
 ## Contact
 
-The **mgatk** package was developed and is maintained by [Caleb Lareau](mailto:caleb.lareau@gmail.com).
+The **mgatk** package was developed and is maintained by [Caleb Lareau](https://profiles.stanford.edu/caleb-lareau).
 
 <br><br>
 

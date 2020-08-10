@@ -131,15 +131,32 @@ importMito.explicit <- function(Afile, Cfile, Gfile, Tfile,
                                       IRanges::IRanges(1:maxpos, width = 1))
   GenomicRanges::mcols(row_g_cov) <- data.frame(refAllele = toupper(ref[[2]][1:maxpos]))
   
+  # Export a signac object
+  refallele <- data.frame(
+    pos = 1:maxpos,
+    ref = as.character(toupper(ref[[2]][1:maxpos])),
+    stringsAsFactors = FALSE
+  )
+  signac_counts <-  rbind(ACGT[["A"]][["counts_fw"]],  ACGT[["C"]][["counts_fw"]],
+                          ACGT[["T"]][["counts_fw"]],  ACGT[["G"]][["counts_fw"]],
+                          ACGT[["A"]][["counts_rev"]],  ACGT[["C"]][["counts_rev"]],
+                          ACGT[["T"]][["counts_rev"]],  ACGT[["G"]][["counts_rev"]])
+  
+  signac_object <- list("counts" = signac_counts, "depth" = sdf, "refallele" = refallele)
+  
   # Make summarized experiments 
   if(length(ACGT[["A"]]) > 2){
     # With base qualities
     SE <- SummarizedExperiment::SummarizedExperiment(
       assays = list(
-        "A_counts_fw" = ACGT[["A"]][["counts_fw"]], "A_counts_rev" = ACGT[["A"]][["counts_rev"]], "A_qual_fw" = ACGT[["A"]][["qual_fw"]], "A_qual_rev" = ACGT[["A"]][["qual_rev"]],
-        "C_counts_fw" = ACGT[["C"]][["counts_fw"]], "C_counts_rev" = ACGT[["C"]][["counts_rev"]], "C_qual_fw" = ACGT[["C"]][["qual_fw"]], "C_qual_rev" = ACGT[["C"]][["qual_rev"]],
-        "G_counts_fw" = ACGT[["G"]][["counts_fw"]], "G_counts_rev" = ACGT[["G"]][["counts_rev"]], "G_qual_fw" = ACGT[["G"]][["qual_fw"]], "G_qual_rev" = ACGT[["G"]][["qual_rev"]],
-        "T_counts_fw" = ACGT[["T"]][["counts_fw"]], "T_counts_rev" = ACGT[["T"]][["counts_rev"]], "T_qual_fw" = ACGT[["T"]][["qual_fw"]], "T_qual_rev" = ACGT[["T"]][["qual_rev"]],
+        "A_counts_fw" = ACGT[["A"]][["counts_fw"]], "A_counts_rev" = ACGT[["A"]][["counts_rev"]],
+        "A_qual_fw" = ACGT[["A"]][["qual_fw"]], "A_qual_rev" = ACGT[["A"]][["qual_rev"]],
+        "C_counts_fw" = ACGT[["C"]][["counts_fw"]], "C_counts_rev" = ACGT[["C"]][["counts_rev"]],
+        "C_qual_fw" = ACGT[["C"]][["qual_fw"]], "C_qual_rev" = ACGT[["C"]][["qual_rev"]],
+        "G_counts_fw" = ACGT[["G"]][["counts_fw"]], "G_counts_rev" = ACGT[["G"]][["counts_rev"]],
+        "G_qual_fw" = ACGT[["G"]][["qual_fw"]], "G_qual_rev" = ACGT[["G"]][["qual_rev"]],
+        "T_counts_fw" = ACGT[["T"]][["counts_fw"]], "T_counts_rev" = ACGT[["T"]][["counts_rev"]],
+        "T_qual_fw" = ACGT[["T"]][["qual_fw"]], "T_qual_rev" = ACGT[["T"]][["qual_rev"]],
         "coverage" =  covmat
       ),
       colData = S4Vectors::DataFrame(sdf),
@@ -159,7 +176,7 @@ importMito.explicit <- function(Afile, Cfile, Gfile, Tfile,
       rowData = row_g_cov
     )
   }
-  return(SE)
+  return(list(SE, signac_object))
 }
 
 #---------------------------------------
@@ -191,9 +208,9 @@ importMito <- function(folder, ...){
   sv <- strsplit(gsub("_refAllele.txt", "", basename(referenceAlleleFile)), split = "[.]")[[1]]
   mitoChr <- sv[length(sv)]
   
-  SE <- importMito.explicit(Afile, Cfile, Gfile, Tfile,
-                            coverageFile, depthFile, referenceAlleleFile, mitoChr, ...)
-  return(SE)
+  SElist <- importMito.explicit(Afile, Cfile, Gfile, Tfile,
+                                coverageFile, depthFile, referenceAlleleFile, mitoChr, ...)
+  return(SElist)
 }
 
 
@@ -204,5 +221,6 @@ args <- commandArgs(trailingOnly = TRUE)
 folder <- args[1]
 name <- args[2]
 
-SE <- importMito(folder)
-saveRDS(SE, file = paste0(folder, "/", name, ".rds"))
+SElist <- importMito(folder)
+saveRDS(SElist[[1]], file = paste0(folder, "/", name, ".rds"))
+saveRDS(SElist[[2]], file = paste0(folder, "/", name, ".signac.rds"))

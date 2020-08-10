@@ -1,9 +1,13 @@
 
+# 0.5.7 
+- Automatically generate .rds file for use with Signac
+
 # 0.5.6
 - Added `tenx` mode for more efficient processing of large single-cell datasets
 
 # 0.5.0
 - Beta version distributed via PyPi
+- Revamped code used in mtscATAC-seq paper
 
 # 0.4.0
 - Fully separated by strand for counts / qualities
