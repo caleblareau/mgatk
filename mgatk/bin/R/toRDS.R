@@ -65,7 +65,8 @@ importMito.explicit <- function(Afile, Cfile, Gfile, Tfile,
       stop("Provide a valid file format for the alt allele abundances (.gz, .txt, .csv, or .tsv)")
     }
     
-    dt$sample <- factor(dt$sample, levels = samplesOrder)
+    # Encore same ordering as coverage for the sample factor 
+    dt[[2]] <- factor(as.character(dt[[2]]), levels = samplesOrder)
     
     if(dim(dt)[2] == 6){
       # including base qualities

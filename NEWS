@@ -1,4 +1,7 @@
 
+# 0.5.8
+- Fix (hopefully innocuous) bug thanks to @bobermayer 
+
 # 0.5.7 
 - Automatically generate .rds file for use with Signac
 
