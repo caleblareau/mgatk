@@ -1,3 +1,5 @@
+# 0.5.9
+- Fix bug in strand assignment in `(b)call` mode
 
 # 0.5.8
 - Fix (hopefully innocuous) bug thanks to @bobermayer 

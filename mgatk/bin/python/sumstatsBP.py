@@ -72,28 +72,28 @@ for read in bam2:
 	for qpos, refpos in read.get_aligned_pairs(True):
 		if qpos is not None and refpos is not None and align_qual_read > alignment_quality:
 			if(seq[qpos] == "A" and quality[qpos] > base_qual):
-				if(reverse):
+				if(not reverse):
 					qualA_fw[refpos] += quality[qpos]
 					countsA_fw[refpos] += 1
 				else:
 					qualA_rev[refpos] += quality[qpos]
 					countsA_rev[refpos] += 1
 			elif(seq[qpos] == "C" and quality[qpos] > base_qual):
-				if(reverse):
+				if(not reverse):
 					qualC_fw[refpos] += quality[qpos]
 					countsC_fw[refpos] += 1
 				else:
 					qualC_rev[refpos] += quality[qpos]
 					countsC_rev[refpos] += 1
 			elif(seq[qpos] == "G" and quality[qpos] > base_qual):
-				if(reverse):
+				if(not reverse):
 					qualG_fw[refpos] += quality[qpos]
 					countsG_fw[refpos] += 1
 				else:
 					qualG_rev[refpos] += quality[qpos]
 					countsG_rev[refpos] += 1
 			elif(seq[qpos] == "T" and quality[qpos] > base_qual):
-				if(reverse):
+				if(not reverse):
 					qualT_fw[refpos] += quality[qpos]
 					countsT_fw[refpos] += 1
 				else:
