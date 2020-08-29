@@ -4,7 +4,7 @@ Credits
 
 Development Lead
 ----------------
-* Caleb Lareau <caleblareau@g.harvard.edu>
+* Caleb Lareau <caleb.lareau@gmail.com>
 
 Supervisors
 ---------------
@@ -14,6 +14,7 @@ Supervisors
 Contributors
 ------------
 * Jeffrey Verboon
+* Kopal Garg
 * Leif Ludwig
 * Jacob Ulirsch
 
