@@ -208,7 +208,6 @@ def main(mode, input, output, name, mito_genome, ncores,
 			pool = Pool(processes=int(ncores))
 			pmblah = pool.starmap(split_chunk_file, zip(barcode_files, repeat(script_dir), repeat(input), repeat(bcbd), repeat(barcode_tag), repeat(mito_chr), repeat(umi_barcode)))
 			pool.close()
-			umi_barcode = "MU"
 		
 	
 		click.echo(gettime() + "Finished determining/splitting barcodes for genotyping.")
