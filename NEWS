@@ -1,3 +1,6 @@
+# 0.6.0
+- Functionality for mgatk-del
+
 # 0.5.9
 - Fix bug in strand assignment in `(b)call` mode
 

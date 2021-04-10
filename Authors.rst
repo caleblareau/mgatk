@@ -6,10 +6,6 @@ Development Lead
 ----------------
 * Caleb Lareau <caleb.lareau@gmail.com>
 
-Supervisors
----------------
-* Martin Aryee
-
 
 Contributors
 ------------
@@ -17,4 +13,5 @@ Contributors
 * Kopal Garg
 * Leif Ludwig
 * Jacob Ulirsch
+* Martin Aryee
 

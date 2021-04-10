@@ -15,7 +15,7 @@ if(FALSE){
 #-----------------
 args <- commandArgs(trailingOnly = TRUE)
 clip_file <- args[1]
-
+SA_file <- args[2]
 
 # positions that are frequently clipped
 blacklist <- c(1,296,299,300,301,3108,3564,3571,10934,13753,13760,16569)
@@ -76,6 +76,17 @@ df3 = df %>% mutate(SA_sup = case_when(pos %in% SA_positions$pos ~ T, TRUE~ F))%
   arrange(-SA) %>% arrange(-clipped) %>% ungroup() %>%
   mutate(clipped = ifelse(pos == 1 | pos == 16569, 0, clipped)) 
 
+# updates
+SA = fread(SA_file) %>%
+  mutate(out3 = case_when(out2 > out1 ~ out1, out1 >= out2 ~ out2)) %>%
+  mutate(out4 = case_when(out1 > out2 ~ out1, out2 >= out1 ~ out2)) %>%
+  subset(., select=-c(out1,out2)) %>% setNames(c('main', 'SA')) %>% arrange(-main) %>%
+  group_by(SA, main) %>% add_tally() %>% 
+  filter(n>1) %>% unique()
+
+SA <- SA %>% filter(!(SA %in% blacklist) & !(main %in% blacklist)) %>% 
+  setNames(c('position', 'supp_A', 'weight'))
+
 p3 = ggplot(df3, aes(x = pos, y = clipped)) +
   geom_col(aes(fill = as.factor(color)), width = 50,
            show.legend = FALSE) +
@@ -86,9 +97,10 @@ p3 = ggplot(df3, aes(x = pos, y = clipped)) +
     size = 2,
     show.legend = FALSE) +
   scale_color_manual(values=c("lightgrey", "black", "red")) +
-  theme_bw() +
+  theme_bw() + theme(legend.position = "none")+
   xlab("position") +
-  ylab("# of clipped reads")
+  ylab("# of clipped reads") +
+  geom_curve(aes(x = position, y = 0, xend = supp_A, yend = 0, alpha=weight), show.legend = TRUE,curvature=-0.5,data = SA)
 
 # save combined plot 
 out_base <- gsub(".clip.tsv","",clip_file)
