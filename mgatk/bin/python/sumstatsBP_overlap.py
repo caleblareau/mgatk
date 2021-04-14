@@ -72,15 +72,18 @@ for read in bam2:
 	ordered_bam2[read.query_name].append(read)
 
 for read_name in ordered_bam2:
+	# disregard singlets and multiplets
 	if len(ordered_bam2[read_name]) != 2:
 		continue
 	
+	# identify fwd and rev in a pair
 	read0, read1 = ordered_bam2[read_name]
 	if read0.is_reverse and not read1.is_reverse:
 		fwd_read, rev_read = read1, read0
 	elif not read0.is_reverse and read1.is_reverse:
 		fwd_read, rev_read = read0, read1
 	else:
+		# disregard a pair if both are the same strand
 		continue
 	
 	# gather what we need
