@@ -41,6 +41,8 @@ from multiprocessing import Pool
 @click.option('--keep-duplicates', '-kd', is_flag=True, help='Retained dupliate (presumably PCR) reads')
 @click.option('--umi-barcode', '-ub', default = "",  help='Read tag (generally two letters) to specify the UMI tag when removing duplicates for genotyping.')
 
+@click.option('--handle-overlap', '-ho', is_flag=True, help='Only count each base in the overlap region between a pair of reads once')
+
 @click.option('--max-javamem', '-jm', default = "8000m", help='Maximum memory for java for running duplicate removal per core. Default = 8000m.')
 
 @click.option('--proper-pairs', '-pp', is_flag=True, help='Require reads to be properly paired.')
@@ -62,7 +64,7 @@ from multiprocessing import Pool
 
 def main(mode, input, output, name, mito_genome, ncores,
 	cluster, jobs, barcode_tag, barcodes, min_barcode_reads,
-	nhmax, nmmax, keep_duplicates, umi_barcode, max_javamem, 
+	nhmax, nmmax, keep_duplicates, umi_barcode, handle_overlap, max_javamem, 
 	proper_pairs, base_qual, alignment_quality, emit_base_qualities,
 	nsamples, keep_samples, ignore_samples,
 	keep_temp_files, keep_qc_bams, skip_r, snake_stdout):
@@ -333,7 +335,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 		# add sqs to get .yaml to play friendly https://stackoverflow.com/questions/39262556/preserve-quotes-and-also-add-data-with-quotes-in-ruamel
 		dict1 = {'input_directory' : sqs(input), 'output_directory' : sqs(output), 'script_dir' : sqs(script_dir),
 			'fasta_file' : sqs(fastaf), 'mito_chr' : sqs(mito_chr), 'mito_length' : sqs(mito_length), 'name' : sqs(name),
-			'base_qual' : sqs(base_qual), 'remove_duplicates' : sqs(remove_duplicates),
+			'base_qual' : sqs(base_qual), 'remove_duplicates' : sqs(remove_duplicates), 'handle_overlap' : sqs(handle_overlap)
 			'barcode_tag' : sqs(barcode_tag), 'umi_barcode' : sqs(umi_barcode),
 			'alignment_quality' : sqs(alignment_quality), 'emit_base_qualities' : sqs(emit_base_qualities),
 			'proper_paired' : sqs(proper_pairs),
