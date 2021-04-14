@@ -8,6 +8,8 @@ import sys
 import re
 import os
 import pysam
+import numpy as np
+from collections import defaultdict
 
 bamfile = sys.argv[1]
 outpre = sys.argv[2]
