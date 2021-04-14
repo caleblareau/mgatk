@@ -335,7 +335,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 		# add sqs to get .yaml to play friendly https://stackoverflow.com/questions/39262556/preserve-quotes-and-also-add-data-with-quotes-in-ruamel
 		dict1 = {'input_directory' : sqs(input), 'output_directory' : sqs(output), 'script_dir' : sqs(script_dir),
 			'fasta_file' : sqs(fastaf), 'mito_chr' : sqs(mito_chr), 'mito_length' : sqs(mito_length), 'name' : sqs(name),
-			'base_qual' : sqs(base_qual), 'remove_duplicates' : sqs(remove_duplicates), 'handle_overlap' : sqs(handle_overlap)
+			'base_qual' : sqs(base_qual), 'remove_duplicates' : sqs(remove_duplicates), 'handle_overlap' : sqs(handle_overlap),
 			'barcode_tag' : sqs(barcode_tag), 'umi_barcode' : sqs(umi_barcode),
 			'alignment_quality' : sqs(alignment_quality), 'emit_base_qualities' : sqs(emit_base_qualities),
 			'proper_paired' : sqs(proper_pairs),
