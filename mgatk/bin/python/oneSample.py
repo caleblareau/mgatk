@@ -82,7 +82,7 @@ else: # just move the previous output
 pysam.index(outputbam)
 
 # 4) Get allele counts per sample / base pair and per-base quality scores
-if handle_overlap:
+if (handle_overlap == "True"):
 	alleleCountcall = " ".join([python, sumstatsBP_overlap_py, outputbam, prefixSM, mito_genome, mito_length, base_qual, sample, fasta_file, alignment_quality, emit_base_qualities])
 else:
 	alleleCountcall = " ".join([python, sumstatsBP_py, outputbam, prefixSM, mito_genome, mito_length, base_qual, sample, fasta_file, alignment_quality, emit_base_qualities])
