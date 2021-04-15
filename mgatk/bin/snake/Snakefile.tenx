@@ -21,6 +21,7 @@ barcode_tag = config["barcode_tag"]
 umi_barcode = config["umi_barcode"]
 emit_base_qualities = config["emit_base_qualities"]
 
+handle_overlap = config["handle_overlap"]
 proper_paired = config["proper_paired"]
 base_qual = str(config["base_qual"])
 alignment_quality = config["alignment_quality"]
@@ -109,7 +110,10 @@ rule process_one_slice:
 		pysam.index(output_bam)
 		
 		# Now collect the genotype counts
-		sumstats_tenx_py = script_dir + "/bin/python/sumstatsBPtenx.py"
+		if handle_overlap:
+			sumstats_tenx_py = script_dir + "/bin/python/sumstatsBPtenx_overlap.py"
+		else:
+			sumstats_tenx_py = script_dir + "/bin/python/sumstatsBPtenx.py"
 		pycall = " ".join(['python', sumstats_tenx_py, output_bam, barcodes_file, out_pre, mito_length, base_qual, fasta_file, alignment_quality, barcode_tag])
 		os.system(pycall)
 		
