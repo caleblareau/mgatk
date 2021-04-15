@@ -110,7 +110,7 @@ rule process_one_slice:
 		pysam.index(output_bam)
 		
 		# Now collect the genotype counts
-		if handle_overlap:
+		if handle_overlap == "True":
 			sumstats_tenx_py = script_dir + "/bin/python/sumstatsBPtenx_overlap.py"
 		else:
 			sumstats_tenx_py = script_dir + "/bin/python/sumstatsBPtenx.py"

@@ -42,7 +42,7 @@ for read in bam_input:
 	cell_barcode = getBarcode(read.tags)
 	if cell_barcode != "NA":
 		read_key = '$'.join([cell_barcode, read.query_name])
-		ordered_bam_input[read.read_key].append(read)
+		ordered_bam_input[read_key].append(read)
 
 # Dimension cell x position x letter x strand
 # Coverage associated with the bases
@@ -115,16 +115,16 @@ for read_key in ordered_bam_input:
 	fwd_aligned_pairs = fwd_read.get_aligned_pairs(True)
 	fwd_region = [pair for pair in fwd_aligned_pairs if pair[0] in fwd_use_idx]
 	for qpos, refpos in fwd_region:
-		if (refpos is not None) and (fwd_quality[qpos] > base_qual) and (fwd_seq[qpos] in dna_letter):
-			l_idx = dna_letters.index(seq[qpos])
+		if (refpos is not None) and (fwd_quality[qpos] > base_qual) and (fwd_seq[qpos] in dna_letters):
+			l_idx = dna_letters.index(fwd_seq[qpos])
 			ca[c_idx, refpos, l_idx, 0] += 1
 
 	# handle rev region
 	rev_aligned_pairs = rev_read.get_aligned_pairs(True)
 	rev_region = [pair for pair in rev_aligned_pairs if pair[0] in rev_use_idx]
 	for qpos, refpos in rev_region:
-		if (refpos is not None) and (rev_quality[qpos] > base_qual) and (rev_seq[qpos] in dna_letter):
-			l_idx = dna_letters.index(seq[qpos])
+		if (refpos is not None) and (rev_quality[qpos] > base_qual) and (rev_seq[qpos] in dna_letters):
+			l_idx = dna_letters.index(rev_seq[qpos])
 			ca[c_idx, refpos, l_idx, 1] += 1
 
 
