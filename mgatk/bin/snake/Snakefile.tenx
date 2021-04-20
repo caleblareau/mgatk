@@ -52,7 +52,7 @@ rule all:
 		mgatk_directory + "/final/" + name + ".C.txt.gz",
 		mgatk_directory + "/final/" + name + ".G.txt.gz",
 		mgatk_directory + "/final/" + name + ".T.txt.gz",	
-		mgatk_directory + "/final/" + name + ".coverage.txt.gz"
+		mgatk_directory + "/final/" + name + ".coverage.txt.gz",
 		mgatk_directory + "/final/" + name + "variant_stats.tsv.gz",
 		mgatk_directory + "/final/" + name + "cell_heteroplasmic_df.tsv.gz",
 		mgatk_directory + "/final/" + name + "vmr_strand_plot.png"
@@ -162,7 +162,7 @@ rule call_variants:
 		A = mgatk_directory + "/final/" + name + ".A.txt.gz",
 		C = mgatk_directory + "/final/" + name + ".C.txt.gz",
 		G = mgatk_directory + "/final/" + name + ".G.txt.gz",
-		T = mgatk_directory + "/final/" + name + ".T.txt.gz"
+		T = mgatk_directory + "/final/" + name + ".T.txt.gz",
 		chrM_ref = mgatk_directory + "/final/" + name + "chrM_refAllele.txt"
 
 	output:
