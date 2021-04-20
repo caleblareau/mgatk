@@ -158,8 +158,8 @@ plt.axhline(np.log10(0.01), color='red', alpha=0.4, linestyle=':')
 plt.axvline(0.65, color='red', alpha=0.4, linestyle=':')
 plt.xlabel('strand correlation', fontsize=20)
 plt.ylabel('log10(VMR)', fontsize=20)
-plt.savefig(MGATK_OUT_DIR + 'vmr_strand_plot.png')
 
 # save results
+plt.savefig(MGATK_OUT_DIR + sample_prefix + '.vmr_strand_plot.png')
 variant_output.to_csv(MGATK_OUT_DIR + sample_prefix + '.variant_stats.tsv.gz', sep='\t',compression='gzip', index=False)
 heteroplasmic_df.to_csv(MGATK_OUT_DIR + sample_prefix + '.cell_heteroplasmic_df.tsv.gz', sep='\t',compression='gzip')
