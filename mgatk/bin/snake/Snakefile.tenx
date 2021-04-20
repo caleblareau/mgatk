@@ -27,6 +27,7 @@ base_qual = str(config["base_qual"])
 alignment_quality = config["alignment_quality"]
 NHmax = config["NHmax"]
 NMmax = config["NMmax"]
+low_coverage_threshold = config["low_coverage_threshold"]
 
 max_javamem  = config["max_javamem"]
 
@@ -154,4 +155,28 @@ rule make_final_sparse_matrices:
 		makeSM(input.Ts, "T")
 		makeSM(input.Covs, "coverage")
 		
+rule call_variants:
+	input:
+		A = mgatk_directory + "/final/" + name + ".A.txt.gz",
+		C = mgatk_directory + "/final/" + name + ".C.txt.gz",
+		G = mgatk_directory + "/final/" + name + ".G.txt.gz",
+		T = mgatk_directory + "/final/" + name + ".T.txt.gz"
+		chrM_ref = mgatk_directory + "/final/" + name + "chrM_refAllele.txt"
+
+	output:
+		variant_stats = outdir + "variant_stats.tsv.gz",
+		heteroplasmy_df = outdir + "cell_heteroplasmic_df.tsv.gz",
+		vmr_strand_plot = outdir + "vmr_strand_plot.png"
 		
+	run:
+		call_variant_py = script_dir + "/bin/python/variant_calling.py"
+		pycall = " ".join(['python', call_variant_py, mgatk_directory + "/final/", mito_length, low_coverage_threshold])
+		os.system(pycall)
+
+
+
+
+
+
+
+
