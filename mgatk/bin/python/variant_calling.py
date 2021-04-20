@@ -80,8 +80,9 @@ def gather_possible_variants(base_coverage_dict, reference_file):
 
 
 MGATK_OUT_DIR = sys.argv[1]
-mito_length = int(sys.argv[2])  # 16569
-low_coverage_threshold = int(sys.argv[3])  # 10
+sample_prefix = sys.argv[2]
+mito_length = int(sys.argv[3])  # 16569
+low_coverage_threshold = int(sys.argv[4])  # 10
 letters = list('ATCG')
 
 base_coverage_dict = load_mgatk_output(MGATK_OUT_DIR)
@@ -144,7 +145,7 @@ variant_output.columns = ['position', 'nucleotide', 'variant', 'vmr', 'mean', 'v
 						  'n_cells_conf_detected', 'n_cells_over_5',
 						  'n_cells_over_10', 'n_cells_over_20', 'strand_correlation', 'mean_coverage']
 variant_output[['vmr', 'mean', 'variance', 'strand_correlation', 'mean_coverage']] = variant_output[['vmr', 'mean', 'variance', 'strand_correlation',
-																									 'mean_coverage']].astype(np.float)
+																									 'mean_coverage']].astype(float)
 
 # exclude variants with only 0 entries after low coverage filtering
 variant_output = variant_output[variant_output['vmr'] > 0]
@@ -160,5 +161,5 @@ plt.ylabel('log10(VMR)', fontsize=20)
 plt.savefig(MGATK_OUT_DIR + 'vmr_strand_plot.png')
 
 # save results
-variant_output.to_csv(MGATK_OUT_DIR + 'variant_stats.tsv.gz', sep='\t',compression='gzip', index=False)
-heteroplasmic_df.to_csv(MGATK_OUT_DIR + 'cell_heteroplasmic_df.tsv.gz', sep='\t',compression='gzip')
+variant_output.to_csv(MGATK_OUT_DIR + sample_prefix + '.variant_stats.tsv.gz', sep='\t',compression='gzip', index=False)
+heteroplasmic_df.to_csv(MGATK_OUT_DIR + sample_prefix + '.cell_heteroplasmic_df.tsv.gz', sep='\t',compression='gzip')

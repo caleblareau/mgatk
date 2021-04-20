@@ -53,9 +53,9 @@ rule all:
 		mgatk_directory + "/final/" + name + ".G.txt.gz",
 		mgatk_directory + "/final/" + name + ".T.txt.gz",	
 		mgatk_directory + "/final/" + name + ".coverage.txt.gz",
-		mgatk_directory + "/final/" + name + "variant_stats.tsv.gz",
-		mgatk_directory + "/final/" + name + "cell_heteroplasmic_df.tsv.gz",
-		mgatk_directory + "/final/" + name + "vmr_strand_plot.png"
+		mgatk_directory + "/final/" + name + ".variant_stats.tsv.gz",
+		mgatk_directory + "/final/" + name + ".cell_heteroplasmic_df.tsv.gz",
+		mgatk_directory + "/final/" + name + ".vmr_strand_plot.png"
 
 rule process_one_slice:
 	input:
@@ -166,13 +166,13 @@ rule call_variants:
 		chrM_ref = mgatk_directory + "/final/chrM_refAllele.txt"
 
 	output:
-		variant_stats = mgatk_directory + "/final/" + name + "variant_stats.tsv.gz",
-		heteroplasmy_df = mgatk_directory + "/final/" + name + "cell_heteroplasmic_df.tsv.gz",
-		vmr_strand_plot = mgatk_directory + "/final/" + name + "vmr_strand_plot.png"
+		variant_stats = mgatk_directory + "/final/" + name + ".variant_stats.tsv.gz",
+		heteroplasmy_df = mgatk_directory + "/final/" + name + ".cell_heteroplasmic_df.tsv.gz",
+		vmr_strand_plot = mgatk_directory + "/final/" + name + ".vmr_strand_plot.png"
 		
 	run:
 		call_variant_py = script_dir + "/bin/python/variant_calling.py"
-		pycall = " ".join(['python', call_variant_py, mgatk_directory + "/final/", mito_length, low_coverage_threshold])
+		pycall = " ".join(['python', call_variant_py, mgatk_directory + "/final/", name, mito_length, low_coverage_threshold])
 		os.system(pycall)
 
 
