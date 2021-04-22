@@ -29,6 +29,7 @@ remove_duplicates = config["remove_duplicates"]
 umi_barcode = config["umi_barcode"]
 emit_base_qualities = config["emit_base_qualities"]
 
+handle_overlap = config["handle_overlap"]
 proper_paired = config["proper_paired"]
 base_qual = str(config["base_qual"])
 alignment_quality = config["alignment_quality"]
@@ -45,6 +46,7 @@ python = "python"
 filtclip_py = script_dir + "/bin/python/filterClipBam.py"
 detailedcall_py = script_dir + "/bin/python/detailedCalls.py"
 sumstatsBP_py = script_dir + "/bin/python/sumstatsBP.py"
+sumstatsBP_overlap_py = script_dir + "/bin/python/sumstatsBP_overlap.py"
 picardCall = java + " -Xmx"+max_javamem+"  -jar " + script_dir + "/bin/picard.jar MarkDuplicates"
 
 # Prepare filepath locations
@@ -80,7 +82,10 @@ else: # just move the previous output
 pysam.index(outputbam)
 
 # 4) Get allele counts per sample / base pair and per-base quality scores
-alleleCountcall = " ".join([python, sumstatsBP_py, outputbam, prefixSM, mito_genome, mito_length, base_qual, sample, fasta_file, alignment_quality, emit_base_qualities])
+if (handle_overlap == "True"):
+	alleleCountcall = " ".join([python, sumstatsBP_overlap_py, outputbam, prefixSM, mito_genome, mito_length, base_qual, sample, fasta_file, alignment_quality, emit_base_qualities])
+else:
+	alleleCountcall = " ".join([python, sumstatsBP_py, outputbam, prefixSM, mito_genome, mito_length, base_qual, sample, fasta_file, alignment_quality, emit_base_qualities])
 os.system(alleleCountcall)
 
 # 5) Get depth from the coverage sparse matrix

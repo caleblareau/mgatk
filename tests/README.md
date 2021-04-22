@@ -18,7 +18,7 @@ mgatk tenx -i barcode/test_barcode.bam -n bc1 -o bc1dmem -bt CB -b barcode/test_
 
 **Option 2**
 ```
-mgatk bcall -i barcode/test_barcode.bam -n bc2 -o bc2d -bt DB -mb 200 -z
+mgatk bcall -i barcode/test_barcode.bam -n bc2 -o bc2d -bt CB -mb 200 -z
 ```
 
 ## Filtering out UMI barcodes
