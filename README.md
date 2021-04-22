@@ -4,6 +4,7 @@
 
 [![PyPI version](https://badge.fury.io/py/mgatk.svg)](https://pypi.python.org/pypi/mgatk)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Downloads](https://pepy.tech/badge/mgatk/month)](https://pepy.tech/project/mgatk)
 
 [Source code is made freely available](http://github.com/caleblareau/mgatk)
 and a packaged install version is provided through [PyPi](https://pypi.python.org/pypi/mgatk/).
