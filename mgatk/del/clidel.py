@@ -32,8 +32,8 @@ from multiprocessing import Pool
 @click.option('--right-coordinates', '-rc', default = "1000", help='Comma separated values for right coordinate of deletions; see wiki')
 
 @click.option('--read-length', '-rl', default = "72", help='Expected length of a single read from the .bam file')
-@click.option('--window-far', '-wf', default = "9", help='TTJ.')
-@click.option('--window-near', '-wn', default = "24", help='TTJ.')
+@click.option('--near-param', '-np', default = "9", help='Number of bases from the start of each read mates ignored for estimating heteroplasmy.')
+@click.option('--far-param', '-fp', default = "24", help='Number of bases inside the insert of the read mates ignored for estimating heteroplasmy.')
 
 @click.option('--keep-temp-files', '-z', is_flag=True, help='Keep all intermediate files.')
 @click.option('--snake-stdout', '-so', is_flag=True, help='Write snakemake log to sdout rather than a file.')

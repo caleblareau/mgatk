@@ -1,3 +1,7 @@
+# 0.6.1
+- Automated variant calling in python thanks to @vincent6liu
+- Command line option to handle overlapping mate reads thanks to @vincent6liu
+
 # 0.6.0
 - Functionality for mgatk-del
 
