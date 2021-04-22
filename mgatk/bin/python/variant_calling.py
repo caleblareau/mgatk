@@ -94,6 +94,12 @@ for nt in base_coverage_dict:
 	total_coverage += base_coverage_dict[nt][0]
 	total_coverage += base_coverage_dict[nt][1]
 
+# exclude low coverage cells from variant calling
+cell_barcodes = total_coverage.index[total_coverage.mean(axis=1) > low_coverage_threshold]
+for nt in base_coverage_dict:
+    base_coverage_dict[nt] = (base_coverage_dict[nt][0].loc[cell_barcodes, :], base_coverage_dict[nt][1].loc[cell_barcodes, :])
+total_coverage = total_coverage.loc[cell_barcodes, :]
+
 # call potential variants
 variants = gather_possible_variants(base_coverage_dict, MGATK_OUT_DIR + 'chrM_refAllele.txt')
 variant_names = ['{}{}>{}'.format(x[0], x[1], x[2]) for x in variants]
@@ -102,11 +108,11 @@ variant_names = ['{}{}>{}'.format(x[0], x[1], x[2]) for x in variants]
 total_coverage_variant_df = []
 fwd_cell_variant_df, rev_cell_variant_df = [], []
 for i, var in enumerate(variants):
-	var_name = variant_names[i]
-	pos, base = var[0], var[2]
-	total_coverage_variant_df.append(total_coverage[pos])
-	fwd_cell_variant_df.append(base_coverage_dict[base][0][pos].values)
-	rev_cell_variant_df.append(base_coverage_dict[base][1][pos].values)
+    var_name = variant_names[i]
+    pos, base = var[0], var[2]
+    total_coverage_variant_df.append(total_coverage[pos])
+    fwd_cell_variant_df.append(base_coverage_dict[base][0][pos].values)
+    rev_cell_variant_df.append(base_coverage_dict[base][1][pos].values)
 total_coverage_variant_df = pd.DataFrame(np.array(total_coverage_variant_df).T, index=cell_barcodes, columns=variant_names)
 fwd_cell_variant_df = pd.DataFrame(np.array(fwd_cell_variant_df).T, index=cell_barcodes, columns=variant_names)
 rev_cell_variant_df = pd.DataFrame(np.array(rev_cell_variant_df).T, index=cell_barcodes, columns=variant_names)
@@ -116,14 +122,14 @@ all_cell_variant_df = fwd_cell_variant_df + rev_cell_variant_df
 heteroplasmic_df = all_cell_variant_df / total_coverage_variant_df
 
 # strand correlation
-mask_idx = (fwd_cell_variant_df+rev_cell_variant_df)==0  # set 0 on both strands to nan to exclude from correlation calculation
+mask_idx = (fwd_cell_variant_df + rev_cell_variant_df) == 0  # set 0 on both strands to nan to exclude from correlation calculation
 fwd_cell_variant_df[mask_idx] = np.nan
 rev_cell_variant_df[mask_idx] = np.nan
-variant_strand_corr = fwd_cell_variant_df.corrwith(rev_cell_variant_df)
+variant_strand_corr = fwd_cell_variant_df.corrwith(rev_cell_variant_df).round(3)
 
 # vmr
 variant_mean = all_cell_variant_df.sum() / total_coverage_variant_df.sum()
-variant_var = heteroplasmic_df[all_cell_variant_df > low_coverage_threshold].var().fillna(0)
+variant_var = heteroplasmic_df.var()
 variant_vmr = variant_var / (variant_mean + 0.00000000001)
 
 # compute other summary stats
@@ -133,33 +139,37 @@ variant_n_cells_conf_detected = ((fwd_cell_variant_df >= 2) & (rev_cell_variant_
 variant_n_cells_over_5 = (heteroplasmic_df >= 0.05).sum()
 variant_n_cells_over_10 = (heteroplasmic_df >= 0.1).sum()
 variant_n_cells_over_20 = (heteroplasmic_df >= 0.2).sum()
+variant_n_cells_over_95 = (heteroplasmic_df >= 0.95).sum()
+max_heteroplasmy = heteroplasmic_df.max()
 variant_mean_coverage = total_coverage_variant_df.mean()
 
 # pack summary stats
 variant_output = pd.DataFrame([variant_positon, variant_nucleotide, variant_names,
-							variant_vmr, variant_mean, variant_var,
-							variant_n_cells_conf_detected, variant_n_cells_over_5,
-							variant_n_cells_over_10, variant_n_cells_over_20,
-							variant_strand_corr, variant_mean_coverage]).T
+                            variant_vmr, variant_mean, variant_var,
+                            variant_n_cells_conf_detected, variant_n_cells_over_5,
+                            variant_n_cells_over_10, variant_n_cells_over_20, variant_n_cells_over_95,
+                            max_heteroplasmy, variant_strand_corr, variant_mean_coverage]).T
 variant_output.columns = ['position', 'nucleotide', 'variant', 'vmr', 'mean', 'variance',
-						  'n_cells_conf_detected', 'n_cells_over_5',
-						  'n_cells_over_10', 'n_cells_over_20', 'strand_correlation', 'mean_coverage']
-variant_output[['vmr', 'mean', 'variance', 'strand_correlation', 'mean_coverage']] = variant_output[['vmr', 'mean', 'variance', 'strand_correlation',
-																									 'mean_coverage']].astype(float)
+                          'n_cells_conf_detected', 'n_cells_over_5',
+                          'n_cells_over_10', 'n_cells_over_20', 'n_cells_over_95',
+                          'max_heteroplasmy', 'strand_correlation', 'mean_coverage']
+variant_output[['vmr', 'mean', 'variance', 'strand_correlation', 'mean_coverage', 'max_heteroplasmy']] = variant_output[['vmr', 'mean', 'variance', 'strand_correlation',
+                                                                                                                         'mean_coverage', 'max_heteroplasmy']].astype(np.float)
 
-# exclude variants with only 0 entries after low coverage filtering
-variant_output = variant_output[variant_output['vmr'] > 0]
-heteroplasmic_df = heteroplasmic_df[variant_output['variant']]
-
-# generate caleb plot
-plt.figure(figsize=(10, 8))
-plt.scatter(variant_output['strand_correlation'], np.log10(variant_output['vmr']), s=5)
-plt.axhline(np.log10(0.01), color='red', alpha=0.4, linestyle=':')
-plt.axvline(0.65, color='red', alpha=0.4, linestyle=':')
-plt.xlabel('strand correlation', fontsize=20)
-plt.ylabel('log10(VMR)', fontsize=20)
+# exclude variants with less than three cells
+multi_cell_variants = variant_output[variant_output['n_cells_conf_detected'] >= 3]['variant']
+heteroplasmic_df = heteroplasmic_df[multi_cell_variants]
 
 # save results
 plt.savefig(MGATK_OUT_DIR + sample_prefix + '.vmr_strand_plot.png')
 variant_output.to_csv(MGATK_OUT_DIR + sample_prefix + '.variant_stats.tsv.gz', sep='\t',compression='gzip', index=False)
 heteroplasmic_df.to_csv(MGATK_OUT_DIR + sample_prefix + '.cell_heteroplasmic_df.tsv.gz', sep='\t',compression='gzip')
+
+# generate caleb plot
+plt.figure(figsize=(10, 8))
+plt.scatter(variant_output[variant_output['variant'].isin(multi_cell_variants)]['strand_correlation'],
+	np.log10(variant_output[variant_output['variant'].isin(multi_cell_variants)]['vmr']), s=5)
+plt.axhline(np.log10(0.01), color='red', alpha=0.4, linestyle=':')
+plt.axvline(0.65, color='red', alpha=0.4, linestyle=':')
+plt.xlabel('strand correlation', fontsize=20)
+plt.ylabel('log10(VMR)', fontsize=20)
