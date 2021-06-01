@@ -22,8 +22,8 @@ setup(
     entry_points={
         'console_scripts': [
             'mgatk = mgatk.cli:main',
-            'mgatk-del-find = mgatk.del.clifind:main',
-            'mgatk-del = mgatk.del.clidel:main'
+            'mgatk-del-find = mgatk.delete.clifind:main',
+            'mgatk-del = mgatk.delete.clidel:main'
         ],
     },
     classifiers=[
