@@ -9,6 +9,7 @@ import itertools
 import time
 import pysam
 import math
+import glob
 
 from pkg_resources import get_distribution
 from subprocess import call, check_call
@@ -20,7 +21,7 @@ from multiprocessing import Pool
 
 @click.command()
 @click.version_option()
-@click.argument('mode', type=click.Choice(['bcall', 'call', 'tenx', 'check','support']))
+@click.argument('mode', type=click.Choice(['bcall', 'call', 'tenx', 'check', 'support', 'remove-background']))
 @click.option('--input', '-i', default = ".", required=True, help='Input; either directory of singular .bam file; see documentation. REQUIRED.')
 @click.option('--output', '-o', default="mgatk_out", help='Output directory for analysis required for `call` and `bcall`. Default = mgatk_out')
 @click.option('--name', '-n', default="mgatk",  help='Prefix for project name. Default = mgatk')
@@ -60,16 +61,19 @@ from multiprocessing import Pool
 @click.option('--skip-R', '-sr', is_flag=True, help='Generate plain-text only output. Otherwise, this generates a .rds obejct that can be immediately read into R for downstream analysis.')
 @click.option('--snake-stdout', '-so', is_flag=True, help='Write snakemake log to sdout rather than a file. May be necessary for certain HPC environments.')
 
+@click.option('--ncells_fg', '-nfg', default = 1000,  help='number of "foreground" cells to use for CellBender. Default = 1000.')
+@click.option('--ncells_bg', '-nbg', default = 20000,  help='number of "background" cells to use for CellBender. Default = 20000.')
+
 def main(mode, input, output, name, mito_genome, ncores,
 	cluster, jobs, barcode_tag, barcodes, min_barcode_reads,
 	nhmax, nmmax, keep_duplicates, umi_barcode, max_javamem, 
 	proper_pairs, base_qual, alignment_quality, emit_base_qualities,
 	nsamples, keep_samples, ignore_samples,
-	keep_temp_files, keep_qc_bams, skip_r, snake_stdout):
+	     keep_temp_files, keep_qc_bams, skip_r, snake_stdout, ncells_fg, ncells_bg):
 	
 	"""
 	mgatk: a mitochondrial genome analysis toolkit. \n
-	MODE = ['bcall', 'call', 'tenx', 'check', 'support'] \n
+	MODE = ['bcall', 'call', 'tenx', 'check', 'support', 'remove-background'] \n
 	See https://github.com/caleblareau/mgatk/wiki for more details.
 	"""
 	
@@ -94,14 +98,15 @@ def main(mode, input, output, name, mito_genome, ncores,
 	if remove_duplicates:
 		check_software_exists("java")
 	
-	if (mode == "call" or mode == "tenx" or mode == "bcall"):
-		if not skip_r:
-			check_software_exists("R")
-			check_R_packages(["data.table", "SummarizedExperiment", "GenomicRanges", "Matrix"])
-	
+	if (mode == "call" or mode == "tenx" or mode == "bcall") and not skip_r:
+		check_software_exists("R")
+		check_R_packages(["data.table", "SummarizedExperiment", "GenomicRanges", "Matrix"])
+	elif (mode=='remove-background'):
+		check_software_exists("R")
+		check_R_packages(["data.table", "SummarizedExperiment", "GenomicRanges", "Matrix", "optparse", "dplyr", "tidyr", "hdf5r"])
 	
 	# Determine which genomes are available
-	rawsg = os.popen('ls ' + script_dir + "/bin/anno/fasta/*.fasta").read().strip().split("\n")
+	rawsg = glob.glob(script_dir + "/bin/anno/fasta/*.fasta")
 	supported_genomes = [x.replace(script_dir + "/bin/anno/fasta/", "").replace(".fasta", "") for x in rawsg]  
 	
 	if(mode == "support"):
@@ -219,7 +224,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 	if(mode == "check" or mode == "call"):
 	
 		bams = []
-		bams = os.popen('ls ' + input + '/*.bam').read().strip().split("\n")
+		bams = glob.glob(input + '/*.bam')
 
 		if bams[0] == '':
 			sys.exit('ERROR: Could not import any samples from the user specification; check flags, logs and input configuration; QUITTING')
@@ -408,19 +413,62 @@ def main(mode, input, output, name, mito_genome, ncores,
 		os.system(snakecmd_gather)
 	
 	if(mode == "call" or mode == "tenx"):
-	
+
 		# Make .rds file from the output
 		Rcall = "Rscript " + script_dir + "/bin/R/toRDS.R " + output + "/final " + name
 		os.system(Rcall)
 		click.echo(gettime() + "Successfully created final output files", logf)
+
+	if(mode == "remove-background"):
+			
+		of = output
 	
+		logf = open(output + "/logs" + "/bg.mgatk.log", 'a')
+		# prepare mgatk output for CellBender
+		# check that software exists
+		check_software_exists("Rscript")
+		cellbender_input_dir = output + "/cellbender_input"
+		make_folder(cellbender_input_dir)
+		# call prepare_cellbender.R to convert mgatk output to cellbender input for variable positions (specify cutoffs on --n_cells_conf_detected, --strand_correlation and --vmr as well?)"
+		Rcall = "Rscript " + script_dir + "/bin/R/prepare_cellbender.R -i " + output + "/final -o " + cellbender_input_dir
+		os.system(Rcall)
+		#print(Rcall)
+		click.echo(gettime() + "Prepared input for CellBender", logf)
+
+		# run CellBender
+		# check that software exists
+		# check_software_exists("cellbender")
+		cellbender_output_dir = output + "/cellbender_output"
+		make_folder(cellbender_output_dir)
+        # pass other arguments to cellbender?
+		cellbender_cmd = "cellbender remove-background --input " + output + "/cellbender_input --output " + output + "/cellbender_output/" + name + ".h5 --expected-cells " + str(ncells_fg) + " --total-droplets-included " + str(ncells_bg) + " --fpr 0.01 --epochs 100 --low-count-threshold 1"
+		os.system(cellbender_cmd)
+		#print(cellbender_cmd)
+		click.echo(gettime() + "Finished CellBender run", logf)
+
+		# convert CellBender output (here we could restrict the output to good cells only with the --cells argument, expects the barcodes.tsv file)
+		Rcall = "Rscript " + script_dir + "/bin/R/convert_cellbender_output.R -i " + output + "/final -c " + output + "/cellbender_output/" + name + ".h5 -o " + output + "/final/" + name + "_filtered.rds"
+		os.system(Rcall)
+		#print(Rcall)
+		click.echo(gettime() + "Converted CellBender output", logf)
+
+		if keep_temp_files:
+			click.echo(gettime() + "Temporary files not deleted since --keep-temp-files was specified.", logf)
+		else:
+			shutil.rmtree(of + "/cellbender_input")
+			shutil.rmtree(of + "/cellbender_output")
+			click.echo(gettime() + "Intermediate files successfully removed.", logf)
+	
+		# Suspend logging
+		logf.close()
+
 	#--------
 	# Cleanup
 	#--------
 	if(mode == "call" or mode == "tenx"):
 		if keep_qc_bams:
 			click.echo(gettime() + "Final bams retained since --keep-qc-bams was specified.", logf)
-			dest = shutil.move(of + "/temp/ready_bam", of + "/qc_bam")  
+			dest = shutil.move(of + "/temp/ready_bam", of + "/qc_bam")	
 
 		if keep_temp_files:
 			click.echo(gettime() + "Temporary files not deleted since --keep-temp-files was specified.", logf)
@@ -428,8 +476,12 @@ def main(mode, input, output, name, mito_genome, ncores,
 			shutil.rmtree(of+ "/fasta")
 			shutil.rmtree(of + "/.internal")
 			shutil.rmtree(of + "/temp")
+			shutil.rmtree(of + "/cellbender_input")
+			shutil.rmtree(of + "/cellbender_output")
 			click.echo(gettime() + "Intermediate files successfully removed.", logf)
 		
 		# Suspend logging
 		logf.close()
+
+	
 	
