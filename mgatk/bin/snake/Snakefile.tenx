@@ -163,7 +163,7 @@ rule call_variants:
 		C = mgatk_directory + "/final/" + name + ".C.txt.gz",
 		G = mgatk_directory + "/final/" + name + ".G.txt.gz",
 		T = mgatk_directory + "/final/" + name + ".T.txt.gz",
-		chrM_ref = mgatk_directory + "/final/chrM_refAllele.txt"
+		chrM_ref = mgatk_directory + "/final/" + mito_genome + "_refAllele.txt"
 
 	output:
 		variant_stats = mgatk_directory + "/final/" + name + ".variant_stats.tsv.gz",
@@ -172,13 +172,6 @@ rule call_variants:
 		
 	run:
 		call_variant_py = script_dir + "/bin/python/variant_calling.py"
-		pycall = " ".join(['python', call_variant_py, mgatk_directory + "/final/", name, mito_length, low_coverage_threshold])
+		pycall = " ".join(['python', call_variant_py, mgatk_directory + "/final/", name, mito_length, low_coverage_threshold, mito_genome])
 		os.system(pycall)
-
-
-
-
-
-
-
 

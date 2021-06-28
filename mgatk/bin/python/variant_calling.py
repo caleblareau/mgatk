@@ -14,7 +14,7 @@ import matplotlib
 from matplotlib import pyplot as plt
 
 
-def load_mgatk_output(output_dir, mito_length=16569):
+def load_mgatk_output(output_dir, mito_length):
 	# assuming mgatk output naming convention
 	base_files = [glob.glob(output_dir + '*.{}.txt.gz'.format(nt))[0] for nt in 'ATCG']
 	
@@ -78,14 +78,16 @@ def gather_possible_variants(base_coverage_dict, reference_file):
 	
 	return variants
 
-
+# Parse arguments
 MGATK_OUT_DIR = sys.argv[1]
 sample_prefix = sys.argv[2]
 mito_length = int(sys.argv[3])  # 16569
 low_coverage_threshold = int(sys.argv[4])  # 10
+mito_genome = sys.argv[5]  # chrM
+
 letters = list('ATCG')
 
-base_coverage_dict = load_mgatk_output(MGATK_OUT_DIR)
+base_coverage_dict = load_mgatk_output(MGATK_OUT_DIR, mito_length)
 cell_barcodes = base_coverage_dict['A'][0].index
 
 # total coverage per position per cell
@@ -101,7 +103,7 @@ for nt in base_coverage_dict:
 total_coverage = total_coverage.loc[cell_barcodes, :]
 
 # call potential variants
-variants = gather_possible_variants(base_coverage_dict, MGATK_OUT_DIR + 'chrM_refAllele.txt')
+variants = gather_possible_variants(base_coverage_dict, MGATK_OUT_DIR + mito_genome +'_refAllele.txt')
 variant_names = ['{}{}>{}'.format(x[0], x[1], x[2]) for x in variants]
 
 # build two <cell by variant tables>, one for each strand
