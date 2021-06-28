@@ -8,6 +8,7 @@ import string
 import itertools
 import time
 import pysam
+import glob
 
 from pkg_resources import get_distribution
 from subprocess import call, check_call
@@ -68,7 +69,8 @@ def main(input, output, name, mito_chromosome, ncores,
 	# Determine samples for analysis
 	# -------------------------------
 	bams = []
-	bams = os.popen('ls ' + input + '/*.bam').read().strip().split("\n")
+	#bams = os.popen('ls ' + input + '/*.bam').read().strip().split("\n")
+	bams = glob.glob(input + '/*.bam')
 
 	if bams[0] == '':
 		sys.exit('ERROR: Could not import any samples from the user specification; check --input parameter; QUITTING')
