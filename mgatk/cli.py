@@ -424,11 +424,13 @@ def main(mode, input, output, name, mito_genome, ncores,
 	if(mode == "remove-background"):
 			
 		of = output
-	
+		check_software_exists("cellbender")
+		check_software_exists("Rscript")
+		
 		logf = open(output + "/logs" + "/bg.mgatk.log", 'a')
 		# prepare mgatk output for CellBender
 		# check that software exists
-		check_software_exists("Rscript")
+		
 		cellbender_input_dir = output + "/cellbender_input"
 		make_folder(cellbender_input_dir)
 		# call prepare_cellbender.R to convert mgatk output to cellbender input for variable positions (specify cutoffs on --n_cells_conf_detected, --strand_correlation and --vmr as well?)"
@@ -439,9 +441,10 @@ def main(mode, input, output, name, mito_genome, ncores,
 
 		# run CellBender
 		# check that software exists
-		# check_software_exists("cellbender")
+		
 		cellbender_output_dir = output + "/cellbender_output"
 		make_folder(cellbender_output_dir)
+		
         # pass other arguments to cellbender?
 		cellbender_cmd = "cellbender remove-background --input " + output + "/cellbender_input --output " + output + "/cellbender_output/" + name + ".h5 --expected-cells " + str(ncells_fg) + " --total-droplets-included " + str(ncells_bg) + " --fpr 0.01 --epochs 100 --low-count-threshold 1"
 		os.system(cellbender_cmd)
@@ -478,8 +481,6 @@ def main(mode, input, output, name, mito_genome, ncores,
 			shutil.rmtree(of+ "/fasta")
 			shutil.rmtree(of + "/.internal")
 			shutil.rmtree(of + "/temp")
-			shutil.rmtree(of + "/cellbender_input")
-			shutil.rmtree(of + "/cellbender_output")
 			click.echo(gettime() + "Intermediate files successfully removed.", logf)
 		
 		# Suspend logging

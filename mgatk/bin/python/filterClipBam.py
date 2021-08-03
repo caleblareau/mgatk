@@ -17,8 +17,12 @@ NHmax = sys.argv[5]
 NMmax = sys.argv[6]
 
 # https://github.com/pysam-developers/pysam/issues/509
+# https://pysam.readthedocs.io/en/latest/api.html using text
 bam = pysam.AlignmentFile(bamfile, "rb")
-out = pysam.AlignmentFile("-", "wb", template = bam)
+
+# Modify the header to account for CRA v2 nonsense
+new_header = str(bam.header).replace("@HD\tSO:coordinate", "@HD\tVN:1.5\tSO:coordinate")
+out = pysam.AlignmentFile("-", "wb", text = new_header)
 
 keepCount = 0
 filtCount = 0

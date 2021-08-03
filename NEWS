@@ -1,3 +1,6 @@
+# 0.6.3
+- Facilitate CellRanger-ATAC v2 bam file
+- Alpha version of remove-background 
 
 # 0.6.2
 - Fixed bug associated with tenx mode
