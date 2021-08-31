@@ -54,12 +54,16 @@ try:
 			
 			# Make a fake UMI from 1) cell barcode + 2) captured umi + 3) experiment
 			# all with just ACGTs so that picard doesn't bark at us. 
-			faux_umi = barcode_id[0:16] + umi_id + fauxdon[(int(barcode_id[17:]) - 1)]
-			
+			# Only do this if the last string element is a number (i.e channel in 10x convention)
+			if(barcode_id[-1].isnumeric()):
+				split_two = barcode_id.split("-")
+				faux_umi = split_two[0] + umi_id + fauxdon[(int(split_two[1]) - 1)]
+			else:
+				faux_umi = barcode_id + umi_id 
 			read.tags = read.tags + [("MU", faux_umi)]
 			out.write(read)
 			
-			
+
 except OSError: # Truncated bam file from previous iteration handle
 	print('Finished parsing bam')
 	
