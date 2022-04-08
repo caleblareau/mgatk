@@ -33,8 +33,8 @@ from multiprocessing import Pool
 @click.option('--right-coordinates', '-rc', default = "1000", help='Comma separated values for right coordinate of deletions; see wiki')
 
 @click.option('--read-length', '-rl', default = "72", help='Expected length of a single read from the .bam file')
-@click.option('--near-param', '-np', default = "9", help='Number of bases from the start of each read mates ignored for estimating heteroplasmy.')
-@click.option('--far-param', '-fp', default = "24", help='Number of bases inside the insert of the read mates ignored for estimating heteroplasmy.')
+@click.option('--window-outer', '-wo', default = "9", help='Number of bases from the start of each read mates ("outer" part of read) ignored for estimating heteroplasmy.')
+@click.option('--window-inner', '-wi', default = "24", help='Number of bases near the insert of the read mates ("outer" part of read) ignored for estimating heteroplasmy.')
 
 @click.option('--keep-temp-files', '-z', is_flag=True, help='Keep all intermediate files.')
 @click.option('--snake-stdout', '-so', is_flag=True, help='Write snakemake log to sdout rather than a file.')
@@ -42,7 +42,7 @@ from multiprocessing import Pool
 def main(input, output, name, mito_chromosome, ncores,
 	cluster, jobs, 
 	left_coordinates, right_coordinates,
-	read_length, window_far, window_near,
+	read_length, window_outer, window_inner,
 	keep_temp_files, snake_stdout):
 	
 	"""
@@ -140,11 +140,14 @@ def main(input, output, name, mito_chromosome, ncores,
 	click.echo(gettime() + "Genotyping samples with "+ncores+" threads.")
 	
 	# add sqs to get .yaml to play friendly https://stackoverflow.com/questions/39262556/preserve-quotes-and-also-add-data-with-quotes-in-ruamel
+	
+	# Note: during variable name updating, we changed
+	# near == outer; far == inner
 	dict1 = {'input_directory' : sqs(input), 'output_directory' : sqs(output), 'script_dir' : sqs(script_dir),
 		'name' : sqs(name),
 		'left_coordinates' : sqs(left_coordinates), 'right_coordinates' : sqs(right_coordinates),
 		'read_length' : sqs(read_length),
-		'window_far' : sqs(window_far), 'window_near' : sqs(window_near)}
+		'window_near' : sqs(window_outer), 'window_far' : sqs(window_inner)}
 	
 	# Potentially submit jobs to cluster
 	snakeclust = ""

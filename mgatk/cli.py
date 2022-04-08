@@ -122,7 +122,8 @@ def main(mode, input, output, name, mito_genome, ncores,
 	
 	# Remember that I started off as bcall as this will become overwritten
 	wasbcall = False
-	if(mode == "bcall" or mode == "tenx"):
+	continue_check = True
+	if(mode == "bcall" or mode == "tenx" or mode == "check"):
 	
 		if(barcode_tag == "X"):
 			sys.exit('ERROR: in `'+mode+'` mode, must specify a valid read tag ID (generally two letters).')
@@ -203,8 +204,9 @@ def main(mode, input, output, name, mito_genome, ncores,
 			mode = "call"
 			input = bcbd 
 			wasbcall = True
-			
-		if(mode == "tenx"):
+		
+		#
+		if(mode == "check" or mode == "tenx"):
 			barcode_files = split_barcodes_file(barcodes, math.ceil(file_len(barcodes)/int(ncores)), output)
 			samples = [os.path.basename(os.path.splitext(sample)[0]) for sample in barcode_files] 
 			samplebams = [of + "/temp/barcoded_bams/" + sample + ".bam" for sample in samples]
@@ -212,11 +214,14 @@ def main(mode, input, output, name, mito_genome, ncores,
 			if(umi_barcode == ""):
 				umi_barcode = "XX"
 			
-			# Enact the split in a parallel manner
-			pool = Pool(processes=int(ncores))
-			pmblah = pool.starmap(split_chunk_file, zip(barcode_files, repeat(script_dir), repeat(input), repeat(bcbd), repeat(barcode_tag), repeat(mito_chr), repeat(umi_barcode)))
-			pool.close()
+			# Enact the split in a parallel manner if necessary
+			if(mode == "tenx"):
+				pool = Pool(processes=int(ncores))
+				pmblah = pool.starmap(split_chunk_file, zip(barcode_files, repeat(script_dir), repeat(input), repeat(bcbd), repeat(barcode_tag), repeat(mito_chr), repeat(umi_barcode)))
+				pool.close()
+				
 			umi_barcode = "MU"
+			continue_check = False
 		
 	
 		click.echo(gettime() + "Finished determining/splitting barcodes for genotyping.")
@@ -224,7 +229,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 	# -------------------------------
 	# Determine samples for analysis
 	# -------------------------------
-	if(mode == "check" or mode == "call"):
+	if((mode == "check" or mode == "call") and continue_check):
 	
 		bams = []
 		bams = glob.glob(input + '/*.bam')
@@ -288,7 +293,7 @@ def main(mode, input, output, name, mito_genome, ncores,
 		
 	if(mode == "check"):
 		# Exit gracefully
-		sys.exit(gettime() + "mgatk check passed! "+nsamplesNote+" if same parameters are run in `call` mode")
+		sys.exit(gettime() + "mgatk check passed!")
 			
 
 	if(mode == "call" or mode == "tenx"):

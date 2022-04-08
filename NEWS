@@ -1,4 +1,8 @@
 
+# 0.6.6
+- Fix naming parameters in tags
+- update `check` issue with tenx mode
+
 # 0.6.4
 - Allow for barcodes with ACGT but not the -n convention
 
