@@ -30,7 +30,7 @@ def writePassingReads(bc_dict, mtchr):
 	'''
 	Write out reads to their corresponding files based on a barcode index
 	'''
-	bam = pysam.AlignmentFile(bamfile,'rb', threads=5)
+	bam = pysam.AlignmentFile(bamfile,'rb')
 	Itr = bam.fetch(str(mtchr),multiple_iterators=False)
 	for read in Itr:
 		read_barcode = getBarcode(read)
