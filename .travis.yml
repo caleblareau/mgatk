@@ -3,7 +3,7 @@ sudo: required
 dist: trusty
 
 python:
-  - "3.8"
+  - "nightly"
 
 before_install:
   - sudo apt-get install default-jre r-base-dev -y
