@@ -12,20 +12,7 @@ window_near = args[5]
 left_coordinates = args[6]
 right_coordinates = args[7]
 
-
-if(FALSE){
-  in_file = "/Users/clareau/dat/Research/AryeeResearch/lareau_dev/mgatk/tests/mgatk_out/temp/del/CACCACTAGGAGGCGA-1.qc.readStats.tsv"
-  out_file = "/Users/clareau/dat/Research/AryeeResearch/lareau_dev/mgatk/tests/mgatk_out/temp/del/CACCACTAGGAGGCGA-1.qc.readStats.tsv"
-  read_length = 72
-  window_far = 6
-  window_near = 28
-  left_coordinates = "6073"
-  right_coordinates = "13095"
-  left_coordinates = "6073,4000"
-  right_coordinates = "13095,8000"
-}
-
-
+# steps to process deletion coordinates
 process_coordinate <- function(string){
   as.numeric(strsplit(string, ",")[[1]])
 }
@@ -35,7 +22,7 @@ window_near <- as.numeric(window_near)
 left <- process_coordinate(left_coordinates)
 right <- process_coordinate(right_coordinates)
 
-
+# Key function to do the deletion calling
 compute_heteroplasmy_deletion <- function(file, breakpoint_l, breakpoint_r){
   
   # Define windows based on breakpoints

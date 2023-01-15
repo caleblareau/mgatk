@@ -7,7 +7,7 @@ dependencies = ['click', 'pysam', 'pytest', 'snakemake', 'biopython', 'numpy', '
 
 setup(
     name='mgatk',
-    version='0.6.6',
+    version='0.6.7',
     url='https://github.com/caleblareau/mgatk',
     license='MIT',
     author='Caleb Lareau',
@@ -22,8 +22,8 @@ setup(
     entry_points={
         'console_scripts': [
             'mgatk = mgatk.cli:main',
-            'mgatk-del-find = mgatk.del.clifind:main',
-            'mgatk-del = mgatk.del.clidel:main'
+            'mgatk-del-find = mgatk.deletioncalling.clifind:main',
+            'mgatk-del = mgatk.deletioncalling.clidel:main'
         ],
     },
     classifiers=[

@@ -1,4 +1,7 @@
 
+# 0.6.7
+- Updates to deletion calling module
+
 # 0.6.6
 - Fix naming parameters in tags
 - update `check` issue with tenx mode

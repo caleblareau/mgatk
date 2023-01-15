@@ -10,10 +10,14 @@ usage = "usage: %prog [options] [inputs] Software to process 1 bam file with spe
 opts = OptionParser(usage=usage)
 opts.add_option("-i", "--input", help="input single cell bam file")
 opts.add_option("-o", "--output", help="output filepath")
+
+# Parse options from command line
 options, arguments = opts.parse_args()
 inbam = options.input
 output_file = options.output
 bam_in = pysam.AlignmentFile(inbam, "rb")
+
+#Functions for deletion calling
 def process_cigar_for_clip_position(cigar, tuple):
     pos = 0
     # Case 1/2: start of read
@@ -35,6 +39,7 @@ def right_clip(cigar):
         return(1)
     else:
         return(0)
+        
 # fuzzy match lev distance
 def lev(a, b):
     if not a: return len(b)

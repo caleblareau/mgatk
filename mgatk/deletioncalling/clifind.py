@@ -51,7 +51,7 @@ def main(input, mito_chromosome, output):
 
 		# Case 1/2: start of read
 		if(cigar[1] == "H" or cigar[2] == "H" or
-		   cigar[1] == "S" or cigar[2] == "S"):
+			cigar[1] == "S" or cigar[2] == "S"):
 			pos = tuple[0][1]
 
 		# Case 2: end of read
@@ -109,18 +109,15 @@ def main(input, mito_chromosome, output):
 	clip_pos_count = np.array(clip_pos_count)
 	SA_count = np.array(SA_count)
 
-	cov = bam_in.count_coverage(mito_chromosome, quality_threshold=0,
-								read_callback='nofilter')
-	cov_out = np.array(np.add(np.add(cov[0], cov[1]), np.add(cov[2],
-					   cov[3])).tolist())
+	cov = bam_in.count_coverage(mito_chromosome, quality_threshold=0, read_callback='nofilter')
+	cov_out = np.array(np.add(np.add(cov[0], cov[1]), np.add(cov[2], cov[3])).tolist())
 
 	outfile_clip = output + '.clip.tsv'
 	with open(outfile_clip, 'w') as f:
 		writer = csv.writer(f, delimiter='\t')
 		idx = np.argsort(-clip_pos_count)
 		writer.writerow(['position', 'coverage', 'clip_count', 'SA'])
-		writer.writerows(zip(np.array(range(1, 16570))[idx], cov_out[idx],
-						 clip_pos_count[idx], SA_count[idx]))
+		writer.writerows(zip(np.array(range(1, 16570))[idx], cov_out[idx], clip_pos_count[idx], SA_count[idx]))
 
 	outputSA = output + '.SA.tsv'
 	with open(outputSA, 'w') as f:
