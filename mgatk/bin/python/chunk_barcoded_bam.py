@@ -16,19 +16,25 @@ umitag = sys.argv[6]
 base=os.path.basename(bamfile)
 basename=os.path.basename(os.path.splitext(bcfile)[0])
 
-def getBarcode(intags, tag_get):
+def getBarcode(read, tag_get):
 	'''
 	Parse out the barcode per-read
 	'''
-	for tg in intags:
-		if(tag_get == tg[0]):
-			return(tg[1])
-	return("AA")
+	# for tg in read.tags:
+	# 	if(tag_get == tg[0]):
+	# 		return(tg[1])
+	# return("AA")
+	# Using get_tag to get the results
+	try:
+		return read.get_tag(barcodeTag, tag_get)[0]
+	except Exception as e:
+		return ("AA")
+
 
 # Read in the barcodes
 with open(bcfile) as barcode_file_handle:
     content = barcode_file_handle.readlines()
-bc = [x.strip() for x in content] 
+bc = set([x.strip() for x in content]) # from list to set, so query becomes O(1)
 
 bam = pysam.AlignmentFile(bamfile, "rb")
 outname = outfolder + "/" + basename + ".bam"
@@ -42,13 +48,13 @@ fauxdon = [a + b + c + d for a in bases for b in bases for c in bases for d in b
 try:
 	Itr = bam.fetch(str(mtchr),multiple_iterators=False)
 	for read in Itr:
-		barcode_id = getBarcode(read.tags, barcodeTag)
+		barcode_id = getBarcode(read, barcodeTag)
 		
 		if(barcode_id in bc):
 		
 			# Now check for true UMI
 			if(umitag != "XX"): 
-				umi_id = getBarcode(read.tags, umitag)
+				umi_id = getBarcode(read, umitag)
 			else:
 				umi_id = ""
 			
