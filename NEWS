@@ -1,4 +1,7 @@
 
+# 0.6.8
+- Speedups for `tens` mode thanks to 
+
 # 0.6.7
 - Updates to deletion calling module
 
