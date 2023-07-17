@@ -1,14 +1,14 @@
 import pytest
 from click.testing import CliRunner
 from mgatk import cli
-import md5
+from hashlib import md5
 
 
 def file_checksums_equal(file1, file2):
     with open(file1) as f:
-        checksum1 = md5.new(f.read()).digest()
+        checksum1 = md5(f.read()).hexdigest()
     with open(file2) as f:
-        checksum2 = md5.new(f.read()).digest()
+        checksum2 = md5(f.read()).hexdigest()
     return checksum1==checksum2 
 
 
