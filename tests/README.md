@@ -1,9 +1,9 @@
 
 ## Standard usage
 ```
-mgatk call -i humanbam -o out -n glio
+mgatk call -i humanbam -o out -n glio -g hg19
 ```
-
+Here: we specify the reference genome b/c it was aligned to hg19 (16571 bp) instead of rCRS (16569), which is the default in `mgatk`
 
 ## Using bcall
 

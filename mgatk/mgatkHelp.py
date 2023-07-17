@@ -90,7 +90,6 @@ def verify_sample_mitobam(bam, mito_chr, mito_length):
 	idxs = pysam.idxstats(bam).split("\n")
 	nReads = 0
 	bam_length = 0
-	
 	# Pull out essentials from idxstats
 	for i in idxs:
 		if(i.split("\t")[0] == mito_chr):
