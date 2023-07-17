@@ -1,6 +1,9 @@
 
+# 0.6.9
+- UMI parsing fix for `tenx` mode thanks to @yaniv-el
+
 # 0.6.8
-- Speedups for `tens` mode thanks to 
+- Speedups for `tenx` mode thanks to @ruochiz
 
 # 0.6.7
 - Updates to deletion calling module

@@ -26,7 +26,7 @@ def getBarcode(read, tag_get):
 	# return("AA")
 	# Using get_tag to get the results
 	try:
-		return read.get_tag(barcodeTag, tag_get)[0]
+		return read.get_tag(tag_get)
 	except Exception as e:
 		return ("AA")
 
