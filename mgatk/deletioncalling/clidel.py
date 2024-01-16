@@ -13,7 +13,7 @@ import glob
 from pkg_resources import get_distribution
 from subprocess import call, check_call
 from mgatk.mgatkHelp import *
-from ruamel import yaml
+from ruamel.yaml import YAML
 from ruamel.yaml.scalarstring import SingleQuotedScalarString as sqs
 from multiprocessing import Pool
 
@@ -158,7 +158,9 @@ def main(input, output, name, mito_chromosome, ncores,
 			
 	y_s = of + "/.internal/parseltongue/snake.dels.yaml"
 	with open(y_s, 'w') as yaml_file:
-		yaml.dump(dict1, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
+		yaml=YAML()
+		yaml.default_flow_style = False
+		yaml.dump(dict1, yaml_file)
 	
 	cp_call = "cp " + y_s +  " " + logs + "/" + name + ".parameters_del.txt"
 	os.system(cp_call)

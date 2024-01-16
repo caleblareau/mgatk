@@ -1,4 +1,8 @@
 
+# 0.7.0
+- Fix deprecation error in yaml
+- Fix deprecation error in snakemake
+
 # 0.6.9
 - UMI parsing fix for `tenx` mode thanks to @yaniv-el
 

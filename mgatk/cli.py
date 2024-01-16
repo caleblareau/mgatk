@@ -14,7 +14,7 @@ import glob
 from pkg_resources import get_distribution
 from subprocess import call, check_call
 from .mgatkHelp import *
-from ruamel import yaml
+from ruamel.yaml import YAML
 from itertools import repeat
 from ruamel.yaml.scalarstring import SingleQuotedScalarString as sqs
 from multiprocessing import Pool
@@ -362,7 +362,9 @@ def main(mode, input, output, name, mito_genome, ncores,
 		
 		y_s = of + "/.internal/parseltongue/snake.scatter.yaml"
 		with open(y_s, 'w') as yaml_file:
-			yaml.dump(dict1, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
+			yaml=YAML()
+			yaml.default_flow_style = False
+			yaml.dump(dict1, yaml_file)
 		
 		cp_call = "cp " + y_s +  " " + logs + "/" + name + ".parameters.txt"
 		os.system(cp_call)
@@ -370,27 +372,25 @@ def main(mode, input, output, name, mito_genome, ncores,
 		if(mode == "call"):
 			
 			# Execute snakemake
-			snake_stats = logs + "/" + name + ".snakemake_scatter.stats"
 			snake_log = logs + "/" + name + ".snakemake_scatter.log"
 			
 			snake_log_out = ""
 			if not snake_stdout:
 				snake_log_out = ' &>' + snake_log
 				
-			snakecmd_scatter = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="'  + y_s + '" --stats '+snake_stats + snake_log_out
+			snakecmd_scatter = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.Scatter --cores '+ncores+' --config cfp="'  + y_s + '"' + snake_log_out
 			os.system(snakecmd_scatter)
 			
 		elif(mode == "tenx"):
 			
 			# Execute snakemake
-			snake_stats = logs + "/" + name + ".snakemake_tenx.stats"
 			snake_log = logs + "/" + name + ".snakemake_tenx.log"
 			
 			snake_log_out = ""
 			if not snake_stdout:
 				snake_log_out = ' &>' + snake_log
 				
-			snakecmd_tenx = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.tenx --cores '+ncores+' --config cfp="'  + y_s + '" --stats '+snake_stats + snake_log_out
+			snakecmd_tenx = 'snakemake'+snakeclust+' --snakefile ' + script_dir + '/bin/snake/Snakefile.tenx --cores '+ncores+' --config cfp="'  + y_s + '"'+ snake_log_out
 			os.system(snakecmd_tenx)
 		
 		click.echo(gettime() + "mgatk successfully processed the supplied .bam files", logf)
@@ -406,17 +406,18 @@ def main(mode, input, output, name, mito_genome, ncores,
 			'script_dir' : sqs(script_dir)}
 		y_g = mgatk_directory + "/.internal/parseltongue/snake.gather.yaml"
 		with open(y_g, 'w') as yaml_file:
-			yaml.dump(dict2, yaml_file, default_flow_style=False, Dumper=yaml.RoundTripDumper)
+			yaml=YAML()
+			yaml.default_flow_style = False
+			yaml.dump(dict2, yaml_file)
 		
 		# Snakemake gather
-		snake_stats = logs + "/" + name + ".snakemake_gather.stats"
 		snake_log = logs + "/" + name + ".snakemake_gather.log"
 		
 		snake_log_out = ""
 		if not snake_stdout:
 			snake_log_out = ' &>' + snake_log 
 			
-		snakecmd_gather = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Gather --cores 1 --config cfp="' + y_g + '" --stats '+snake_stats + snake_log_out
+		snakecmd_gather = 'snakemake --snakefile ' + script_dir + '/bin/snake/Snakefile.Gather --cores 1 --config cfp="' + y_g + '"' + snake_log_out
 		os.system(snakecmd_gather)
 	
 	if(mode == "call" or mode == "tenx"):
