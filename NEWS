@@ -1,4 +1,7 @@
 
+# 0.7.1
+- Fix various versioning bugs
+
 # 0.7.0
 - Fix deprecation error in yaml
 - Fix deprecation error in snakemake

@@ -19,8 +19,9 @@ from pkg_resources import get_distribution
 @click.option('--input', '-i', default = ".", required=True, help='Input; a single .bam file of reads to be processed.')
 @click.option('--mito-chromosome', '-mc', default = "chrM", required=True, help='Name of mtDNA chromosome in bam file (e.g. chrM or MT)')
 @click.option('--output', '-o', default = "mgatkdel_find", required=True, help='Name of output files prefix')
+@click.option('--mito-length', '-ml', default = 16569, help='Lenght of the mitochondrial chromosome contig')
 
-def main(input, mito_chromosome, output):
+def main(input, mito_chromosome, output, mito_length):
 	
 	"""
 	mgatk-del-find: detect possible deletion junctions from bam files. \n
@@ -76,10 +77,10 @@ def main(input, mito_chromosome, output):
 	# iniate empty lists for storing counts
 	# loop and extract per position clipping counts
 
-	clip_pos_count_0 = [0] * 16569
-	SA_count_0 = [0] * 16569
-	clip_pos_count = [0] * 16569
-	SA_count = [0] * 16569
+	clip_pos_count_0 = [0] * mito_length
+	SA_count_0 = [0] * mito_length
+	clip_pos_count = [0] * mito_length
+	SA_count = [0] * mito_length
 	out1_list = []
 	out2_list = []
 	
@@ -117,7 +118,7 @@ def main(input, mito_chromosome, output):
 		writer = csv.writer(f, delimiter='\t')
 		idx = np.argsort(-clip_pos_count)
 		writer.writerow(['position', 'coverage', 'clip_count', 'SA'])
-		writer.writerows(zip(np.array(range(1, 16570))[idx], cov_out[idx], clip_pos_count[idx], SA_count[idx]))
+		writer.writerows(zip(np.array(range(1, mito_length + 1))[idx], cov_out[idx], clip_pos_count[idx], SA_count[idx]))
 
 	outputSA = output + '.SA.tsv'
 	with open(outputSA, 'w') as f:

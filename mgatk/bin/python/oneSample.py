@@ -6,16 +6,16 @@ import subprocess
 import sys
 import shutil
 import pysam
-from ruamel import yaml
+import yaml
 
 configFile = sys.argv[1]
 inputbam = sys.argv[2]
 outputbam = sys.argv[3]
 sample = sys.argv[4]
 
-with open(configFile, 'r') as stream:
-	config = yaml.load(stream, Loader=yaml.Loader)
-
+with open(configFile, 'r') as file:
+	config = yaml.safe_load(file)
+    
 # Parse the configuration variables
 indir = config["input_directory"]
 outdir = config["output_directory"]

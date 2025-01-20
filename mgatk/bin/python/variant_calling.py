@@ -156,7 +156,7 @@ variant_output.columns = ['position', 'nucleotide', 'variant', 'vmr', 'mean', 'v
                           'n_cells_over_10', 'n_cells_over_20', 'n_cells_over_95',
                           'max_heteroplasmy', 'strand_correlation', 'mean_coverage']
 variant_output[['vmr', 'mean', 'variance', 'strand_correlation', 'mean_coverage', 'max_heteroplasmy']] = variant_output[['vmr', 'mean', 'variance', 'strand_correlation',
-                                                                                                                         'mean_coverage', 'max_heteroplasmy']].astype(np.float)
+                                                                                                                         'mean_coverage', 'max_heteroplasmy']].astype(float)
 
 # exclude variants with less than three cells
 multi_cell_variants = variant_output[variant_output['n_cells_conf_detected'] >= 3]['variant']
