@@ -18,7 +18,7 @@ setup(
     include_package_data=True,
     zip_safe=False,
     platforms='any',
-    python_requires='>=3.8',
+    python_requires='>=3.11',
     install_requires=dependencies,
     extras_require={'test': ['pytest']},
     entry_points={
@@ -45,6 +45,8 @@ setup(
         'Operating System :: Unix',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ]
 )
