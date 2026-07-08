@@ -137,3 +137,53 @@ def test_tenx_end_to_end_on_known_barcodes(runner, tmp_path, barcode_dir):
         "n_cells_conf_detected", "n_cells_over_5", "n_cells_over_10", "n_cells_over_20",
         "n_cells_over_95", "max_heteroplasmy", "strand_correlation", "mean_coverage",
     ]
+
+
+# ---------------------------------------------------------------------------
+# Gzipped barcode lists must be accepted in `bcall` and `tenx` mode (issue #106).
+# ---------------------------------------------------------------------------
+
+def _gzip_barcodes(src_txt, dst_gz):
+    with open(src_txt) as fh:
+        contents = fh.read()
+    with gzip.open(dst_gz, "wt") as fh:
+        fh.write(contents)
+    return dst_gz
+
+
+@requires_snakemake
+@requires_mgatk_r_packages
+def test_bcall_end_to_end_on_gzipped_barcodes(runner, tmp_path, barcode_dir):
+    barcodes_gz = _gzip_barcodes(
+        barcode_dir / "test_barcodes.txt", tmp_path / "barcodes.txt.gz"
+    )
+    out_dir = tmp_path / "out"
+    result = runner.invoke(
+        cli.main,
+        [
+            "bcall", "-i", str(barcode_dir / "test_barcode.bam"), "-n", "bc1",
+            "-o", str(out_dir), "-bt", "CB", "-b", str(barcodes_gz),
+            "-z", "--snake-stdout",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert (out_dir / "final" / "bc1.rds").exists()
+
+
+@requires_snakemake
+@requires_mgatk_r_packages
+def test_tenx_end_to_end_on_gzipped_barcodes(runner, tmp_path, barcode_dir):
+    barcodes_gz = _gzip_barcodes(
+        barcode_dir / "test_barcodes.txt", tmp_path / "barcodes.txt.gz"
+    )
+    out_dir = tmp_path / "out"
+    result = runner.invoke(
+        cli.main,
+        [
+            "tenx", "-i", str(barcode_dir / "test_barcode.bam"), "-n", "bc1",
+            "-o", str(out_dir), "-bt", "CB", "-b", str(barcodes_gz),
+            "-c", "2", "--snake-stdout",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert (out_dir / "final" / "bc1.rds").exists()

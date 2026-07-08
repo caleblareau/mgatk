@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Fast job: install the package on a Python matrix, confirm every console
+  # script imports and reports its version, and run the pure-Python unit tests.
+  # The R/snakemake-dependent end-to-end tests skip themselves here (see the
+  # `requires_*` markers in tests/conftest.py).
+  # ---------------------------------------------------------------------------
+  unit:
+    name: Unit tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: setup.py
+
+      - name: Install mgatk + test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[test]"
+
+      - name: Console scripts resolve and report a version
+        run: |
+          mgatk --version
+          mgatk-del --version
+          mgatk-del-find --version
+
+      - name: Run test suite (end-to-end tests auto-skip without R)
+        run: pytest -v
+
+  # ---------------------------------------------------------------------------
+  # Full job: adds R + Bioconductor and runs the complete suite, including the
+  # snakemake/R end-to-end pipeline tests against the bundled sample data.
+  # snakemake is installed into the same environment as the package, so the
+  # subprocess it launches can import mgatk.processing.
+  # ---------------------------------------------------------------------------
+  end-to-end:
+    name: End-to-end (snakemake + R/Bioconductor)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: setup.py
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+          use-public-rspm: true
+
+      - name: Cache R packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: ${{ runner.os }}-rpkgs-${{ hashFiles('.github/workflows/ci.yml') }}
+          restore-keys: ${{ runner.os }}-rpkgs-
+
+      - name: Install R / Bioconductor packages
+        run: |
+          Rscript -e 'install.packages(c("data.table", "Matrix", "dplyr", "ggplot2", "ggrepel"), repos = "https://cloud.r-project.org")'
+          Rscript -e 'if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager", repos = "https://cloud.r-project.org"); BiocManager::install(c("SummarizedExperiment", "GenomicRanges"), update = FALSE, ask = FALSE)'
+
+      - name: Install mgatk + test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[test]"
+
+      - name: Confirm snakemake and R are visible to mgatk
+        run: |
+          mgatk --version
+          snakemake --version
+          Rscript -e 'stopifnot(all(sapply(c("data.table", "SummarizedExperiment", "GenomicRanges", "Matrix", "dplyr"), requireNamespace, quietly = TRUE)))'
+
+      - name: Run full test suite
+        run: pytest -v

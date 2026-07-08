@@ -38,6 +38,13 @@ requires_dplyr = pytest.mark.skipif(
     not _r_packages_available(["dplyr"]), reason="R with dplyr is required"
 )
 
+# mgatk-del-find shells out to Rscript for its bulk-deletion plot (with
+# check=True), so the whole command fails if these plotting packages are absent.
+requires_del_plot_r_packages = pytest.mark.skipif(
+    not _r_packages_available(["data.table", "ggrepel", "ggplot2", "dplyr"]),
+    reason="R with data.table/ggrepel/ggplot2/dplyr is required for del-find plotting",
+)
+
 
 @pytest.fixture(scope="session")
 def repo_root():

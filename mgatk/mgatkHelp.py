@@ -180,7 +180,7 @@ def _open_barcode_file(fname):
 	return open(fname)
 
 def file_len(fname):
-    with open(fname) as f:
+    with _open_barcode_file(fname) as f:
         return sum(1 for _ in f)
 
 def split_barcodes_file(barcode_file, nsamples, output):

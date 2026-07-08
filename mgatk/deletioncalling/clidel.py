@@ -10,7 +10,7 @@ import time
 import pysam
 import glob
 
-from importlib.metadata import version
+from mgatk import __version__
 from mgatk.mgatkHelp import *
 from ruamel.yaml import YAML
 from ruamel.yaml.scalarstring import SingleQuotedScalarString as sqs
@@ -50,7 +50,6 @@ def main(input, output, name, mito_chromosome, ncores,
 	
 	script_dir = os.path.dirname(os.path.realpath(__file__))
 	cwd = os.getcwd()
-	__version__ = version('mgatk')
 	click.echo(gettime() + "mgatk-del v%s" % __version__)
 	
 	# Determine cores
