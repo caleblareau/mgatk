@@ -1,18 +1,14 @@
-import os
-import subprocess
-import shutil
-import pysam
 from os.path import join
 
-configfile: config["cfp"]     
+from mgatk.processing.one_sample import process_one_sample
+
+configfile: config["cfp"]
 outdir = config["output_directory"]
-script_dir = config["script_dir"]          
+script_dir = config["script_dir"]
 
 # A Snakemake regular expression matching the bam file paths
 SAMPLES, = glob_wildcards(join(outdir, ".internal/samples/{sample}.bam.txt"))
 bamtxtin = '{sample}.bam.txt'
-
-oneSample_py = script_dir + "/bin/python/oneSample.py"
 
 rule all:
 	input:
@@ -24,7 +20,7 @@ rule process_one_sample:
 	output:
 		bam = outdir + "/temp/ready_bam/{sample}.qc.bam",
 		bai = outdir + "/temp/ready_bam/{sample}.qc.bam.bai",
-		depth = outdir + "/qc/depth/{sample}.depth.txt", 
+		depth = outdir + "/qc/depth/{sample}.depth.txt",
 		A = outdir + "/temp/sparse_matrices/{sample}.A.txt",
 		C = outdir + "/temp/sparse_matrices/{sample}.C.txt",
 		G = outdir + "/temp/sparse_matrices/{sample}.G.txt",
@@ -35,10 +31,9 @@ rule process_one_sample:
 		sample = output.bam.replace(outdir + "/temp/ready_bam/", "").replace(".qc.bam", "")
 		with open(input.txtin) as f:
 			inputbam = f.read()
-		
+
 		# Process one sample
-		pycall = " ".join(['python', oneSample_py, config["cfp"], inputbam, output.bam, sample])
-		os.system(pycall)
+		process_one_sample(config, inputbam, output.bam, sample)
 
 # Collate everything
 rule make_sample_list:
@@ -46,7 +41,8 @@ rule make_sample_list:
 		depths = expand(outdir + "/qc/depth/{sample}.depth.txt", sample=SAMPLES)
 	output:
 		allSamplesFile = outdir + "/temp/scattered.allSamples.txt"
-	run: 	
-		for file in input.depths:
-			sample = file.replace(outdir + "/qc/depth/", "").replace(".depth.txt", "")
-			os.system("echo " + sample + " >> " + output.allSamplesFile)
+	run:
+		with open(output.allSamplesFile, "w") as out_f:
+			for file in input.depths:
+				sample = file.replace(outdir + "/qc/depth/", "").replace(".depth.txt", "")
+				out_f.write(sample + "\n")

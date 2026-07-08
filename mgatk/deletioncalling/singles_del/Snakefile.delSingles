@@ -1,13 +1,12 @@
-import os
 import subprocess
-import shutil
-import pysam
 from os.path import join
 
-configfile: config["cfp"]     
+from mgatk.deletioncalling.processing import process_cell_reads
+
+configfile: config["cfp"]
 outdir = config["output_directory"]
-script_dir = config["script_dir"]          
-name = config["name"]          
+script_dir = config["script_dir"]
+name = config["name"]
 
 read_length = config["read_length"]
 window_far = config["window_far"]
@@ -20,7 +19,6 @@ right_coordinates = config["right_coordinates"]
 SAMPLES, = glob_wildcards(join(outdir, ".internal/samples/{sample}.bam.txt"))
 bamtxtin = '{sample}.bam.txt'
 
-oneSample_py = script_dir + "/singles_del/01_process_cell_reads.py"
 oneSample_R = script_dir + "/singles_del/02_heteroplasmy_del_singles.R"
 
 rule all:
@@ -37,15 +35,15 @@ rule process_one_sample:
 		# Pull reads and clips from bam files
 		with open(input.txtin) as f:
 			inputbam = f.read()
-		pycall = " ".join(['python', oneSample_py, "-i", inputbam, "-o", output.pyout])
-		print(pycall)
-		os.system(pycall)
-		
+		process_cell_reads(inputbam, output.pyout)
+
 		# Aggregate statistics at the per-cell level for each deletion
-		Rcall = " ".join(['Rscript', oneSample_R, output.pyout, output.Rout, read_length, window_far, window_near, left_coordinates, right_coordinates])
-		print(Rcall)
-		os.system(Rcall)
-		
+		subprocess.run(
+			["Rscript", oneSample_R, output.pyout, output.Rout,
+			 read_length, window_far, window_near, left_coordinates, right_coordinates],
+			check=True,
+		)
+
 
 # Collate everything
 rule make_combined_heteroplasmy:
@@ -53,9 +51,9 @@ rule make_combined_heteroplasmy:
 		Routs = expand(outdir + "/temp/del/{sample}.delStats.tsv", sample=SAMPLES)
 	output:
 		allDelHetFile = outdir + "/final/"+name+".deletion_heteroplasmy.tsv"
-	run: 	
-		out_file = open(output.allDelHetFile, 'w')
-		out_file.write("cell_id" + "\t" + "heteroplasmy" + "\t" + "reads_del" + "\t" + "reads_wt" + "\t" + "reads_all" + "\t" + "total_clipped_bases" + "\t" + "deletion" + "\t" + "version" +"\n")
-		out_file.close()
-		for file in input.Routs:
-			os.system("cat " + file + " >> " + output.allDelHetFile)
+	run:
+		with open(output.allDelHetFile, "w") as out_f:
+			out_f.write("cell_id" + "\t" + "heteroplasmy" + "\t" + "reads_del" + "\t" + "reads_wt" + "\t" + "reads_all" + "\t" + "total_clipped_bases" + "\t" + "deletion" + "\t" + "version" + "\n")
+			for file in input.Routs:
+				with open(file) as in_f:
+					out_f.write(in_f.read())

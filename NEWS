@@ -1,4 +1,22 @@
 
+# 0.8.0
+- Removed the `java`/Picard MarkDuplicates dependency entirely; duplicate
+  removal now runs through `bam-dedup` (pure Python/Cython, pysam-based).
+  `mgatk/bin/picard.jar` (~15MB) is gone from the repo.
+- **Breaking**: `--max-javamem`/`-jm` is deprecated and does nothing (there's
+  no JVM left to size). It's still accepted so existing scripts don't fail;
+  passing it now prints a one-line notice instead.
+- Refactored the standalone scripts under `mgatk/bin/python/` (invoked via
+  `os.system('python script.py ...')`) into a proper importable package,
+  `mgatk.processing`, called directly from the CLI and Snakemake rules.
+  Hardened the remaining external-process calls (snakemake, Rscript,
+  cellbender) to check for failure instead of silently ignoring it.
+- Modernized dependencies for current Python/snakemake/pysam/numpy/pandas;
+  fixed several Python-2-only and deprecated-API bugs along the way.
+- Replaced the placeholder test suite (a single test with no assertions)
+  with real unit and end-to-end coverage; refreshed `tests/README.md` and
+  the GitHub issue templates.
+
 # 0.7.1
 - Fix various versioning bugs
 

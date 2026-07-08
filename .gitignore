@@ -10,8 +10,8 @@ __pycache__/
 *.so
 
 # Snake make executables / temp directory
-Pypkg/mgatk/.snakemake/*
-Pypkg/mgatk/tests/.snakemake/*
+.snakemake/
+tests/.snakemake/
 
 # Distribution / packaging
 .Python

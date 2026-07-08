@@ -1,12 +1,11 @@
+import gzip
 import os
-import subprocess
 import shutil
-import pysam
 from os.path import join
 
-configfile: config["cfp"]     
+configfile: config["cfp"]
 mgatk_directory = config["mgatk_directory"]
-name = config["name"]          
+name = config["name"]
 
 # A Snakemake regular expression matching the bam file paths
 SAMPLES, = glob_wildcards(join(mgatk_directory, "temp/ready_bam/{sample}.qc.bam"))
@@ -17,7 +16,7 @@ rule all:
 		mgatk_directory + "/final/" + name + ".A.txt.gz",
 		mgatk_directory + "/final/" + name + ".C.txt.gz",
 		mgatk_directory + "/final/" + name + ".G.txt.gz",
-		mgatk_directory + "/final/" + name + ".T.txt.gz",	
+		mgatk_directory + "/final/" + name + ".T.txt.gz",
 		mgatk_directory + "/final/" + name + ".coverage.txt.gz",
 
 rule make_depth_table:
@@ -25,10 +24,11 @@ rule make_depth_table:
 		depths = expand(mgatk_directory + "/qc/depth/{sample}.depth.txt", sample=SAMPLES)
 	output:
 		depthtable = mgatk_directory + "/final/" + name + ".depthTable.txt"
-	run: 
-		with open(output.depthtable, 'w') as f:
+	run:
+		with open(output.depthtable, "w") as out_f:
 			for file in input.depths:
-				os.system("cat " + file + " >> " + output.depthtable)
+				with open(file) as in_f:
+					out_f.write(in_f.read())
 
 rule make_final_sparse_matrices:
 	input:
@@ -37,23 +37,27 @@ rule make_final_sparse_matrices:
 		Gs = expand(mgatk_directory + "/temp/sparse_matrices/{sample}.G.txt", sample=SAMPLES),
 		Ts = expand(mgatk_directory + "/temp/sparse_matrices/{sample}.T.txt", sample=SAMPLES),
 		Covs = expand(mgatk_directory + "/temp/sparse_matrices/{sample}.coverage.txt", sample=SAMPLES)
-		
+
 	output:
 		A = mgatk_directory + "/final/" + name + ".A.txt.gz",
 		C = mgatk_directory + "/final/" + name + ".C.txt.gz",
 		G = mgatk_directory + "/final/" + name + ".G.txt.gz",
 		T = mgatk_directory + "/final/" + name + ".T.txt.gz",
 		Cov = mgatk_directory + "/final/" + name + ".coverage.txt.gz"
-		
-	run: 
+
+	run:
 		def makeSM(iterableThing, l):
-			for i in iterableThing:
-				os.system("cat " + i + " >> " + mgatk_directory + "/final/" + name + "."+l+".txt")
-			os.system("gzip " + mgatk_directory + "/final/" + name + "."+l+".txt")
-			
+			txt_path = mgatk_directory + "/final/" + name + "." + l + ".txt"
+			with open(txt_path, "wb") as out_f:
+				for i in iterableThing:
+					with open(i, "rb") as in_f:
+						shutil.copyfileobj(in_f, out_f)
+			with open(txt_path, "rb") as f_in, gzip.open(txt_path + ".gz", "wb") as f_out:
+				shutil.copyfileobj(f_in, f_out)
+			os.remove(txt_path)
+
 		makeSM(input.As, "A")
 		makeSM(input.Cs, "C")
 		makeSM(input.Gs, "G")
 		makeSM(input.Ts, "T")
 		makeSM(input.Covs, "coverage")
-

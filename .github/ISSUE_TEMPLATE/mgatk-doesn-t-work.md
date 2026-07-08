@@ -7,6 +7,10 @@ assignees: caleblareau
 
 ---
 
+Use this template when mgatk *runs without crashing* but the output is missing,
+empty, or not what you expected. If mgatk crashes or won't run at all, please
+use the "Bug report" template instead.
+
 **Describe the bug**
 
 A clear and concise description of what the bug is, including the command that you executed. 
@@ -25,7 +29,7 @@ Is the assay 10x 3' scRNA? or a nuclear prep? If so, there may be such low mitoc
 
 **Clarify if the execution successful on the test data provided in the repository**
 
-This will help us narrow down whether it's a data-intrinsic problem or an installation problem.
+This will help us narrow down whether it's a data-intrinsic problem or an installation problem. See [tests/README.md](../../tests/README.md#verifying-your-installation) for a few commands that confirm your install is working against the bundled test data.
 
 **Additional context**
 

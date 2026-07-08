@@ -1,38 +1,33 @@
 ---
 name: Bug report
-about: Create a report to help us improve
+about: Report a crash, installation problem, or unexpected behavior
 title: ''
-labels: ''
+labels: bug
 assignees: ''
 
 ---
 
 **Describe the bug**
-A clear and concise description of what the bug is.
+A clear and concise description of what went wrong.
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+**Command run**
+The exact `mgatk`/`mgatk-del`/`mgatk-del-find` command you ran, including all flags.
+
+**Error output / traceback**
+Paste the full error message or traceback here (use a code block).
 
 **Expected behavior**
-A clear and concise description of what you expected to happen.
+What you expected to happen instead.
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+**Environment**
+ - `mgatk --version` output:
+ - Install method: [pip / conda / from source]
+ - OS: [e.g. Ubuntu 22.04, macOS 14]
+ - Python version: [`python --version`]
+ - Relevant tool versions if applicable: `R --version`, `snakemake --version`
 
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
-
-**Smartphone (please complete the following information):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
+**Sanity check**
+Does `mgatk check -i <your.bam> -o <out> -n check -bt <tag> -g <genome>` pass? See [tests/README.md](../../tests/README.md#verifying-your-installation) for a few quick commands to confirm your install is healthy before digging further.
 
 **Additional context**
 Add any other context about the problem here.

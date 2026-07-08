@@ -11,6 +11,8 @@ import filecmp
 import math
 import pysam
 
+from .processing.barcodes import chunk_barcoded_bam
+
 def string_hamming_distance(str1, str2):
     """
     Fast hamming distance over 2 strings known to be of same length.
@@ -19,7 +21,7 @@ def string_hamming_distance(str1, str2):
     are different.
     eg "karolin" and "kathrin" is 3.
     """
-    return sum(itertools.imap(operator.ne, str1, str2))
+    return sum(c1 != c2 for c1, c2 in zip(str1, str2))
 
 
 def rev_comp(seq):
@@ -57,6 +59,18 @@ def check_software_exists(tool):
 	if(str(tool_path) == "None"):
 		sys.exit("ERROR: cannot find "+tool+" in environment; add it to user PATH environment")
 
+def run_command(cmd, log_file=None):
+	"""
+	Run an external command (as an argv list, not a shell string) and raise
+	CalledProcessError if it fails, optionally appending combined stdout/stderr
+	to log_file instead of inheriting the caller's streams.
+	"""
+	if log_file:
+		with open(log_file, 'a') as logf:
+			subprocess.run(cmd, check=True, stdout=logf, stderr=subprocess.STDOUT)
+	else:
+		subprocess.run(cmd, check=True)
+
 
 def parse_fasta(filename):
 	"""
@@ -82,10 +96,8 @@ def verify_bai(bamfile):
 		pysam.index(bamfile)
 
 # Helper function for chunking the bam
-def split_chunk_file(one_barcode_file, script_dir, input, bcbd, barcode_tag, mito_chr, umi_barcode):
-	chunk_bam_py = script_dir + "/bin/python/chunk_barcoded_bam.py"
-	pycall = " ".join(['python', chunk_bam_py, input, bcbd, barcode_tag, one_barcode_file, mito_chr, umi_barcode])
-	os.system(pycall)
+def split_chunk_file(one_barcode_file, input, bcbd, barcode_tag, mito_chr, umi_barcode):
+	chunk_barcoded_bam(input, bcbd, barcode_tag, one_barcode_file, mito_chr, umi_barcode)
 
 def verify_sample_mitobam(bam, mito_chr, mito_length):
 	idxs = pysam.idxstats(bam).split("\n")
@@ -168,7 +180,7 @@ def _open_barcode_file(fname):
 	return open(fname)
 
 def file_len(fname):
-    with _open_barcode_file(fname) as f:
+    with open(fname) as f:
         return sum(1 for _ in f)
 
 def split_barcodes_file(barcode_file, nsamples, output):
