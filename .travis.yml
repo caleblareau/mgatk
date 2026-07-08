@@ -1,15 +1,28 @@
 language: python
-sudo: required
-dist: trusty
+dist: jammy
 
 python:
-  - "nightly"
+  - "3.11"
+  - "3.12"
 
+# R + Bioconductor are needed for the end-to-end pipeline tests. snakemake is a
+# pip dependency of mgatk, so it lands in the same environment as the package
+# and its subprocess can import mgatk.processing.
 before_install:
-  - sudo apt-get install default-jre r-base-dev -y
+  - sudo apt-get update
+  - sudo apt-get install -y r-base
 
 install:
-  - python setup.py install
+  - python -m pip install --upgrade pip
+  - pip install -e ".[test]"
+  - Rscript -e 'install.packages(c("data.table", "Matrix", "dplyr"), repos = "https://cloud.r-project.org")'
+  - Rscript -e 'if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager", repos = "https://cloud.r-project.org"); BiocManager::install(c("SummarizedExperiment", "GenomicRanges"), update = FALSE, ask = FALSE)'
 
-script: 
-  - cd tests && echo $PATH
+script:
+  # Console scripts must import and report a version (regression guard for the
+  # module-level __version__ that previously crashed every entry point).
+  - mgatk --version
+  - mgatk-del --version
+  - mgatk-del-find --version
+  # Full suite, including the snakemake/R end-to-end tests on the bundled data.
+  - pytest -v

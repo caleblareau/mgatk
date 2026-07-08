@@ -11,7 +11,7 @@ import pysam
 import math
 import glob
 
-from importlib.metadata import version
+from mgatk import __version__
 from .mgatkHelp import *
 from .processing.barcodes import quantify_barcodes, split_barcoded_bam
 from ruamel.yaml import YAML
@@ -82,7 +82,6 @@ def main(mode, input, output, name, mito_genome, ncores,
 	
 	script_dir = os.path.dirname(os.path.realpath(__file__))
 	cwd = os.getcwd()
-	__version__ = version('mgatk')
 	click.echo(gettime() + "mgatk v%s" % __version__)
 
 	if max_javamem is not None:
