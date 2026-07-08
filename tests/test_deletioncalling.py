@@ -4,7 +4,11 @@ import pytest
 from click.testing import CliRunner
 
 from mgatk.deletioncalling import clidel, clifind
-from conftest import requires_dplyr, requires_snakemake
+from conftest import (
+    requires_del_plot_r_packages,
+    requires_dplyr,
+    requires_snakemake,
+)
 
 
 @pytest.fixture
@@ -12,6 +16,7 @@ def runner():
     return CliRunner()
 
 
+@requires_del_plot_r_packages
 def test_del_find_produces_clip_and_sa_tables(runner, tmp_path, pearsonbam_dir):
     bam = pearsonbam_dir / "CACCACTAGGAGGCGA-1.qc.bam"
     out_prefix = tmp_path / "out"

@@ -15,7 +15,7 @@ before_install:
 install:
   - python -m pip install --upgrade pip
   - pip install -e ".[test]"
-  - Rscript -e 'install.packages(c("data.table", "Matrix", "dplyr"), repos = "https://cloud.r-project.org")'
+  - Rscript -e 'install.packages(c("data.table", "Matrix", "dplyr", "ggplot2", "ggrepel"), repos = "https://cloud.r-project.org")'
   - Rscript -e 'if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager", repos = "https://cloud.r-project.org"); BiocManager::install(c("SummarizedExperiment", "GenomicRanges"), update = FALSE, ask = FALSE)'
 
 script:
